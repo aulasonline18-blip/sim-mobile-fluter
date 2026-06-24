@@ -1,5 +1,15 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'sim/billing/credits_functions.dart';
+import 'sim/billing/payments_functions.dart';
+import 'sim/billing/sim_pricing.dart';
+import 'sim/billing/sim_server_billing_clients.dart';
+import 'sim/external_ai/sim_ai_server_config.dart';
+import 'sim/external_ai/sim_server_attachment_client.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +17,7 @@ const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
 const simSupabaseAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
+const simServerBaseUrl = 'https://gemini-aid-pal.lovable.app';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,6 +79,33 @@ class LabSession extends ChangeNotifier {
   String? userName;
   String? authError;
   StreamSubscription<AuthState>? _authSub;
+  SimAiServerConfig? _serverConfig;
+  SimServerCreditsClient? _creditsClientInstance;
+  SimServerPaymentsClient? _paymentsClientInstance;
+  SimServerAttachmentClient? _attachmentClientInstance;
+
+  SimAiServerConfig _getServerConfig() {
+    return _serverConfig ??= SimAiServerConfig(
+      baseUrl: simServerBaseUrl,
+      accessTokenProvider: () async =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+    );
+  }
+
+  SimServerCreditsClient _getCreditsClient() {
+    return _creditsClientInstance ??=
+        SimServerCreditsClient(config: _getServerConfig());
+  }
+
+  SimServerPaymentsClient _getPaymentsClient() {
+    return _paymentsClientInstance ??=
+        SimServerPaymentsClient(config: _getServerConfig());
+  }
+
+  SimServerAttachmentClient _getAttachmentClient() {
+    return _attachmentClientInstance ??=
+        SimServerAttachmentClient(config: _getServerConfig());
+  }
   String? selectedLanguageCode;
   String? stableLang;
   String otherLanguage = '';
@@ -139,12 +177,42 @@ class LabSession extends ChangeNotifier {
         user?.userMetadata?['full_name']?.toString() ??
         user?.userMetadata?['name']?.toString();
     if (authed) {
-      credits = credits <= 0 ? 3 : credits;
       if (route == '/login') route = safeReturnTo(returnTo);
+      unawaited(_loadCreditsFromServer());
     } else {
       credits = 0;
     }
     notifyListeners();
+  }
+
+  Future<void> _loadCreditsFromServer() async {
+    try {
+      final snapshot = await _getCreditsClient().getMyCredits();
+      credits = snapshot.balance;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> refreshCredits() async {
+    await _loadCreditsFromServer();
+  }
+
+  Future<String?> createCheckoutUrl(CreditPackId packId) async {
+    try {
+      final result = await _getPaymentsClient().createCreditsCheckoutHosted(
+        CreateCreditsCheckoutHostedInput(
+          packId: packId.wire,
+          successUrl:
+              '$simServerBaseUrl/checkout/return?session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl: '$simServerBaseUrl/creditos?canceled=1',
+          environment: StripeEnvironment.live,
+        ).validate(),
+      );
+      if (!result.ok) return null;
+      return isValidStripeCheckoutUrl(result.url) ? result.url : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> signInWithGoogle() async {
@@ -273,25 +341,130 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addLabAttachment(String source) {
+  Future<void> addRealAttachment(String source) async {
     if (attachments.length >= maxAttachments) return;
-    final now = DateTime.now().millisecondsSinceEpoch;
     final isImage = source != 'document';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final draftId = 'att-$now-${attachments.length + 1}';
+
+    List<int>? bytes;
+    String? name;
+    String contentType;
+
+    try {
+      if (isImage) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          withData: true,
+        );
+        if (result == null || result.files.isEmpty) return;
+        final file = result.files.first;
+        bytes = file.bytes?.toList();
+        name = file.name;
+        final ext = name!.split('.').last.toLowerCase();
+        contentType = switch (ext) {
+          'png' => 'image/png',
+          'gif' => 'image/gif',
+          'webp' => 'image/webp',
+          _ => 'image/jpeg',
+        };
+      } else {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'csv'],
+          withData: true,
+        );
+        if (result == null || result.files.isEmpty) return;
+        final file = result.files.first;
+        bytes = file.bytes?.toList();
+        name = file.name;
+        final ext = name!.split('.').last.toLowerCase();
+        contentType = switch (ext) {
+          'txt' => 'text/plain',
+          'csv' => 'text/csv',
+          _ => 'application/pdf',
+        };
+      }
+    } catch (_) {
+      return;
+    }
+
+    if (bytes == null || bytes.isEmpty) return;
+
+    if (bytes.length > maxAttachmentBytes) {
+      attachments = [
+        ...attachments,
+        AttachmentDraft(
+          id: draftId,
+          name: name!,
+          type: contentType,
+          size: bytes.length,
+          status: 'error',
+          error: 'Arquivo maior que 10MB.',
+        ),
+      ];
+      notifyListeners();
+      return;
+    }
+
     attachments = [
       ...attachments,
       AttachmentDraft(
-        id: 'att-$now-${attachments.length + 1}',
-        name: isImage
-            ? 'imagem-${attachments.length + 1}.jpg'
-            : 'arquivo-${attachments.length + 1}.pdf',
-        type: isImage ? 'image/jpeg' : 'application/pdf',
-        size: isImage ? 842000 : 1240000,
-        status: 'ready',
-        method: isImage ? 'vision' : 'pdf-text',
-        extractedText:
-            'LABORATORY MOCK: texto extraído do anexo para preservar o contrato visual e funcional da Fase 2.',
+        id: draftId,
+        name: name!,
+        type: contentType,
+        size: bytes.length,
+        status: 'uploading',
       ),
     ];
+    notifyListeners();
+
+    try {
+      final processed = await _getAttachmentClient().processAttachment(
+        SimAttachmentFile(
+          name: name!,
+          contentType: contentType,
+          bytes: bytes,
+        ),
+      );
+      final ok = processed.charsExtracted >= minExtractedChars;
+      attachments = [
+        for (final a in attachments)
+          if (a.id == draftId)
+            AttachmentDraft(
+              id: a.id,
+              name: a.name,
+              type: a.type,
+              size: a.size,
+              status: ok ? 'ready' : 'error',
+              extractedText: processed.extractedText,
+              method: processed.method,
+              error: ok ? null : 'Conteúdo insuficiente.',
+            )
+          else
+            a,
+      ];
+    } catch (e) {
+      final msg = e.toString().contains('AUDIO_NOT_SUPPORTED')
+          ? audioNotSupportedMessage
+          : e.toString().contains('VIDEO_NOT_SUPPORTED')
+          ? videoNotSupportedMessage
+          : 'Erro ao processar anexo. Tente novamente.';
+      attachments = [
+        for (final a in attachments)
+          if (a.id == draftId)
+            AttachmentDraft(
+              id: a.id,
+              name: a.name,
+              type: a.type,
+              size: a.size,
+              status: 'error',
+              error: msg,
+            )
+          else
+            a,
+      ];
+    }
     notifyListeners();
   }
 
@@ -1628,7 +1801,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
       error = null;
       attachmentMenuOpen = false;
     });
-    widget.session.addLabAttachment(source);
+    widget.session.addRealAttachment(source);
   }
 
   @override
@@ -1919,15 +2092,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'LABORATORY MOCK: upload/extraction is simulated; validation and saved fields follow the SIM contract for Fase 2.',
-                        style: TextStyle(
-                          color: simMuted,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
+
                     ],
                   ),
                 ),
@@ -2643,10 +2808,59 @@ class StatusLine extends StatelessWidget {
   }
 }
 
-class CreditsLabScreen extends StatelessWidget {
+class CreditsLabScreen extends StatefulWidget {
   const CreditsLabScreen({required this.session, super.key});
 
   final LabSession session;
+
+  @override
+  State<CreditsLabScreen> createState() => _CreditsLabScreenState();
+}
+
+class _CreditsLabScreenState extends State<CreditsLabScreen> {
+  bool _loading = true;
+  CreditPackId? _buying;
+  String? _buyError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCredits();
+  }
+
+  Future<void> _loadCredits() async {
+    await widget.session.refreshCredits();
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _handlePackClick(CreditPack pack) async {
+    if (_buying != null) return;
+    setState(() {
+      _buying = pack.id;
+      _buyError = null;
+    });
+    try {
+      final url = await widget.session.createCheckoutUrl(pack.id);
+      if (!mounted) return;
+      if (url == null) {
+        setState(() {
+          _buyError = 'Não foi possível abrir o checkout. Tente de novo.';
+          _buying = null;
+        });
+        return;
+      }
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        setState(() => _buyError = 'Não foi possível abrir o navegador.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _buyError = 'Erro: $e');
+    } finally {
+      if (mounted) setState(() => _buying = null);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2658,45 +2872,160 @@ class CreditsLabScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Créditos',
-                  style: TextStyle(
-                    color: simDark,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Créditos',
+                      style: TextStyle(
+                        color: simDark,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: simMuted),
+                      tooltip: 'Atualizar saldo',
+                      onPressed: () {
+                        setState(() => _loading = true);
+                        _loadCredits();
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Saldo atual: ${session.credits}',
-                  style: const TextStyle(color: simMuted, fontSize: 15),
+                _loading
+                    ? const SizedBox(
+                        height: 40,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: simDark,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        'Saldo: ${widget.session.credits} crédito${widget.session.credits == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                          color: simDark,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                const SizedBox(height: 4),
+                const Text(
+                  '3 créditos por aula  •  10 por imagem',
+                  style: TextStyle(color: simMuted, fontSize: 13),
                 ),
                 const SizedBox(height: 18),
-                CreditPackButton(
-                  title: '100 créditos',
-                  subtitle: 'Aulas e uso básico',
-                  onTap: session.openCheckoutReturn,
-                ),
-                CreditPackButton(
-                  title: '200 créditos',
-                  subtitle: 'Mais aulas e imagem quando disponível',
-                  onTap: session.openCheckoutReturn,
-                ),
-                CreditPackButton(
-                  title: '500 créditos',
-                  subtitle: 'Uso prolongado do SIM',
-                  onTap: session.openCheckoutReturn,
+                for (final pack in simPricing.creditPacks)
+                  _SimCreditPackButton(
+                    pack: pack,
+                    loading: _buying == pack.id,
+                    disabled: _buying != null,
+                    onTap: () => _handlePackClick(pack),
+                  ),
+                if (_buyError != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _buyError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                const Text(
+                  'Após o pagamento, toque em ↺ para atualizar o saldo.',
+                  style: TextStyle(color: simMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 16),
                 PrimaryWideButton(
                   label: 'Voltar para aula',
-                  onTap: () => session.openSupport('/cyber/aula'),
+                  onTap: () => widget.session.openSupport('/cyber/aula'),
                 ),
                 const SizedBox(height: 10),
-                SecondaryWideButton(label: 'Portal', onTap: session.goPortal),
+                SecondaryWideButton(
+                  label: 'Portal',
+                  onTap: widget.session.goPortal,
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SimCreditPackButton extends StatelessWidget {
+  const _SimCreditPackButton({
+    required this.pack,
+    required this.loading,
+    required this.disabled,
+    required this.onTap,
+  });
+
+  final CreditPack pack;
+  final bool loading;
+  final bool disabled;
+  final VoidCallback onTap;
+
+  String get _subtitle => switch (pack.id) {
+        CreditPackId.credits100 => '~33 aulas',
+        CreditPackId.credits200 => '~66 aulas',
+        CreditPackId.credits500 => '~166 aulas',
+      };
+
+  String get _price {
+    final cents = pack.amountCents;
+    return 'R\$ ${cents ~/ 100},${(cents % 100).toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: OutlinedButton(
+        onPressed: disabled ? null : onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: simDark,
+          side: const BorderSide(color: simBorder),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          padding: const EdgeInsets.all(14),
+        ),
+        child: Row(
+          children: [
+            loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: simDark,
+                    ),
+                  )
+                : const Icon(Icons.credit_card, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${pack.credits} créditos — $_price',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    _subtitle,
+                    style: const TextStyle(color: simMuted, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -2758,22 +3087,33 @@ class CreditPackButton extends StatelessWidget {
   }
 }
 
-class CheckoutReturnScreen extends StatelessWidget {
+class CheckoutReturnScreen extends StatefulWidget {
   const CheckoutReturnScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<CheckoutReturnScreen> createState() => _CheckoutReturnScreenState();
+}
+
+class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
+  @override
+  void initState() {
+    super.initState();
+    widget.session.refreshCredits();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SimpleLabPage(
-      title: 'Retorno do pagamento',
+      title: 'Pagamento recebido',
       body:
-          'O pagamento volta para o SIM, valida a sessão do checkout e devolve o aluno para a aula ou para tentar novamente.',
+          'Saldo atualizado para ${widget.session.credits} crédito${widget.session.credits == 1 ? '' : 's'}. Bom estudo!',
       primary: 'Continuar aula',
-      onPrimary: () => session.openSupport('/cyber/aula'),
-      session: session,
-      secondary: 'Tentar de novo',
-      onSecondary: session.openCredits,
+      onPrimary: () => widget.session.openSupport('/cyber/aula'),
+      session: widget.session,
+      secondary: 'Ver créditos',
+      onSecondary: widget.session.openCredits,
     );
   }
 }
