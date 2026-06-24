@@ -2450,13 +2450,91 @@ class MenuLine extends StatelessWidget {
   }
 }
 
-class PhaseBoundaryScreen extends StatelessWidget {
+class PhaseBoundaryScreen extends StatefulWidget {
   const PhaseBoundaryScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<PhaseBoundaryScreen> createState() => _PhaseBoundaryScreenState();
+}
+
+class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
+  static const _stageDurationMs = 1500;
+  static const _autoNavDelayMs = 650;
+  static const _msgIntervalMs = 3200;
+
+  static const _stages = [
+    _PrepStage(title: 'Preparando seu perfil…', progress: 0.15),
+    _PrepStage(title: 'Preparando seu currículo…', progress: 0.40),
+    _PrepStage(title: 'Preparando sua aula…', progress: 0.65),
+  ];
+
+  static const _messages = [
+    'Enquanto sua aula é preparada…',
+    'O SIM está dividindo o tópico em passos menores.',
+    'A IA não vai apenas responder.',
+    'Ela vai tentar ensinar do melhor jeito para você.',
+    'Se algo parecer difícil, o caminho pode mudar.',
+    'Se você errar, o erro vira uma pista.',
+    'Se você entender, o SIM te ajuda a avançar.',
+    'Todo dia, a IA fica mais poderosa.',
+    'O SIM traz esse poder para o estudo.',
+    'Estudar pode ficar mais leve, claro e eficiente.',
+    'Sua aula está quase pronta.',
+    'Respire. Aprender pode ser mais fácil do que você imagina.',
+  ];
+
+  int _stageIdx = 0;
+  int _msgIdx = 0;
+  bool _ready = false;
+  Timer? _stageTimer;
+  Timer? _msgTimer;
+  Timer? _navTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startStageProgression();
+    _startMessageRotation();
+  }
+
+  void _startStageProgression() {
+    _stageTimer = Timer(const Duration(milliseconds: _stageDurationMs), () {
+      if (!mounted) return;
+      setState(() => _stageIdx = 1);
+      _stageTimer = Timer(const Duration(milliseconds: _stageDurationMs), () {
+        if (!mounted) return;
+        setState(() => _stageIdx = 2);
+        _stageTimer = Timer(const Duration(milliseconds: _stageDurationMs), () {
+          if (!mounted) return;
+          setState(() => _ready = true);
+          _navTimer = Timer(const Duration(milliseconds: _autoNavDelayMs), () {
+            if (mounted) widget.session.preparationDone();
+          });
+        });
+      });
+    });
+  }
+
+  void _startMessageRotation() {
+    _msgTimer = Timer.periodic(const Duration(milliseconds: _msgIntervalMs), (_) {
+      if (!mounted) return;
+      setState(() => _msgIdx = (_msgIdx + 1) % _messages.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _stageTimer?.cancel();
+    _msgTimer?.cancel();
+    _navTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final stage = _stages[_stageIdx];
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -2469,55 +2547,113 @@ class PhaseBoundaryScreen extends StatelessWidget {
                   child: SimCard(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Preparando sua aula',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
+                        // Título do estágio atual
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          child: Text(
+                            stage.title,
+                            key: ValueKey(_stageIdx),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              height: 1.3,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'SIM está interpretando o seu objetivo, montando o currículo e preparando a primeira aula.',
-                          style: TextStyle(
-                            color: simMuted,
-                            fontSize: 15,
-                            height: 1.45,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: session.entryStatus == 'primeira_aula_pronta'
-                                ? 1
-                                : null,
-                            minHeight: 10,
-                            backgroundColor: simLight,
-                            color: simDark,
+                        const SizedBox(height: 16),
+                        // Mensagem rotativa
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
+                          child: Text(
+                            _messages[_msgIdx],
+                            key: ValueKey(_msgIdx),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                              height: 1.55,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 20),
+                        // Barra de progresso animada
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: stage.progress),
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeOut,
+                          builder: (context, value, _) => ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: value,
+                              minHeight: 10,
+                              backgroundColor: simLight,
+                              color: simDark,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Indicadores de passo (3 pontos)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(3, (i) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: i == _stageIdx ? 20 : 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: i <= _stageIdx ? simDark : simBorder,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          )),
+                        ),
+                        const SizedBox(height: 20),
+                        // Três pontos pulsantes enquanto não pronto
+                        if (!_ready) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(3, (i) => _PulseDot(delay: i * 150)),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        // Botão
                         SizedBox(
                           width: double.infinity,
                           height: 54,
-                          child: DecoratedBox(
-                            decoration: primaryButtonDecoration(radius: 14),
-                            child: TextButton(
-                              onPressed: session.preparationDone,
-                              child: const Text(
-                                'Continuar',
-                                style: TextStyle(
-                                  color: simDark,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
+                          child: _ready
+                              ? DecoratedBox(
+                                  decoration: primaryButtonDecoration(radius: 14),
+                                  child: TextButton(
+                                    onPressed: widget.session.preparationDone,
+                                    child: const Text(
+                                      'Continuar →',
+                                      style: TextStyle(color: simDark, fontSize: 17, fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                )
+                              : DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: simLight,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'Preparando…',
+                                      style: TextStyle(color: simMuted, fontSize: 17, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _ready ? 'Pronto para continuar.' : 'Aguardando preparação…',
+                          style: const TextStyle(color: simMuted, fontSize: 13),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -2526,6 +2662,60 @@ class PhaseBoundaryScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrepStage {
+  const _PrepStage({required this.title, required this.progress});
+  final String title;
+  final double progress;
+}
+
+class _PulseDot extends StatefulWidget {
+  const _PulseDot({required this.delay});
+  final int delay;
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _ctrl.repeat(reverse: true);
+    });
+    _anim = Tween(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      child: FadeTransition(
+        opacity: _anim,
+        child: Container(
+          width: 10, height: 10,
+          decoration: const BoxDecoration(color: simDark, shape: BoxShape.circle),
         ),
       ),
     );
