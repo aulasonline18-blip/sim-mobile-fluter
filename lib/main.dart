@@ -93,7 +93,7 @@ class LabSession extends ChangeNotifier {
 
   SimAiServerConfig _getServerConfig() {
     return _serverConfig ??= SimAiServerConfig(
-      baseUrl: simServerBaseUrl,
+      baseUrl: simLovableBaseUrl,
       accessTokenProvider: () async =>
           Supabase.instance.client.auth.currentSession?.accessToken,
     );
