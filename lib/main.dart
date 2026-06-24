@@ -81,6 +81,7 @@ class LabSession extends ChangeNotifier {
   int totalAulaSteps = 10;
   String route = '/';
   String returnTo = '/';
+  String? checkoutSessionId;
   String? userId;
   String? userEmail;
   String? userName;
@@ -107,6 +108,13 @@ class LabSession extends ChangeNotifier {
   SimServerPaymentsClient _getPaymentsClient() {
     return _paymentsClientInstance ??=
         SimServerPaymentsClient(config: _getServerConfig());
+  }
+
+  Future<CheckoutStatus> getCheckoutStatus(String sessionId) {
+    return _getPaymentsClient().getCheckoutStatus(
+      sessionId: sessionId,
+      environment: StripeEnvironment.live,
+    );
   }
 
   SimServerAttachmentClient _getAttachmentClient() {
@@ -226,7 +234,7 @@ class LabSession extends ChangeNotifier {
         CreateCreditsCheckoutHostedInput(
           packId: packId.wire,
           successUrl:
-              '$simLovableBaseUrl/checkout/return?session_id={CHECKOUT_SESSION_ID}',
+              'sim-mobile://checkout/return?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: '$simLovableBaseUrl/creditos?canceled=1',
           environment: StripeEnvironment.live,
         ).validate(),
@@ -3194,23 +3202,111 @@ class CheckoutReturnScreen extends StatefulWidget {
 }
 
 class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
+  CheckoutStatusKind? _status;
+  int _credits = 0;
+  int _balance = 0;
+  String? _error;
+  String? _returnTo;
+  Timer? _pollTimer;
+  int _elapsedMs = 0;
+  static const int _timeoutMs = 30000;
+  static const int _pollIntervalMs = 2000;
+
   @override
   void initState() {
     super.initState();
-    widget.session.refreshCredits();
+    _confirm();
+  }
+
+  String? get _sessionId => widget.session.checkoutSessionId;
+
+  Future<void> _confirm() async {
+    final sessionId = _sessionId;
+    if (sessionId == null || !isValidStripeSessionId(sessionId)) {
+      setState(() {
+        _status = CheckoutStatusKind.error;
+        _error = 'Sessão de pagamento inválida.';
+      });
+      return;
+    }
+    final result = await widget.session.getCheckoutStatus(sessionId);
+    if (result.kind == CheckoutStatusKind.pending && _elapsedMs < _timeoutMs) {
+      _pollTimer = Timer(const Duration(milliseconds: _pollIntervalMs), () {
+        _elapsedMs += _pollIntervalMs;
+        _confirm();
+      });
+      return;
+    }
+    _pollTimer?.cancel();
+    if (result.kind == CheckoutStatusKind.complete) {
+      widget.session.refreshCredits();
+    }
+    setState(() {
+      _status = result.kind;
+      _credits = result.credits;
+      _balance = result.balance;
+      _error = result.error;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleContinue() {
+    final s = widget.session;
+    final target = s.returnTo;
+    s.returnTo = '/';
+    s.openSupport(target.isNotEmpty ? target : '/');
   }
 
   @override
   Widget build(BuildContext context) {
+    final status = _status;
+    if (status == null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Verificando pagamento...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (status == CheckoutStatusKind.complete) {
+      return SimpleLabPage(
+        title: 'Pagamento confirmado',
+        body: 'Você recebeu $_credits crédito${_credits == 1 ? '' : 's'}. Saldo atual: $_balance crédito${_balance == 1 ? '' : 's'}.',
+        primary: 'Continuar',
+        onPrimary: _handleContinue,
+        session: widget.session,
+        secondary: 'Ver créditos',
+        onSecondary: widget.session.openCredits,
+      );
+    }
+    if (status == CheckoutStatusKind.expired) {
+      return SimpleLabPage(
+        title: 'Sessão expirada',
+        body: 'O tempo para confirmar o pagamento expirou. Se o pagamento foi realizado, entre em contato com o suporte.',
+        primary: 'Ver créditos',
+        onPrimary: widget.session.openCredits,
+        session: widget.session,
+      );
+    }
     return SimpleLabPage(
-      title: 'Pagamento recebido',
-      body:
-          'Saldo atualizado para ${widget.session.credits} crédito${widget.session.credits == 1 ? '' : 's'}. Bom estudo!',
-      primary: 'Continuar aula',
-      onPrimary: () => widget.session.openSupport('/cyber/aula'),
+      title: 'Erro no pagamento',
+      body: _error ?? 'Não foi possível verificar o pagamento. Tente novamente.',
+      primary: 'Ver créditos',
+      onPrimary: widget.session.openCredits,
       session: widget.session,
-      secondary: 'Ver créditos',
-      onSecondary: widget.session.openCredits,
     );
   }
 }
