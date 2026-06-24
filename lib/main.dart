@@ -346,12 +346,49 @@ class LabSession extends ChangeNotifier {
       goLogin(target: '/');
       return;
     }
-    if (credits <= 0) return;
+    if (credits <= 0) {
+      openCredits();
+      return;
+    }
+    _clearSessionState();
+    route = '/cyber/idioma';
+    notifyListeners();
+  }
+
+  void _clearSessionState() {
+    // Onboarding
     selectedLanguageCode = null;
     stableLang = null;
     otherLanguage = '';
-    route = '/cyber/idioma';
-    notifyListeners();
+    freeText = '';
+    preferredName = '';
+    attachments = [];
+    studentProfileNotes = '';
+    lessonLocalId = null;
+    entryStatus = 'idle';
+    entryError = null;
+    // Placement
+    placementStarted = false;
+    placementDone = false;
+    placementStage = 'choice';
+    placementLoading = false;
+    placementError = null;
+    placementQuestion = null;
+    placementChoices = [];
+    placementStartMarker = null;
+    placementMarker = null;
+    // Aula
+    aulaStep = 0;
+    selectedAnswer = '';
+    aulaMessage = '';
+    doubtOpen = false;
+    audioEnabled = true;
+    audioLoading = false;
+    audioError = null;
+    imageStatus = 'idle';
+    imageError = null;
+    // T02
+    resetT02();
   }
 
   void chooseLanguage(String code, String name) {
