@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -136,6 +138,22 @@ class LabSession extends ChangeNotifier {
   String? externalDoorOpened;
   String deleteConfirmation = '';
   String? accountDeletionMessage;
+
+  // T02 lesson content
+  bool t02Loading = false;
+  String? t02Error;
+  String? t02Explanation;
+  String? t02Question;
+  Map<String, String>? t02Options;
+  String? t02CorrectAnswer;
+  String? t02WhyCorrect;
+  dynamic t02WhyWrong;
+
+  // Parent panel signals
+  int signalsSolid = 0;
+  int signalsUnderstood = 0;
+  int signalsFragile = 0;
+  int totalAulaSteps = 10;
 
   void goPortal() {
     route = '/';
@@ -552,6 +570,9 @@ class LabSession extends ChangeNotifier {
 
   void chooseAulaAnswer(String letter) {
     selectedAnswer = letter;
+    if (letter == 'A') signalsSolid++;
+    if (letter == 'B') signalsUnderstood++;
+    if (letter == 'C') signalsFragile++;
     aulaMessage = letter == 'A'
         ? 'Resposta registrada. SIM preparou o próximo passo.'
         : letter == 'B'
@@ -580,6 +601,7 @@ class LabSession extends ChangeNotifier {
     doubtOpen = false;
     imageStatus = 'idle';
     imageError = null;
+    resetT02();
     notifyListeners();
   }
 
@@ -613,6 +635,75 @@ class LabSession extends ChangeNotifier {
     await Future<void>.delayed(const Duration(milliseconds: 180));
     imageStatus = 'ready';
     notifyListeners();
+  }
+
+  Future<void> loadT02Content() async {
+    if (t02Loading) return;
+    t02Loading = true;
+    t02Error = null;
+    notifyListeners();
+    try {
+      final client = _supabaseClientOrNull();
+      final token = client?.auth.currentSession?.accessToken;
+      if (token == null) throw Exception('Não autenticado');
+
+      final uri = Uri.parse('https://gemini-aid-pal.lovable.app/api/complete-lesson');
+      final httpClient = HttpClient();
+      final req = await httpClient.postUrl(uri);
+      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Authorization', 'Bearer $token');
+      final payload = jsonEncode({
+        'mode': 'lesson',
+        'lessonLocalId': lessonLocalId ?? 'aula-1',
+        'item': freeText.isNotEmpty ? freeText : 'Conteúdo da aula',
+        'stable_lang': stableLang ?? 'Portuguese',
+        'academic_level': null,
+        'layer': 1,
+        'err_count': 0,
+        'lesson_mode': 'session',
+        'history': [],
+        'preferred_name': preferredName.isNotEmpty ? preferredName : null,
+        'student_profile_notes': studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+      });
+      req.write(payload);
+      final res = await req.close().timeout(const Duration(seconds: 45));
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        throw Exception('Servidor retornou ${res.statusCode}: $body');
+      }
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final c = data['conteudo'] as Map<String, dynamic>?;
+      if (c == null) throw Exception('Resposta sem conteúdo');
+      t02Explanation = c['explanation']?.toString();
+      t02Question = c['question']?.toString();
+      final opts = c['options'];
+      if (opts is Map) {
+        t02Options = {
+          'A': opts['A']?.toString() ?? '',
+          'B': opts['B']?.toString() ?? '',
+          'C': opts['C']?.toString() ?? '',
+        };
+      }
+      t02CorrectAnswer = c['correct_answer']?.toString();
+      t02WhyCorrect = c['why_correct'];
+      t02WhyWrong = c['why_wrong'];
+      t02Loading = false;
+    } catch (e) {
+      t02Loading = false;
+      t02Error = 'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
+    }
+    notifyListeners();
+  }
+
+  void resetT02() {
+    t02Loading = false;
+    t02Error = null;
+    t02Explanation = null;
+    t02Question = null;
+    t02Options = null;
+    t02CorrectAnswer = null;
+    t02WhyCorrect = null;
+    t02WhyWrong = null;
   }
 
   @override
@@ -2393,16 +2484,33 @@ class PlacementLabScreen extends StatelessWidget {
   }
 }
 
-class AulaLabScreen extends StatelessWidget {
+class AulaLabScreen extends StatefulWidget {
   const AulaLabScreen({required this.session, super.key});
 
   final LabSession session;
+
+  @override
+  State<AulaLabScreen> createState() => _AulaLabScreenState();
+}
+
+class _AulaLabScreenState extends State<AulaLabScreen> {
+  LabSession get session => widget.session;
+
+  @override
+  void initState() {
+    super.initState();
+    if (session.t02Explanation == null && !session.t02Loading) {
+      session.loadT02Content();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final topic = session.freeText.trim().isEmpty
         ? 'Aula SIM'
         : session.freeText.trim();
+    final opts = session.t02Options;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -2436,14 +2544,45 @@ class AulaLabScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          const Text(
-                            'Explicação da aula mínima em laboratório. Aqui entra o conteúdo T02 real quando o servidor estiver conectado.',
-                            style: TextStyle(
-                              color: simMuted,
-                              fontSize: 15,
-                              height: 1.45,
+                          if (session.t02Loading) ...[
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
                             ),
-                          ),
+                            const Text(
+                              'Preparando sua aula...',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: simMuted, fontSize: 14),
+                            ),
+                          ] else if (session.t02Error != null) ...[
+                            Text(
+                              session.t02Error!,
+                              style: const TextStyle(color: Colors.red, fontSize: 14),
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: session.loadT02Content,
+                              child: const Text(
+                                'Tentar novamente',
+                                style: TextStyle(
+                                  color: simDark,
+                                  fontWeight: FontWeight.w700,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            Text(
+                              session.t02Explanation ?? '',
+                              style: const TextStyle(
+                                color: simMuted,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 14),
                           LessonImagePanel(session: session),
                           if (session.audioError != null) ...[
@@ -2480,9 +2619,9 @@ class AulaLabScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Qual alternativa mostra que você entendeu este primeiro ponto?',
-                            style: TextStyle(
+                          Text(
+                            session.t02Question ?? 'Qual alternativa mostra que você entendeu este primeiro ponto?',
+                            style: const TextStyle(
                               color: simDark,
                               fontSize: 15,
                               height: 1.4,
@@ -2491,20 +2630,19 @@ class AulaLabScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           AnswerButton(
                             label: 'A',
-                            text: 'Consigo explicar com minhas palavras.',
+                            text: opts?['A'] ?? 'Consigo explicar com minhas palavras.',
                             active: session.selectedAnswer == 'A',
                             onTap: () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B',
-                            text: 'Entendi uma parte, mas preciso revisar.',
+                            text: opts?['B'] ?? 'Entendi uma parte, mas preciso revisar.',
                             active: session.selectedAnswer == 'B',
                             onTap: () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C',
-                            text:
-                                'Ainda estou perdido e preciso de recuperação.',
+                            text: opts?['C'] ?? 'Ainda estou perdido e preciso de recuperação.',
                             active: session.selectedAnswer == 'C',
                             onTap: () => session.chooseAulaAnswer('C'),
                           ),
