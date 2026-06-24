@@ -31,6 +31,7 @@ import '../media/audio_preference.dart';
 import '../media/lesson_audio_controller.dart';
 import '../media/lesson_visual_pipeline.dart';
 import '../media/student_lesson_media_service.dart';
+import '../modules/pedagogical_module_contracts.dart';
 import '../placement/placement_route_controller.dart';
 import '../placement/placement_store.dart';
 import '../placement/placement_t02_caller.dart';
@@ -183,7 +184,8 @@ class SimOrganism {
     );
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
-    final curriculumSync = LessonCurriculumSyncEngine(stateService: stateService);
+    final curriculumSync =
+        LessonCurriculumSyncEngine(stateService: stateService);
 
     final audioPreference = AudioPreference();
     final audioCore = AudioCore(
