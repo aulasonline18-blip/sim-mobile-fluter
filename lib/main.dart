@@ -96,6 +96,15 @@ class LabSession extends ChangeNotifier {
   SimServerPaymentsClient? _paymentsClientInstance;
   SimServerAttachmentClient? _attachmentClientInstance;
   SimOrganismController? _controller;
+  LessonRuntimeSnapshot? _lastSnapshot;
+
+  ClassroomPhase get classroomPhase =>
+      _lastSnapshot?.phase ?? const ClassroomPhase.loading();
+  bool get lessonIsDone => _lastSnapshot?.isDone ?? false;
+  double get lessonProgress => _lastSnapshot?.viewModel?.progress ?? 0.0;
+  String get lessonHeaderLabel => _lastSnapshot?.viewModel?.headerLabel ?? '';
+  bool get answersLocked => _lastSnapshot?.viewModel?.locked ?? false;
+  String get nextStepLabel => _lastSnapshot?.viewModel?.nextLabel ?? '';
 
   SimAiServerConfig _getServerConfig() {
     return _serverConfig ??= SimAiServerConfig(
@@ -776,6 +785,7 @@ class LabSession extends ChangeNotifier {
   }
 
   void _applySnapshot(LessonRuntimeSnapshot snapshot) {
+    _lastSnapshot = snapshot;
     final c = snapshot.conteudo;
     t02Loading = false;
     if (!snapshot.hasCurriculum) {
@@ -2632,17 +2642,131 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     }
   }
 
+  String _headerLabel() {
+    final raw = session.lessonHeaderLabel;
+    if (raw.startsWith('aula_item_of:')) {
+      final rest = raw.substring('aula_item_of:'.length);
+      final parts = rest.split(':');
+      final itemOf = parts.isNotEmpty ? parts[0] : '?';
+      final layerKey = parts.length > 1 ? parts[1] : '';
+      return 'Item $itemOf · ${_layerName(layerKey)}';
+    }
+    if (raw.startsWith('aula_review_review:')) {
+      final inner = raw.substring('aula_review_review:'.length);
+      return 'Revisão · ${_layerName(inner)}';
+    }
+    if (raw.isEmpty) return 'Item ${session.aulaStep + 1} · Camada 1';
+    return _layerName(raw);
+  }
+
+  String _layerName(String key) => switch (key) {
+        'aula_layer_1' || 'aula_layer_label_1' => 'Camada 1',
+        'aula_layer_2' || 'aula_layer_label_2' => 'Camada 2',
+        'aula_layer_3' || 'aula_layer_label_3' => 'Camada 3',
+        'aula_review_lbl_1' => 'Revisão C1',
+        'aula_review_lbl_2' => 'Revisão C2',
+        'aula_review_lbl_3' => 'Revisão C3',
+        _ => key,
+      };
+
+  String _nextLabel() {
+    final raw = session.nextStepLabel;
+    return switch (raw) {
+      'aula_layer_label_1' => 'Ir para Camada 1',
+      'aula_layer_label_2' => 'Ir para Camada 2',
+      'aula_layer_label_3' => 'Ir para Camada 3',
+      'aula_next' => 'Próximo',
+      'aula_next_item' => 'Próximo item',
+      'aula_consolidate' => 'Consolidar',
+      _ when raw.isEmpty => 'Avançar',
+      _ => raw,
+    };
+  }
+
+  String _feedbackMsg() {
+    final phase = session.classroomPhase;
+    if (phase.type != ClassroomPhaseType.concluido) return '';
+    final correct = phase.wasCorrect ?? false;
+    final signal = phase.signal ?? DecisionSignal.three;
+    if (correct && signal == DecisionSignal.one) return 'Excelente! Resposta correta e sólida.';
+    if (correct && signal == DecisionSignal.two) return 'Correto, mas SIM marcou revisão leve.';
+    if (signal == DecisionSignal.three) return 'SIM abriu recuperação para reforçar este ponto.';
+    return 'Errou. SIM refaz este ponto.';
+  }
+
+  Widget _buildDoneScreen(String topic) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            AulaTopBar(session: session),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: SimCard(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 48, color: simDark),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Sessão concluída!',
+                          style: TextStyle(
+                            color: simDark,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          topic,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: simMuted, fontSize: 15, height: 1.4),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Sólido: ${session.signalsSolid}  ·  Entendeu: ${session.signalsUnderstood}  ·  Frágil: ${session.signalsFragile}',
+                          style: const TextStyle(color: simMuted, fontSize: 13, fontFamily: 'monospace'),
+                        ),
+                        const SizedBox(height: 20),
+                        PrimaryWideButton(label: 'Voltar ao início', onTap: session.goPortal),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final topic =
-        session.freeText.trim().isEmpty ? 'Aula SIM' : session.freeText.trim();
+    final topic = session.freeText.trim().isEmpty ? 'Aula SIM' : session.freeText.trim();
     final opts = session.t02Options;
+    final phase = session.classroomPhase;
+    final isDone = session.lessonIsDone;
+    final locked = session.answersLocked;
+    final isConcluido = phase.type == ClassroomPhaseType.concluido;
+
+    if (isDone) return _buildDoneScreen(topic);
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             AulaTopBar(session: session),
+            ClipRRect(
+              child: LinearProgressIndicator(
+                value: session.lessonProgress > 0 ? session.lessonProgress / 100 : null,
+                minHeight: 3,
+                backgroundColor: simLight,
+                color: simDark,
+              ),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -2653,7 +2777,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Item ${session.aulaStep + 1} · Camada 1',
+                            _headerLabel(),
                             style: const TextStyle(
                               color: simMuted,
                               fontSize: 12,
@@ -2675,8 +2799,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             const Center(
                               child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 20),
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                             const Text(
@@ -2687,8 +2810,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ] else if (session.t02Error != null) ...[
                             Text(
                               session.t02Error!,
-                              style: const TextStyle(
-                                  color: Colors.red, fontSize: 14),
+                              style: const TextStyle(color: Colors.red, fontSize: 14),
                             ),
                             const SizedBox(height: 10),
                             GestureDetector(
@@ -2750,7 +2872,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 8),
                           Text(
                             session.t02Question ??
-                                'Qual alternativa mostra que você entendeu este primeiro ponto?',
+                                'Qual alternativa mostra que você entendeu este ponto?',
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 15,
@@ -2760,26 +2882,53 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 12),
                           AnswerButton(
                             label: 'A',
-                            text: opts?['A'] ??
-                                'Consigo explicar com minhas palavras.',
+                            text: opts?['A'] ?? 'Consigo explicar com minhas palavras.',
                             active: session.selectedAnswer == 'A',
-                            onTap: () => session.chooseAulaAnswer('A'),
+                            locked: locked,
+                            correct: isConcluido && session.t02CorrectAnswer == 'A',
+                            onTap: locked ? null : () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B',
-                            text: opts?['B'] ??
-                                'Entendi uma parte, mas preciso revisar.',
+                            text: opts?['B'] ?? 'Entendi uma parte, mas preciso revisar.',
                             active: session.selectedAnswer == 'B',
-                            onTap: () => session.chooseAulaAnswer('B'),
+                            locked: locked,
+                            correct: isConcluido && session.t02CorrectAnswer == 'B',
+                            onTap: locked ? null : () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C',
-                            text: opts?['C'] ??
-                                'Ainda estou perdido e preciso de recuperação.',
+                            text: opts?['C'] ?? 'Ainda estou perdido e preciso de recuperação.',
                             active: session.selectedAnswer == 'C',
-                            onTap: () => session.chooseAulaAnswer('C'),
+                            locked: locked,
+                            correct: isConcluido && session.t02CorrectAnswer == 'C',
+                            onTap: locked ? null : () => session.chooseAulaAnswer('C'),
                           ),
-                          if (session.aulaMessage.isNotEmpty) ...[
+                          if (isConcluido) ...[
+                            const SizedBox(height: 14),
+                            _FeedbackBanner(
+                              message: _feedbackMsg(),
+                              wasCorrect: phase.wasCorrect ?? false,
+                            ),
+                            if (session.t02WhyCorrect != null || session.t02WhyWrong != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                (phase.wasCorrect ?? false)
+                                    ? session.t02WhyCorrect?.toString() ?? ''
+                                    : session.t02WhyWrong?.toString() ?? '',
+                                style: const TextStyle(
+                                  color: simMuted,
+                                  fontSize: 13.5,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            PrimaryWideButton(
+                              label: _nextLabel(),
+                              onTap: session.advanceAula,
+                            ),
+                          ] else if (session.aulaMessage.isNotEmpty && !locked) ...[
                             const SizedBox(height: 14),
                             Text(
                               session.aulaMessage,
@@ -2790,28 +2939,23 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            PrimaryWideButton(
-                              label: 'Avançar',
-                              onTap: session.advanceAula,
-                            ),
+                            PrimaryWideButton(label: 'Avançar', onTap: session.advanceAula),
                           ],
                         ],
                       ),
                     ),
-                    if (session.selectedAnswer == 'B') ...[
+                    if (isConcluido && phase.signal == DecisionSignal.two) ...[
                       const SizedBox(height: 14),
                       const AuxRoomCard(
                         title: 'Revisão',
-                        body:
-                            'SIM marcou este ponto para revisão antes de seguir. A revisão nasce da verdade pedagógica registrada no estado.',
+                        body: 'SIM marcou este ponto para revisão antes de seguir.',
                       ),
                     ],
-                    if (session.selectedAnswer == 'C') ...[
+                    if (isConcluido && phase.signal == DecisionSignal.three) ...[
                       const SizedBox(height: 14),
                       const AuxRoomCard(
                         title: 'Recuperação',
-                        body:
-                            'SIM abriu recuperação para reconstruir o ponto que ainda travou. A recuperação preserva o caminho do aluno.',
+                        body: 'SIM abriu recuperação para reconstruir o ponto que ainda travou.',
                       ),
                     ],
                     const SizedBox(height: 14),
@@ -2830,7 +2974,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Sala de dúvida aberta. No app real, esta pergunta chama o T02 com o adendo de dúvida no servidor.',
+                              'Sala de dúvida aberta.',
                               style: TextStyle(
                                 color: simMuted,
                                 fontSize: 14,
@@ -2845,6 +2989,37 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackBanner extends StatelessWidget {
+  const _FeedbackBanner({required this.message, required this.wasCorrect});
+
+  final String message;
+  final bool wasCorrect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: wasCorrect ? const Color(0xFFECFDF5) : const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: wasCorrect ? const Color(0xFF6EE7B7) : const Color(0xFFFBBF24),
+        ),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(
+          color: wasCorrect ? const Color(0xFF065F46) : const Color(0xFF92400E),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          height: 1.4,
         ),
       ),
     );
@@ -3847,37 +4022,54 @@ class AnswerButton extends StatelessWidget {
     required this.label,
     required this.text,
     required this.active,
-    required this.onTap,
+    this.locked = false,
+    this.correct = false,
+    this.onTap,
     super.key,
   });
 
   final String label;
   final String text;
   final bool active;
-  final VoidCallback onTap;
+  final bool locked;
+  final bool correct;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    Color borderColor = active ? simDark : simBorder;
+    Color bgColor = Colors.white;
+    if (correct) {
+      bgColor = const Color(0xFFECFDF5);
+      borderColor = const Color(0xFF34D399);
+    } else if (active && locked) {
+      bgColor = const Color(0xFFFEF2F2);
+      borderColor = const Color(0xFFF87171);
+    } else if (active) {
+      bgColor = simLight;
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: active ? simLight : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: active ? simDark : simBorder),
-          ),
-          child: Text(
-            '$label. $text',
-            style: const TextStyle(
-              color: simDark,
-              fontSize: 14.5,
-              height: 1.35,
-              fontWeight: FontWeight.w600,
+        child: Opacity(
+          opacity: locked && !active && !correct ? 0.55 : 1.0,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor),
+            ),
+            child: Text(
+              '$label. $text',
+              style: const TextStyle(
+                color: simDark,
+                fontSize: 14.5,
+                height: 1.35,
+              ),
             ),
           ),
         ),
