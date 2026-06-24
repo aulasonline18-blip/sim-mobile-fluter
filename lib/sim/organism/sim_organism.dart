@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../billing/account_deletion.dart';
 import '../billing/credits_route_controller.dart';
 import '../billing/payment_return_store.dart';
@@ -11,10 +13,13 @@ import '../cloud/cloud_queue.dart';
 import '../cloud/lesson_cloud_bootstrap.dart';
 import '../cloud/lesson_curriculum_sync_engine.dart';
 import '../cloud/supabase_client_contract.dart';
+import '../cloud/supabase_flutter_session_provider.dart';
 import '../cloud/student_learning_sync.dart';
 import '../experience/student_experience_engine.dart';
 import '../experience/student_experience_t00_adapter.dart';
 import '../experience/student_experience_t02_adapter.dart';
+import '../external_ai/sim_ai_server_config.dart';
+import '../external_ai/sim_server_ai_clients.dart';
 import '../lesson/dopamine_ready_window_engine.dart';
 import '../lesson/lesson_event_bus.dart';
 import '../lesson/lesson_material_cache.dart';
@@ -37,7 +42,7 @@ import 'sim_organism_health.dart';
 import 'sim_organism_router.dart';
 
 class SimOrganism {
-  SimOrganism._({
+  SimOrganism._({{
     required this.lessonLocalId,
     required this.stateService,
     required this.router,
@@ -95,12 +100,15 @@ class SimOrganism {
     return stateService.ensure(lessonLocalId: lessonLocalId);
   }
 
-  static SimOrganism laboratory({String lessonLocalId = 'lab-live-entry'}) {
-    final stateService = StudentLearningStateService();
-    stateService.ensure(lessonLocalId: lessonLocalId, userId: 'lab-user');
-
-    const t02Client = LaboratoryT02Client();
-    const t00Client = LaboratoryT00Client();
+  static SimOrganism _build({
+    required String lessonLocalId,
+    required T02LessonClient t02Client,
+    required T00BootstrapClient t00Client,
+    required GeneratedAudioClient audioClient,
+    required LessonImageClient imageClient,
+    required SupabaseSessionProvider sessionProvider,
+    required StudentLearningStateService stateService,
+  }) {
     final cache = LessonMaterialCache();
     final eventBus = LessonEventBus();
     final orchestrator = LessonOrchestrator(
@@ -167,14 +175,11 @@ class SimOrganism {
       ),
     );
 
-    final cloudFunctions = LaboratoryStudentStateCloudFunctions();
     final cloudQueue = CloudQueue(
       storage: MemoryCloudQueueStorage(),
       stateService: stateService,
-      sessionProvider: const LaboratorySessionProvider(
-        session: SupabaseSession(accessToken: 'lab-token', userId: 'lab-user'),
-      ),
-      cloudFunctions: cloudFunctions,
+      sessionProvider: sessionProvider,
+      cloudFunctions: LaboratoryStudentStateCloudFunctions(),
     );
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
@@ -184,8 +189,9 @@ class SimOrganism {
     final audioCore = AudioCore(
       preference: audioPreference,
       playback: NoopAudioPlaybackAdapter(),
-      generatedAudioClient: const LaboratoryGeneratedAudioClient(),
-      stableLangProvider: () => stateService.read(lessonLocalId)?.profile.stableLang ?? '',
+      generatedAudioClient: audioClient,
+      stableLangProvider: () =>
+          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
     );
     final mediaService = StudentLessonMediaService(
       audioCore: audioCore,
@@ -197,9 +203,7 @@ class SimOrganism {
       mediaService: mediaService,
       preference: audioPreference,
     );
-    final visualPipeline = LessonVisualPipeline(
-      imageClient: const LaboratoryLessonImageClient(),
-    );
+    final visualPipeline = LessonVisualPipeline(imageClient: imageClient);
 
     final returnStore = PaymentReturnStore();
     final creditsController = CreditsRouteController(
@@ -237,6 +241,50 @@ class SimOrganism {
       visualPipeline: visualPipeline,
       creditsController: creditsController,
       accountDeletionController: accountDeletionController,
+    );
+  }
+
+  static SimOrganism laboratory({String lessonLocalId = 'lab-live-entry'}) {
+    final stateService = StudentLearningStateService();
+    stateService.ensure(lessonLocalId: lessonLocalId, userId: 'lab-user');
+    return _build(
+      lessonLocalId: lessonLocalId,
+      t02Client: const LaboratoryT02Client(),
+      t00Client: const LaboratoryT00Client(),
+      audioClient: const LaboratoryGeneratedAudioClient(),
+      imageClient: const LaboratoryLessonImageClient(),
+      sessionProvider: const LaboratorySessionProvider(
+        session: SupabaseSession(accessToken: 'lab-token', userId: 'lab-user'),
+      ),
+      stateService: stateService,
+    );
+  }
+
+  static SimOrganism production({String lessonLocalId = 'live-entry'}) {
+    Future<String?> tokenProvider() async =>
+        Supabase.instance.client.auth.currentSession?.accessToken;
+
+    final vmConfig = SimAiServerConfig(
+      baseUrl: 'http://167.179.109.137:3000',
+      accessTokenProvider: tokenProvider,
+      t02Path: '/api/complete-lesson',
+    );
+    final lovableConfig = SimAiServerConfig(
+      baseUrl: 'https://gemini-aid-pal.lovable.app',
+      accessTokenProvider: tokenProvider,
+    );
+
+    final stateService = StudentLearningStateService();
+    stateService.ensure(lessonLocalId: lessonLocalId);
+
+    return _build(
+      lessonLocalId: lessonLocalId,
+      t02Client: SimServerT02Client(config: vmConfig),
+      t00Client: SimServerT00Client(config: lovableConfig),
+      audioClient: SimServerGeneratedAudioClient(config: lovableConfig),
+      imageClient: SimServerLessonImageClient(config: lovableConfig),
+      sessionProvider: const SupabaseFlutterSessionProvider(),
+      stateService: stateService,
     );
   }
 }
