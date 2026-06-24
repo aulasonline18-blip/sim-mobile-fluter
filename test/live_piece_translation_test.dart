@@ -60,8 +60,10 @@ void main() {
       expect(resolution.curriculumMatchesObjective, isTrue);
       expect(resolution.destination, '/cyber/aula');
       expect(resolution.needsLessonGeneration, isFalse);
-      expect(resolution.readySource,
-          ExistingStudyReadySource.readyLessonMaterials);
+      expect(
+        resolution.readySource,
+        ExistingStudyReadySource.readyLessonMaterials,
+      );
       expect(resolution.initialItemIndex, 0);
       expect(resolution.initialMarker, 'M1');
     });
