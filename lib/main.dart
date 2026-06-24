@@ -26,7 +26,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: simSupabaseUrl,
-    publishableKey: simSupabaseAnonKey,
+    anonKey: simSupabaseAnonKey,
   );
   runApp(const SimMobileApp());
 }
