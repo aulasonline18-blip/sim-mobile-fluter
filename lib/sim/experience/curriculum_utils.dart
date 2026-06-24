@@ -5,11 +5,43 @@ String itemText(CurriculumItem item) {
 }
 
 String normalizeStudyKey(Object? value) {
-  return value
+  const accents = {
+    'á': 'a',
+    'à': 'a',
+    'ã': 'a',
+    'â': 'a',
+    'ä': 'a',
+    'é': 'e',
+    'è': 'e',
+    'ê': 'e',
+    'ë': 'e',
+    'í': 'i',
+    'ì': 'i',
+    'î': 'i',
+    'ï': 'i',
+    'ó': 'o',
+    'ò': 'o',
+    'õ': 'o',
+    'ô': 'o',
+    'ö': 'o',
+    'ú': 'u',
+    'ù': 'u',
+    'û': 'u',
+    'ü': 'u',
+    'ç': 'c',
+    'ñ': 'n',
+  };
+  final lower = value.toString().trim().toLowerCase();
+  final buffer = StringBuffer();
+  for (final rune in lower.runes) {
+    final char = String.fromCharCode(rune);
+    buffer.write(accents[char] ?? char);
+  }
+  return buffer
       .toString()
-      .trim()
-      .toLowerCase()
-      .replaceAll(RegExp(r'\s+'), ' ');
+      .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 }
 
 List<CurriculumItem> normalizeCurriculumItems(Object? raw) {
@@ -52,7 +84,8 @@ List<CurriculumItem> normalizeCurriculumItems(Object? raw) {
   return out;
 }
 
-String _firstText(Object? a, Object? b, Object? c, Object? d, Object? e, Object? f) {
+String _firstText(
+    Object? a, Object? b, Object? c, Object? d, Object? e, Object? f) {
   for (final value in [a, b, c, d, e, f]) {
     if (value is String && value.trim().isNotEmpty) return value.trim();
   }

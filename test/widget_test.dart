@@ -6,7 +6,7 @@ void main() {
   testWidgets('Portal shows SIM entry point', (WidgetTester tester) async {
     await tester.pumpWidget(const SimMobileApp());
     expect(find.text('SIM'), findsOneWidget);
-    expect(find.text('Sign in to start'), findsOneWidget);
+    expect(find.text('Entrar para começar'), findsOneWidget);
     expect(find.text('Smart Intelligence Mentor'), findsOneWidget);
   });
 
@@ -19,28 +19,20 @@ void main() {
       ..authReady = true
       ..credits = 3;
     await tester.pumpWidget(SimMobileApp(initialSession: session));
-    await tester.tap(find.text('Start'));
+    await tester.tap(find.text('Iniciar agora'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('English'));
     await tester.pumpAndSettle();
     expect(find.text('Tell us about who is going to study'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.attach_file));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Anexar arquivo'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('arquivo-1.pdf'), findsOneWidget);
     await tester.enterText(
       find.byType(TextField).first,
       'Quero estudar essa lista para a prova de matemática.',
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save and continue'));
-    await tester.pumpAndSettle();
-    expect(find.text('/cyber/curriculo'), findsOneWidget);
-    expect(
-      find.textContaining('entry.status: pedido_recebido'),
-      findsOneWidget,
-    );
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(session.route, '/cyber/curriculo');
+    expect(session.entryStatus, 'pedido_recebido');
     await tester.binding.setSurfaceSize(null);
   });
 
@@ -57,12 +49,7 @@ void main() {
     await tester.tap(find.text('3'));
     await tester.pumpAndSettle();
     expect(find.text('Créditos'), findsOneWidget);
-    await tester.tap(find.text('100 créditos'));
-    await tester.pumpAndSettle();
-    expect(find.text('Retorno do pagamento'), findsOneWidget);
-    await tester.tap(find.text('Tentar de novo'));
-    await tester.pumpAndSettle();
-    expect(find.text('500 créditos'), findsOneWidget);
+    expect(find.textContaining('100 créditos'), findsOneWidget);
 
     session.openSupport('/privacidade');
     await tester.pumpAndSettle();

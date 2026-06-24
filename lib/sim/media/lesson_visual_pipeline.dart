@@ -1,5 +1,6 @@
 import 'blueprint_prompt.dart';
 import 'lesson_visual_models.dart';
+import 'math_templates/math_templates.dart' as math_templates;
 
 abstract interface class LessonImageClient {
   Future<String?> generateLessonImage({
@@ -32,8 +33,8 @@ class LessonVisualTrigger {
           value['teacherPrompt']?.toString() ??
           value['prompt']?.toString(),
       needsImage: needs,
-      renderStrategy:
-          value['render_strategy']?.toString() ?? value['renderStrategy']?.toString(),
+      renderStrategy: value['render_strategy']?.toString() ??
+          value['renderStrategy']?.toString(),
       mathTemplate: value['math_template'],
       colorLegend: colorLegendFromJson(value['color_legend']),
     );
@@ -46,9 +47,7 @@ class LessonVisualPipeline {
   final LessonImageClient imageClient;
 
   Future<String?> renderMathTemplateVisual(Object? visualTrigger) async {
-    final trigger = LessonVisualTrigger.fromJson(visualTrigger);
-    if (trigger.mathTemplate == null) return null;
-    return null;
+    return math_templates.tryRenderMathTemplate(visualTrigger);
   }
 
   Future<String?> fetchPaidLessonImage(String prompt, String lessonKey) async {

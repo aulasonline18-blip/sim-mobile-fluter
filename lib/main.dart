@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'sim/billing/credits_functions.dart';
 import 'sim/billing/payments_functions.dart';
 import 'sim/billing/sim_pricing.dart';
 import 'sim/billing/sim_server_billing_clients.dart';
@@ -13,11 +12,11 @@ import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
-const simSupabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
+const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
+const simSupabaseAnonKey = 'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
 const simServerBaseUrl = 'http://167.179.109.137:3000';
 const simLovableBaseUrl = 'https://gemini-aid-pal.lovable.app';
@@ -26,7 +25,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: simSupabaseUrl,
-    anonKey: simSupabaseAnonKey,
+    publishableKey: simSupabaseAnonKey,
   );
   runApp(const SimMobileApp());
 }
@@ -113,6 +112,7 @@ class LabSession extends ChangeNotifier {
     return _attachmentClientInstance ??=
         SimServerAttachmentClient(config: _getServerConfig());
   }
+
   String? selectedLanguageCode;
   String? stableLang;
   String otherLanguage = '';
@@ -149,12 +149,6 @@ class LabSession extends ChangeNotifier {
   String? t02CorrectAnswer;
   String? t02WhyCorrect;
   dynamic t02WhyWrong;
-
-  // Parent panel signals
-  int signalsSolid = 0;
-  int signalsUnderstood = 0;
-  int signalsFragile = 0;
-  int totalAulaSteps = 10;
 
   void goPortal() {
     route = '/';
@@ -196,8 +190,7 @@ class LabSession extends ChangeNotifier {
     authed = user != null;
     userId = user?.id;
     userEmail = user?.email;
-    userName =
-        user?.userMetadata?['full_name']?.toString() ??
+    userName = user?.userMetadata?['full_name']?.toString() ??
         user?.userMetadata?['name']?.toString();
     if (authed) {
       if (route == '/login') route = safeReturnTo(returnTo);
@@ -303,9 +296,8 @@ class LabSession extends ChangeNotifier {
         password: password,
         emailRedirectTo: simAuthRedirectUrl,
         data: {
-          'full_name': name.trim().isEmpty
-              ? email.split('@').first
-              : name.trim(),
+          'full_name':
+              name.trim().isEmpty ? email.split('@').first : name.trim(),
         },
       );
     } on AuthException catch (error) {
@@ -353,9 +345,8 @@ class LabSession extends ChangeNotifier {
   }
 
   void setFreeText(String value) {
-    freeText = value.length > maxFreeText
-        ? value.substring(0, maxFreeText)
-        : value;
+    freeText =
+        value.length > maxFreeText ? value.substring(0, maxFreeText) : value;
     notifyListeners();
   }
 
@@ -384,7 +375,7 @@ class LabSession extends ChangeNotifier {
         final file = result.files.first;
         bytes = file.bytes?.toList();
         name = file.name;
-        final ext = name!.split('.').last.toLowerCase();
+        final ext = name.split('.').last.toLowerCase();
         contentType = switch (ext) {
           'png' => 'image/png',
           'gif' => 'image/gif',
@@ -394,17 +385,21 @@ class LabSession extends ChangeNotifier {
       } else {
         final result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
-          allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'csv'],
+          allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'csv', 'rtf'],
           withData: true,
         );
         if (result == null || result.files.isEmpty) return;
         final file = result.files.first;
         bytes = file.bytes?.toList();
         name = file.name;
-        final ext = name!.split('.').last.toLowerCase();
+        final ext = name.split('.').last.toLowerCase();
         contentType = switch (ext) {
           'txt' => 'text/plain',
           'csv' => 'text/csv',
+          'rtf' => 'application/rtf',
+          'doc' => 'application/msword',
+          'docx' =>
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           _ => 'application/pdf',
         };
       }
@@ -414,16 +409,48 @@ class LabSession extends ChangeNotifier {
 
     if (bytes == null || bytes.isEmpty) return;
 
+    if (contentType.startsWith('audio/')) {
+      attachments = [
+        ...attachments,
+        AttachmentDraft(
+          id: draftId,
+          name: name,
+          type: contentType,
+          size: bytes.length,
+          status: 'error',
+          error: audioNotSupportedMessage,
+        ),
+      ];
+      notifyListeners();
+      return;
+    }
+
+    if (contentType.startsWith('video/')) {
+      attachments = [
+        ...attachments,
+        AttachmentDraft(
+          id: draftId,
+          name: name,
+          type: contentType,
+          size: bytes.length,
+          status: 'error',
+          error: videoNotSupportedMessage,
+        ),
+      ];
+      notifyListeners();
+      return;
+    }
+
     if (bytes.length > maxAttachmentBytes) {
       attachments = [
         ...attachments,
         AttachmentDraft(
           id: draftId,
-          name: name!,
+          name: name,
           type: contentType,
           size: bytes.length,
           status: 'error',
-          error: 'Arquivo maior que 10MB.',
+          error: 'Arquivo maior que 10MB. Escolha um arquivo menor.',
         ),
       ];
       notifyListeners();
@@ -434,7 +461,7 @@ class LabSession extends ChangeNotifier {
       ...attachments,
       AttachmentDraft(
         id: draftId,
-        name: name!,
+        name: name,
         type: contentType,
         size: bytes.length,
         status: 'uploading',
@@ -443,9 +470,24 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
 
     try {
+      attachments = [
+        for (final a in attachments)
+          if (a.id == draftId)
+            AttachmentDraft(
+              id: a.id,
+              name: a.name,
+              type: a.type,
+              size: a.size,
+              status: 'processing',
+            )
+          else
+            a,
+      ];
+      notifyListeners();
+
       final processed = await _getAttachmentClient().processAttachment(
         SimAttachmentFile(
-          name: name!,
+          name: name,
           contentType: contentType,
           bytes: bytes,
         ),
@@ -462,7 +504,9 @@ class LabSession extends ChangeNotifier {
               status: ok ? 'ready' : 'error',
               extractedText: processed.extractedText,
               method: processed.method,
-              error: ok ? null : 'Conteúdo insuficiente.',
+              error: ok
+                  ? null
+                  : 'Não consegui ler esse anexo. Tente tirar uma foto mais nítida ou descrever em texto.',
             )
           else
             a,
@@ -471,8 +515,8 @@ class LabSession extends ChangeNotifier {
       final msg = e.toString().contains('AUDIO_NOT_SUPPORTED')
           ? audioNotSupportedMessage
           : e.toString().contains('VIDEO_NOT_SUPPORTED')
-          ? videoNotSupportedMessage
-          : 'Erro ao processar anexo. Tente novamente.';
+              ? videoNotSupportedMessage
+              : 'Não consegui ler esse anexo. Tente tirar uma foto mais nítida ou descrever em texto.';
       attachments = [
         for (final a in attachments)
           if (a.id == draftId)
@@ -506,14 +550,16 @@ class LabSession extends ChangeNotifier {
         ? freeTrim.substring(0, maxFreeText)
         : freeTrim;
     attachmentsText = _buildAttachmentsText();
-    final language = stableLang ?? 'English';
+    final language = stableLang ??
+        (otherLanguage.trim().isNotEmpty ? otherLanguage.trim() : null) ??
+        selectedLanguageCode ??
+        'English';
     lessonLocalId = _deriveLessonLocalId(
       clipped,
       selectedLanguageCode ?? language,
     );
-    studentProfileNotes = attachmentsText.isEmpty
-        ? clipped
-        : '$clipped\n\n$attachmentsText';
+    studentProfileNotes =
+        attachmentsText.isEmpty ? clipped : '$clipped\n\n$attachmentsText';
     freeText = clipped;
     entryStatus = 'pedido_recebido';
     entryError = null;
@@ -577,8 +623,8 @@ class LabSession extends ChangeNotifier {
     aulaMessage = letter == 'A'
         ? 'Resposta registrada. SIM preparou o próximo passo.'
         : letter == 'B'
-        ? 'Resposta registrada. SIM marcou revisão.'
-        : 'Resposta registrada. SIM abriu caminho de recuperação.';
+            ? 'Resposta registrada. SIM marcou revisão.'
+            : 'Resposta registrada. SIM abriu caminho de recuperação.';
     notifyListeners();
   }
 
@@ -664,7 +710,8 @@ class LabSession extends ChangeNotifier {
         'lesson_mode': 'session',
         'history': [],
         'preferred_name': preferredName.isNotEmpty ? preferredName : null,
-        'student_profile_notes': studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+        'student_profile_notes':
+            studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
       });
       req.write(payload);
       final res = await req.close().timeout(const Duration(seconds: 45));
@@ -691,7 +738,8 @@ class LabSession extends ChangeNotifier {
       t02Loading = false;
     } catch (e) {
       t02Loading = false;
-      t02Error = 'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
+      t02Error =
+          'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
     }
     notifyListeners();
   }
@@ -719,15 +767,13 @@ class LabSession extends ChangeNotifier {
           a.status == 'ready' &&
           (a.extractedText?.trim().length ?? 0) >= minExtractedChars,
     );
-    return ready
-        .map((a) {
-          final text = a.extractedText!.trim();
-          final clipped = text.length > 8000
-              ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
-              : text;
-          return '--- Anexo: ${a.name} ---\n$clipped';
-        })
-        .join('\n\n');
+    return ready.map((a) {
+      final text = a.extractedText!.trim();
+      final clipped = text.length > 8000
+          ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
+          : text;
+      return '--- Anexo: ${a.name} ---\n$clipped';
+    }).join('\n\n');
   }
 }
 
@@ -775,7 +821,17 @@ class _SimMobileAppState extends State<SimMobileApp> {
     super.dispose();
   }
 
-  void _onSessionChanged() => setState(() {});
+  void _onSessionChanged() {
+    if (!mounted) return;
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1136,7 +1192,9 @@ class PortalHeroCard extends StatelessWidget {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          session.authed ? 'Iniciar agora' : 'Entrar para começar',
+                          session.authed
+                              ? 'Iniciar agora'
+                              : 'Entrar para começar',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -1234,7 +1292,6 @@ class HelpCard extends StatelessWidget {
               ),
             ],
           ),
-
         ],
       ),
     );
@@ -1512,8 +1569,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 loading
                                     ? 'Aguarde...'
                                     : signup
-                                    ? 'Criar conta e ganhar 3 aulas grátis'
-                                    : 'Entrar',
+                                        ? 'Criar conta e ganhar 3 aulas grátis'
+                                        : 'Entrar',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: simDark,
@@ -1603,7 +1660,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-
                 ],
               ),
             ),
@@ -1824,8 +1880,8 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
   );
 
   bool get waitingAttachment => widget.session.attachments.any(
-    (a) => a.status == 'uploading' || a.status == 'processing',
-  );
+        (a) => a.status == 'uploading' || a.status == 'processing',
+      );
   bool get objectiveTooShort => widget.session.freeText.trim().length < 10;
   bool get canContinue => !sending && !waitingAttachment && !objectiveTooShort;
 
@@ -1837,6 +1893,9 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
   }
 
   void showObjectiveRequired() {
+    debugPrint(
+      '[OBJECTIVE_REQUIRED] freeTextChars=${widget.session.freeText.trim().length} attachmentsCount=${widget.session.attachments.length}',
+    );
     setState(() {
       error = widget.session.attachments.isNotEmpty
           ? objectiveRequiredWithAttachmentMessage
@@ -2141,10 +2200,10 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                         sending
                                             ? 'Reading…'
                                             : waitingAttachment
-                                            ? 'Aguardando leitura do anexo...'
-                                            : objectiveTooShort
-                                            ? 'Escreva o objetivo primeiro'
-                                            : 'Save and continue',
+                                                ? 'Aguardando leitura do anexo...'
+                                                : objectiveTooShort
+                                                    ? 'Escreva o objetivo primeiro'
+                                                    : 'Save and continue',
                                         style: const TextStyle(
                                           color: simDark,
                                           fontSize: 18,
@@ -2159,7 +2218,6 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                           ),
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -2217,14 +2275,14 @@ class AttachmentChip extends StatelessWidget {
     final icon = attachment.type.startsWith('image/')
         ? '📷'
         : attachment.type == 'application/pdf'
-        ? '📄'
-        : '📝';
+            ? '📄'
+            : '📝';
     final suffix =
         attachment.status == 'uploading' || attachment.status == 'processing'
-        ? ' lendo...'
-        : attachment.status == 'error'
-        ? ' erro'
-        : '';
+            ? ' lendo...'
+            : attachment.status == 'error'
+                ? ' erro'
+                : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
@@ -2235,9 +2293,28 @@ class AttachmentChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$icon ${attachment.name}$suffix',
-            style: const TextStyle(color: simDark, fontSize: 12),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$icon ${attachment.name}$suffix',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: simDark, fontSize: 12),
+                ),
+                if (attachment.status == 'error' &&
+                    attachment.error != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    attachment.error!,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: simMuted, fontSize: 11),
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(width: 4),
           InkWell(
@@ -2507,9 +2584,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final topic = session.freeText.trim().isEmpty
-        ? 'Aula SIM'
-        : session.freeText.trim();
+    final topic =
+        session.freeText.trim().isEmpty ? 'Aula SIM' : session.freeText.trim();
     final opts = session.t02Options;
 
     return Scaffold(
@@ -2549,7 +2625,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             const Center(
                               child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 20),
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                             const Text(
@@ -2560,7 +2637,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ] else if (session.t02Error != null) ...[
                             Text(
                               session.t02Error!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14),
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 14),
                             ),
                             const SizedBox(height: 10),
                             GestureDetector(
@@ -2621,7 +2699,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            session.t02Question ?? 'Qual alternativa mostra que você entendeu este primeiro ponto?',
+                            session.t02Question ??
+                                'Qual alternativa mostra que você entendeu este primeiro ponto?',
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 15,
@@ -2631,19 +2710,22 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 12),
                           AnswerButton(
                             label: 'A',
-                            text: opts?['A'] ?? 'Consigo explicar com minhas palavras.',
+                            text: opts?['A'] ??
+                                'Consigo explicar com minhas palavras.',
                             active: session.selectedAnswer == 'A',
                             onTap: () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B',
-                            text: opts?['B'] ?? 'Entendi uma parte, mas preciso revisar.',
+                            text: opts?['B'] ??
+                                'Entendi uma parte, mas preciso revisar.',
                             active: session.selectedAnswer == 'B',
                             onTap: () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C',
-                            text: opts?['C'] ?? 'Ainda estou perdido e preciso de recuperação.',
+                            text: opts?['C'] ??
+                                'Ainda estou perdido e preciso de recuperação.',
                             active: session.selectedAnswer == 'C',
                             onTap: () => session.chooseAulaAnswer('C'),
                           ),
@@ -2837,8 +2919,8 @@ class LessonImagePanel extends StatelessWidget {
             loading
                 ? 'Gerando imagem da aula...'
                 : ready
-                ? 'Imagem da aula pronta'
-                : 'Imagem da aula',
+                    ? 'Imagem da aula pronta'
+                    : 'Imagem da aula',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: simDark,
@@ -3240,31 +3322,36 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Painel do Pai',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.3,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Painel do Pai',
+                          style: TextStyle(
+                            color: simDark,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.3,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Acompanhe o progresso sem interferir',
-                        style: TextStyle(color: simMuted, fontSize: 13),
-                      ),
-                    ],
+                        SizedBox(height: 2),
+                        Text(
+                          'Acompanhe o progresso sem interferir',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: simMuted, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   OutlinedButton(
                     onPressed: s.goPortal,
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: simBorder),
                       foregroundColor: simDark,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -3314,7 +3401,8 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                         children: [
                           Text(
                             'Item ${s.aulaStep} de ${s.totalAulaSteps}',
-                            style: const TextStyle(color: simMuted, fontSize: 14),
+                            style:
+                                const TextStyle(color: simMuted, fontSize: 14),
                           ),
                           Text(
                             '${s.totalAulaSteps > 0 ? (s.aulaStep / s.totalAulaSteps * 100).round() : 0}%',
@@ -3417,7 +3505,8 @@ class _PaiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: simBorder),
         boxShadow: const [
-          BoxShadow(color: Color(0x0E111827), blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(
+              color: Color(0x0E111827), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -3441,7 +3530,8 @@ class _PaiCard extends StatelessWidget {
 }
 
 class _PaiStat extends StatelessWidget {
-  const _PaiStat({required this.label, required this.value, required this.hint});
+  const _PaiStat(
+      {required this.label, required this.value, required this.hint});
 
   final String label;
   final int value;
