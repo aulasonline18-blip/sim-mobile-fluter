@@ -135,6 +135,15 @@ class LabSession extends ChangeNotifier {
   String? entryError;
   bool placementStarted = false;
   bool placementDone = false;
+
+  // Placement T02 state
+  String placementStage = 'choice'; // choice | intro | running | result
+  bool placementLoading = false;
+  String? placementError;
+  String? placementQuestion;
+  List<Map<String, dynamic>> placementChoices = []; // [{id, label, correct}]
+  String? placementStartMarker;
+  String? placementMarker;
   int aulaStep = 0;
   String selectedAnswer = '';
   String aulaMessage = '';
@@ -562,18 +571,97 @@ class LabSession extends ChangeNotifier {
 
   void skipPlacement() {
     placementDone = true;
+    placementStage = 'choice';
     route = '/cyber/aula';
     notifyListeners();
   }
 
   void startPlacement() {
     placementStarted = true;
+    placementStage = 'intro';
     notifyListeners();
   }
 
   void finishPlacement() {
     placementDone = true;
+    placementStage = 'choice';
     route = '/cyber/aula';
+    notifyListeners();
+  }
+
+  Future<void> loadPlacementT02() async {
+    if (placementLoading) return;
+    placementLoading = true;
+    placementError = null;
+    notifyListeners();
+    try {
+      final client = _supabaseClientOrNull();
+      final token = client?.auth.currentSession?.accessToken;
+      if (token == null) throw Exception('Não autenticado');
+
+      final uri = Uri.parse('$simServerBaseUrl/api/complete-lesson');
+      final httpClient = HttpClient();
+      final req = await httpClient.postUrl(uri);
+      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Authorization', 'Bearer $token');
+      final payload = jsonEncode({
+        'mode': 'placement',
+        'lessonLocalId': lessonLocalId ?? 'placement',
+        'item': freeText.isNotEmpty ? freeText : 'Conteúdo da aula',
+        'stable_lang': stableLang ?? 'Portuguese',
+        'academic_level': null,
+        'layer': 1,
+        'err_count': 0,
+        'lesson_mode': 'session',
+        'history': [],
+        'preferred_name': preferredName.isNotEmpty ? preferredName : null,
+        'student_profile_notes': studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+        'guidance_for_T02': 'T11_placement_addendum.txt server-side guidance',
+        'target_topic': freeText.trim(),
+      });
+      req.write(payload);
+      final res = await req.close().timeout(const Duration(seconds: 45));
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        throw Exception('Servidor retornou ${res.statusCode}');
+      }
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final c = data['conteudo'] as Map<String, dynamic>?;
+      if (c == null) throw Exception('Resposta sem conteúdo');
+
+      final question = c['question']?.toString() ?? '';
+      final opts = c['options'];
+      final correct = c['correct_answer']?.toString() ?? 'A';
+      if (question.isEmpty || opts == null) throw Exception('Questão inválida');
+
+      placementQuestion = question;
+      placementMarker = 'M-1';
+      placementChoices = (['A', 'B', 'C']).map<Map<String, dynamic>>((letter) {
+        return {
+          'id': 'pre-1-${letter.toLowerCase()}',
+          'label': (opts is Map ? opts[letter]?.toString() : null) ?? '',
+          'correct': letter == correct,
+        };
+      }).toList();
+      placementStage = 'running';
+    } catch (e) {
+      // Fallback: question simples local se T02 falhar
+      placementQuestion = 'Como você avalia seu conhecimento sobre este tema?';
+      placementMarker = 'M-1';
+      placementChoices = [
+        {'id': 'pre-1-a', 'label': 'Domino bem', 'correct': true},
+        {'id': 'pre-1-b', 'label': 'Conheço um pouco', 'correct': false},
+        {'id': 'pre-1-c', 'label': 'Preciso começar do zero', 'correct': false},
+      ];
+      placementStage = 'running';
+    }
+    placementLoading = false;
+    notifyListeners();
+  }
+
+  void answerPlacement(bool correct) {
+    placementStartMarker = correct ? 'M-2' : 'M-1';
+    placementStage = 'result';
     notifyListeners();
   }
 
@@ -2412,83 +2500,191 @@ class PlacementLabScreen extends StatelessWidget {
 
   final LabSession session;
 
+  int get _step {
+    switch (session.placementStage) {
+      case 'intro': return 2;
+      case 'running': return 3;
+      case 'result': return 4;
+      default: return 1;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(step: 5, total: 5, label: 'Nivelamento'),
+            StepHeader(step: _step, total: 4, label: 'Nivelamento'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: SimCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Você já conhece esse assunto?',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        session.placementStarted
-                            ? 'Pergunta de nivelamento: escolha a opção que melhor representa seu ponto de partida.'
-                            : 'SIM pode começar do zero ou fazer uma pergunta rápida para sugerir o ponto certo.',
-                        style: const TextStyle(
-                          color: simMuted,
-                          fontSize: 15,
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      if (!session.placementStarted) ...[
-                        PrimaryWideButton(
-                          label: 'Começar do zero',
-                          onTap: session.skipPlacement,
-                        ),
-                        const SizedBox(height: 12),
-                        SecondaryWideButton(
-                          label: 'Fazer nivelamento',
-                          onTap: session.startPlacement,
-                        ),
-                      ] else ...[
-                        const Text(
-                          'Qual alternativa descreve melhor seu conhecimento?',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SecondaryWideButton(
-                          label: 'A. Domino bem',
-                          onTap: session.finishPlacement,
-                        ),
-                        const SizedBox(height: 8),
-                        SecondaryWideButton(
-                          label: 'B. Sei uma parte',
-                          onTap: session.finishPlacement,
-                        ),
-                        const SizedBox(height: 8),
-                        SecondaryWideButton(
-                          label: 'C. Preciso começar guiado',
-                          onTap: session.finishPlacement,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                child: SimCard(child: _body()),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _body() {
+    switch (session.placementStage) {
+      case 'intro':
+        return _IntroBody(session: session);
+      case 'running':
+        return _RunningBody(session: session);
+      case 'result':
+        return _ResultBody(session: session);
+      default:
+        return _ChoiceBody(session: session);
+    }
+  }
+}
+
+class _ChoiceBody extends StatelessWidget {
+  const _ChoiceBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Por onde você quer começar?',
+          style: TextStyle(color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Você pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.',
+          style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 22),
+        PrimaryWideButton(label: 'Começar do início', onTap: session.skipPlacement),
+        const SizedBox(height: 12),
+        SecondaryWideButton(label: 'Fazer teste rápido', onTap: session.startPlacement),
+      ],
+    );
+  }
+}
+
+class _IntroBody extends StatelessWidget {
+  const _IntroBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Teste rápido',
+          style: TextStyle(color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Vou te fazer algumas perguntas curtas. Não tem nota, não tem erro ruim — é só pra eu saber por onde começar.',
+          style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 22),
+        PrimaryWideButton(
+          label: session.placementLoading ? 'Preparando...' : 'Começar',
+          onTap: session.placementLoading ? () {} : session.loadPlacementT02,
+        ),
+      ],
+    );
+  }
+}
+
+class _RunningBody extends StatelessWidget {
+  const _RunningBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    if (session.placementLoading) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(32),
+        child: CircularProgressIndicator(),
+      ));
+    }
+    final question = session.placementQuestion ?? '';
+    final choices = session.placementChoices;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Pergunta 1 de 1',
+          style: TextStyle(color: simMuted, fontSize: 12, letterSpacing: 1.2),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          question,
+          style: const TextStyle(color: simDark, fontSize: 17, fontWeight: FontWeight.w700, height: 1.45),
+        ),
+        const SizedBox(height: 20),
+        ...choices.map((c) {
+          final label = c['label'] as String? ?? '';
+          final correct = c['correct'] as bool? ?? false;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: SecondaryWideButton(
+              label: label,
+              onTap: () => session.answerPlacement(correct),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _ResultBody extends StatelessWidget {
+  const _ResultBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final marker = session.placementStartMarker ?? 'M-1';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tudo certo',
+          style: TextStyle(color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Vou te levar pro ponto certo.',
+          style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: simLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: simBorder),
+          ),
+          child: Text.rich(
+            TextSpan(
+              text: 'Começando em ',
+              style: const TextStyle(color: simDark, fontSize: 14),
+              children: [
+                TextSpan(
+                  text: marker,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const TextSpan(text: '.'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        PrimaryWideButton(label: 'Continuar', onTap: session.finishPlacement),
+      ],
     );
   }
 }
