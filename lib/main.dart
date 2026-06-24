@@ -19,7 +19,8 @@ const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
 const simSupabaseAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
-const simServerBaseUrl = 'https://gemini-aid-pal.lovable.app';
+const simServerBaseUrl = 'http://167.179.109.137:3000';
+const simLovableBaseUrl = 'https://gemini-aid-pal.lovable.app';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -225,8 +226,8 @@ class LabSession extends ChangeNotifier {
         CreateCreditsCheckoutHostedInput(
           packId: packId.wire,
           successUrl:
-              '$simServerBaseUrl/checkout/return?session_id={CHECKOUT_SESSION_ID}',
-          cancelUrl: '$simServerBaseUrl/creditos?canceled=1',
+              '$simLovableBaseUrl/checkout/return?session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl: '$simLovableBaseUrl/creditos?canceled=1',
           environment: StripeEnvironment.live,
         ).validate(),
       );
@@ -647,7 +648,7 @@ class LabSession extends ChangeNotifier {
       final token = client?.auth.currentSession?.accessToken;
       if (token == null) throw Exception('Não autenticado');
 
-      final uri = Uri.parse('https://gemini-aid-pal.lovable.app/api/complete-lesson');
+      final uri = Uri.parse('$simServerBaseUrl/api/complete-lesson');
       final httpClient = HttpClient();
       final req = await httpClient.postUrl(uri);
       req.headers.set('Content-Type', 'application/json');
