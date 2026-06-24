@@ -72,6 +72,10 @@ class LabSession extends ChangeNotifier {
   bool authed = false;
   bool authReady = false;
   int credits = 0;
+  int signalsSolid = 0;
+  int signalsUnderstood = 0;
+  int signalsFragile = 0;
+  int totalAulaSteps = 10;
   String route = '/';
   String returnTo = '/';
   String? userId;
@@ -786,16 +790,6 @@ class PortalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     PortalHeroCard(session: session),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'SIM v1  •  Cyber-Premium',
-                      style: TextStyle(
-                        color: simMuted,
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        letterSpacing: 0.5,
-                      ),
-                    ),
                     const SizedBox(height: 20),
                     HelpCard(session: session),
                     const SizedBox(height: 24),
@@ -1050,7 +1044,7 @@ class PortalHeroCard extends StatelessWidget {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          session.authed ? 'Start' : 'Sign in to start',
+                          session.authed ? 'Iniciar agora' : 'Entrar para começar',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -1106,7 +1100,7 @@ class HelpCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Help improve SIM.',
+                      'Ajude a melhorar o SIM.',
                       style: TextStyle(
                         color: simDark,
                         fontSize: 15,
@@ -1115,7 +1109,7 @@ class HelpCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Send suggestions, report difficulties, and talk directly to the developer.',
+                      'Envie sugestões, reporte dificuldades e fale direto com o desenvolvedor.',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 13.5,
@@ -1135,31 +1129,20 @@ class HelpCard extends StatelessWidget {
             children: [
               ContactButton(
                 asset: 'assets/whatsapp-logo.png',
-                label: 'Contact us on WhatsApp',
+                label: 'Falar no WhatsApp',
                 onTap: () => session.openExternalDoor(
                   'https://wa.me/message/RLCYEXAYFUIIA1',
                 ),
               ),
               ContactButton(
                 asset: 'assets/messenger-logo.png',
-                label: 'Contact us on Messenger',
+                label: 'Falar no Messenger',
                 onTap: () =>
                     session.openExternalDoor('https://m.me/61557707493807'),
               ),
             ],
           ),
-          if (session.externalDoorOpened != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Porta externa: ${session.externalDoorOpened}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: simMuted,
-                fontSize: 11,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ],
+
         ],
       ),
     );
@@ -1339,7 +1322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Sign in',
+                    'Entrar',
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 12,
@@ -1373,8 +1356,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(width: 10),
                                 Text(
                                   loading
-                                      ? 'Please wait...'
-                                      : 'Continue with Google',
+                                      ? 'Aguarde...'
+                                      : 'Continuar com Google',
                                   style: const TextStyle(
                                     color: Color(0xFF1A1A1A),
                                     fontWeight: FontWeight.w600,
@@ -1406,21 +1389,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         if (signup) ...[
                           SimInput(
-                            hint: 'Your name',
+                            hint: 'Seu nome',
                             controller: nameController,
                             onChanged: (_) {},
                           ),
                           const SizedBox(height: 12),
                         ],
                         SimInput(
-                          hint: 'email@example.com',
+                          hint: 'email@exemplo.com',
                           controller: emailController,
                           keyboardType: TextInputType.emailAddress,
                           onChanged: (_) {},
                         ),
                         const SizedBox(height: 12),
                         SimInput(
-                          hint: 'Password (min. 6 characters)',
+                          hint: 'Senha (mín. 6 caracteres)',
                           controller: passwordController,
                           obscureText: true,
                           onChanged: (_) {},
@@ -1435,10 +1418,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: loading ? null : emailSubmit,
                               child: Text(
                                 loading
-                                    ? 'Please wait...'
+                                    ? 'Aguarde...'
                                     : signup
-                                    ? 'Create account and get 3 free lessons'
-                                    : 'Sign in',
+                                    ? 'Criar conta e ganhar 3 aulas grátis'
+                                    : 'Entrar',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: simDark,
@@ -1491,7 +1474,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: widget.session.goPortal,
                     child: const Text(
-                      '← Back to portal',
+                      '← Voltar ao portal',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
@@ -1528,15 +1511,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'GOOGLE AUTH VIA SUPABASE',
-                    style: TextStyle(
-                      color: simMuted,
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
+
                 ],
               ),
             ),
@@ -1583,7 +1558,7 @@ class IdiomaScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(step: 1, total: 5, label: 'Step 1 of 5'),
+            const StepHeader(step: 1, total: 5, label: 'Passo 1 de 5'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
@@ -1593,7 +1568,7 @@ class IdiomaScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Choose your language',
+                        'Em qual idioma você quer estudar?',
                         style: TextStyle(
                           color: simDark,
                           fontSize: 30,
@@ -1603,7 +1578,7 @@ class IdiomaScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'SIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.',
+                        'O SIM vai usar esse idioma para o app, aulas, explicações, imagens e todo o guiamento.',
                         style: TextStyle(
                           color: simMuted,
                           fontSize: 18,
@@ -1625,7 +1600,7 @@ class IdiomaScreen extends StatelessWidget {
                       LanguageButton(
                         language: const SupportedLang(
                           code: 'other',
-                          name: 'Other language',
+                          name: 'Outro idioma',
                           native: '',
                           flag: '🌐',
                         ),
@@ -1685,7 +1660,7 @@ class _OtherLanguageBoxState extends State<OtherLanguageBox> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Type your language',
+            'Digite seu idioma',
             style: TextStyle(
               color: simMuted,
               fontSize: 15,
@@ -1696,7 +1671,7 @@ class _OtherLanguageBoxState extends State<OtherLanguageBox> {
             controller: controller,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: 'e.g. Italian, German, Arabic, Kiribati…',
+              hintText: 'ex: Italiano, Alemão, Árabe, Kiribati…',
               border: InputBorder.none,
             ),
             style: const TextStyle(color: simDark, fontSize: 18),
@@ -2272,7 +2247,7 @@ class PhaseBoundaryScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          '/cyber/curriculo',
+                          'Preparando sua aula',
                           style: TextStyle(
                             color: simDark,
                             fontSize: 22,
@@ -2281,7 +2256,7 @@ class PhaseBoundaryScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'SIM recebeu a ficha, interpreta o objetivo, monta o currículo e prepara a primeira aula.',
+                          'SIM está interpretando o seu objetivo, montando o currículo e preparando a primeira aula.',
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 15,
@@ -2294,27 +2269,10 @@ class PhaseBoundaryScreen extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: session.entryStatus == 'primeira_aula_pronta'
                                 ? 1
-                                : 0.72,
+                                : null,
                             minHeight: 10,
                             backgroundColor: simLight,
                             color: simDark,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'lessonLocalId: ${session.lessonLocalId ?? ''}',
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'entry.status: ${session.entryStatus}',
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -2326,7 +2284,7 @@ class PhaseBoundaryScreen extends StatelessWidget {
                             child: TextButton(
                               onPressed: session.preparationDone,
                               child: const Text(
-                                'Continuar para nivelamento',
+                                'Continuar',
                                 style: TextStyle(
                                   color: simDark,
                                   fontSize: 17,
@@ -3118,20 +3076,271 @@ class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
   }
 }
 
-class FatherLabScreen extends StatelessWidget {
+class FatherLabScreen extends StatefulWidget {
   const FatherLabScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<FatherLabScreen> createState() => _FatherLabScreenState();
+}
+
+class _FatherLabScreenState extends State<FatherLabScreen> {
+  @override
   Widget build(BuildContext context) {
-    return SimpleLabPage(
-      title: 'Painel do Pai',
-      body:
-          'Resumo vivo: idioma ${session.stableLang ?? '-'}, objetivo ${session.freeText.isEmpty ? '-' : session.freeText}, avanço ${session.aulaStep}.',
-      primary: 'Voltar',
-      onPrimary: () => session.openSupport('/cyber/aula'),
-      session: session,
+    final s = widget.session;
+    final hasData = s.authed;
+
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Column(
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Painel do Pai',
+                        style: TextStyle(
+                          color: simDark,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Acompanhe o progresso sem interferir',
+                        style: TextStyle(color: simMuted, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  OutlinedButton(
+                    onPressed: s.goPortal,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: simBorder),
+                      foregroundColor: simDark,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Voltar', style: TextStyle(fontSize: 13)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              if (!hasData)
+                _PaiCard(
+                  title: 'SEM SESSÃO',
+                  child: const Text(
+                    'Nenhuma sessão ativa encontrada.',
+                    style: TextStyle(color: simMuted, fontSize: 14),
+                  ),
+                )
+              else ...[
+                // Objective
+                _PaiCard(
+                  title: 'OBJETIVO',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.freeText.isEmpty ? '—' : s.freeText,
+                        style: const TextStyle(color: simDark, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Idioma: ${(s.stableLang ?? '—').toUpperCase()}',
+                        style: const TextStyle(color: simMuted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Progress
+                _PaiCard(
+                  title: 'PROGRESSO',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Item ${s.aulaStep} de ${s.totalAulaSteps}',
+                            style: const TextStyle(color: simMuted, fontSize: 14),
+                          ),
+                          Text(
+                            '${s.totalAulaSteps > 0 ? (s.aulaStep / s.totalAulaSteps * 100).round() : 0}%',
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: s.totalAulaSteps > 0
+                              ? s.aulaStep / s.totalAulaSteps
+                              : 0,
+                          minHeight: 8,
+                          backgroundColor: simLight,
+                          color: simDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Quality signals
+                _PaiCard(
+                  title: 'QUALIDADE',
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PaiStat(
+                              label: 'Sólido',
+                              value: s.signalsSolid,
+                              hint: 'Dominou',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _PaiStat(
+                              label: 'Entendeu',
+                              value: s.signalsUnderstood,
+                              hint: 'Compreendeu',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _PaiStat(
+                              label: 'Frágil',
+                              value: s.signalsFragile,
+                              hint: 'Precisa reforço',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Total de sinais: ${s.signalsSolid + s.signalsUnderstood + s.signalsFragile}',
+                        style: const TextStyle(color: simMuted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Aulas salvas
+                _PaiCard(
+                  title: 'AULAS SALVAS',
+                  child: Text(
+                    '${s.aulaStep} aula${s.aulaStep == 1 ? '' : 's'} concluída${s.aulaStep == 1 ? '' : 's'}',
+                    style: const TextStyle(color: simDark, fontSize: 14),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaiCard extends StatelessWidget {
+  const _PaiCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: simBorder),
+        boxShadow: const [
+          BoxShadow(color: Color(0x0E111827), blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: simMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _PaiStat extends StatelessWidget {
+  const _PaiStat({required this.label, required this.value, required this.hint});
+
+  final String label;
+  final int value;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: simBorder),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '$value',
+            style: const TextStyle(
+              color: simDark,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              color: simDark,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            hint,
+            style: const TextStyle(color: simMuted, fontSize: 10),
+          ),
+        ],
+      ),
     );
   }
 }
