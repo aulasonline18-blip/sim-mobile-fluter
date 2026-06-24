@@ -3744,10 +3744,64 @@ class FatherLabScreen extends StatefulWidget {
 }
 
 class _FatherLabScreenState extends State<FatherLabScreen> {
+  bool _loading = true;
+  String? _error;
+  _FatherData? _data;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refresh() {
+    final s = widget.session;
+    try {
+      final hasSession = s.lessonLocalId != null || s.aulaStep > 0;
+      final total = s.signalsSolid + s.signalsUnderstood + s.signalsFragile;
+      final pct = s.totalAulaSteps > 0
+          ? (s.aulaStep / s.totalAulaSteps * 100).round()
+          : 0;
+      setState(() {
+        _loading = false;
+        _error = null;
+        _data = _FatherData(
+          hasSession: hasSession,
+          objective: s.freeText.isEmpty ? null : s.freeText,
+          language: s.stableLang,
+          progressPercent: pct,
+          currentItemIndex: s.aulaStep,
+          totalItems: s.totalAulaSteps,
+          signalsSolid: s.signalsSolid,
+          signalsUnderstood: s.signalsUnderstood,
+          signalsFragile: s.signalsFragile,
+          signalsTotal: total,
+          amparoActive: false,
+          amparoLevel: 0,
+          upcomingReviews: const [],
+          lessonsCount: s.aulaStep,
+          takenAt: DateTime.now(),
+        );
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final hasData = s.authed;
 
     return Scaffold(
       body: SafeArea(
@@ -3778,23 +3832,47 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                       ),
                     ],
                   ),
-                  OutlinedButton(
-                    onPressed: s.goPortal,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: simBorder),
-                      foregroundColor: simDark,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: simMuted, size: 20),
+                        tooltip: 'Atualizar',
+                        onPressed: () { setState(() => _loading = true); _refresh(); },
                       ),
-                    ),
-                    child: const Text('Voltar', style: TextStyle(fontSize: 13)),
+                      const SizedBox(width: 4),
+                      OutlinedButton(
+                        onPressed: s.goPortal,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: simBorder),
+                          foregroundColor: simDark,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Voltar', style: TextStyle(fontSize: 13)),
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              if (!hasData)
+              if (_loading && _data == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator(color: simDark, strokeWidth: 2)),
+                )
+              else if (_error != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(_error!, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)),
+                )
+              else if (_data != null && !_data!.hasSession)
                 _PaiCard(
                   title: 'SEM SESSÃO',
                   child: const Text(
@@ -3802,7 +3880,7 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                     style: TextStyle(color: simMuted, fontSize: 14),
                   ),
                 )
-              else ...[
+              else if (_data != null) ...[
                 // Objective
                 _PaiCard(
                   title: 'OBJETIVO',
@@ -3810,12 +3888,12 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        s.freeText.isEmpty ? '—' : s.freeText,
+                        _data!.objective ?? '—',
                         style: const TextStyle(color: simDark, fontSize: 16),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Idioma: ${(s.stableLang ?? '—').toUpperCase()}',
+                        'Idioma: ${(_data!.language ?? '—').toUpperCase()}',
                         style: const TextStyle(color: simMuted, fontSize: 12),
                       ),
                     ],
@@ -3832,11 +3910,11 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Item ${s.aulaStep} de ${s.totalAulaSteps}',
+                            'Item ${_data!.currentItemIndex} de ${_data!.totalItems}',
                             style: const TextStyle(color: simMuted, fontSize: 14),
                           ),
                           Text(
-                            '${s.totalAulaSteps > 0 ? (s.aulaStep / s.totalAulaSteps * 100).round() : 0}%',
+                            '${_data!.progressPercent}%',
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 28,
@@ -3849,8 +3927,8 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999),
                         child: LinearProgressIndicator(
-                          value: s.totalAulaSteps > 0
-                              ? s.aulaStep / s.totalAulaSteps
+                          value: _data!.totalItems > 0
+                              ? _data!.currentItemIndex / _data!.totalItems
                               : 0,
                           minHeight: 8,
                           backgroundColor: simLight,
@@ -3868,46 +3946,77 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                     children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: _PaiStat(
-                              label: 'Sólido',
-                              value: s.signalsSolid,
-                              hint: 'Dominou',
-                            ),
-                          ),
+                          Expanded(child: _PaiStat(label: 'Sólido', value: _data!.signalsSolid, hint: 'Dominou')),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: _PaiStat(
-                              label: 'Entendeu',
-                              value: s.signalsUnderstood,
-                              hint: 'Compreendeu',
-                            ),
-                          ),
+                          Expanded(child: _PaiStat(label: 'Entendeu', value: _data!.signalsUnderstood, hint: 'Compreendeu')),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: _PaiStat(
-                              label: 'Frágil',
-                              value: s.signalsFragile,
-                              hint: 'Precisa reforço',
-                            ),
-                          ),
+                          Expanded(child: _PaiStat(label: 'Frágil', value: _data!.signalsFragile, hint: 'Precisa reforço')),
                         ],
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Total de sinais: ${s.signalsSolid + s.signalsUnderstood + s.signalsFragile}',
+                        'Total de sinais: ${_data!.signalsTotal}',
                         style: const TextStyle(color: simMuted, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
 
+                // Amparo
+                _PaiCard(
+                  title: 'AMPARO',
+                  child: _data!.amparoActive
+                      ? Text(
+                          'Amparo ativo no nível ${_data!.amparoLevel}.',
+                          style: const TextStyle(color: simDark, fontSize: 14),
+                        )
+                      : const Text(
+                          'Nenhum amparo ativo.',
+                          style: TextStyle(color: simMuted, fontSize: 14),
+                        ),
+                ),
+
+                // Revisões
+                _PaiCard(
+                  title: 'PRÓXIMAS REVISÕES',
+                  child: _data!.upcomingReviews.isEmpty
+                      ? const Text(
+                          'Nenhuma revisão pendente.',
+                          style: TextStyle(color: simMuted, fontSize: 14),
+                        )
+                      : Column(
+                          children: _data!.upcomingReviews.asMap().entries.map((e) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(e.value, style: const TextStyle(color: simDark, fontSize: 13)),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+
                 // Aulas salvas
                 _PaiCard(
                   title: 'AULAS SALVAS',
                   child: Text(
-                    '${s.aulaStep} aula${s.aulaStep == 1 ? '' : 's'} concluída${s.aulaStep == 1 ? '' : 's'}',
+                    '${_data!.lessonsCount} aula${_data!.lessonsCount == 1 ? '' : 's'} concluída${_data!.lessonsCount == 1 ? '' : 's'}',
                     style: const TextStyle(color: simDark, fontSize: 14),
+                  ),
+                ),
+
+                // Timestamp
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'atualizado: ${_data!.takenAt.hour.toString().padLeft(2, '0')}:${_data!.takenAt.minute.toString().padLeft(2, '0')}:${_data!.takenAt.second.toString().padLeft(2, '0')}',
+                      style: const TextStyle(color: simMuted, fontSize: 11),
+                    ),
                   ),
                 ),
               ],
@@ -3917,6 +4026,42 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
       ),
     );
   }
+}
+
+class _FatherData {
+  const _FatherData({
+    required this.hasSession,
+    this.objective,
+    this.language,
+    required this.progressPercent,
+    required this.currentItemIndex,
+    required this.totalItems,
+    required this.signalsSolid,
+    required this.signalsUnderstood,
+    required this.signalsFragile,
+    required this.signalsTotal,
+    required this.amparoActive,
+    required this.amparoLevel,
+    required this.upcomingReviews,
+    required this.lessonsCount,
+    required this.takenAt,
+  });
+
+  final bool hasSession;
+  final String? objective;
+  final String? language;
+  final int progressPercent;
+  final int currentItemIndex;
+  final int totalItems;
+  final int signalsSolid;
+  final int signalsUnderstood;
+  final int signalsFragile;
+  final int signalsTotal;
+  final bool amparoActive;
+  final int amparoLevel;
+  final List<String> upcomingReviews;
+  final int lessonsCount;
+  final DateTime takenAt;
 }
 
 class _PaiCard extends StatelessWidget {
