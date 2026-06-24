@@ -42,7 +42,7 @@ import 'sim_organism_health.dart';
 import 'sim_organism_router.dart';
 
 class SimOrganism {
-  SimOrganism._({{
+  SimOrganism._({
     required this.lessonLocalId,
     required this.stateService,
     required this.router,
