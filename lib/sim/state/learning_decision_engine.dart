@@ -7,6 +7,7 @@ enum DecisionActionType {
   waitForLessonText,
   showCompletion,
   needsReinforcement,
+  sendToSupport,
   noSafeDecision,
 }
 
@@ -60,10 +61,19 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
     }
 
     final completed = progress?.concluidos.toSet() ?? <String>{};
-    final currentMarker =
-        curriculum.items[itemIdx].marker.isNotEmpty
-            ? curriculum.items[itemIdx].marker
-            : current?.marker;
+    final currentMarker = curriculum.items[itemIdx].marker.isNotEmpty
+        ? curriculum.items[itemIdx].marker
+        : current?.marker;
+    if (_shouldSendToSupport(state, currentMarker)) {
+      return DecisionResult(
+        actionType: DecisionActionType.sendToSupport,
+        reason: '3 agravantes recentes -> abrir amparo',
+        confidence: DecisionConfidence.high,
+        proposedItemIdx: itemIdx,
+        proposedLayer: layer,
+        proposedMarker: currentMarker,
+      );
+    }
 
     if (currentMarker != null && completed.contains(currentMarker)) {
       final nextIdx = itemIdx + 1;
@@ -84,15 +94,15 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
       );
     }
 
-    final lastForItem = state.attempts.reversed.cast<LessonAttempt?>().firstWhere(
-          (attempt) => attempt?.marker == currentMarker,
-          orElse: () => null,
-        );
+    final lastForItem =
+        state.attempts.reversed.cast<LessonAttempt?>().firstWhere(
+              (attempt) => attempt?.marker == currentMarker,
+              orElse: () => null,
+            );
 
     if (lastForItem != null && lastForItem.layer == layer) {
       if (layer == LessonLayer.l3) {
-        if (!lastForItem.correct ||
-            lastForItem.sinal == DecisionSignal.three) {
+        if (!lastForItem.correct || lastForItem.sinal == DecisionSignal.three) {
           return DecisionResult(
             actionType: DecisionActionType.needsReinforcement,
             reason: 'L3 ainda nao consolidada -> refazer L3',
@@ -121,8 +131,7 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
       }
 
       if (layer == LessonLayer.l2) {
-        if (!lastForItem.correct ||
-            lastForItem.sinal == DecisionSignal.three) {
+        if (!lastForItem.correct || lastForItem.sinal == DecisionSignal.three) {
           return DecisionResult(
             actionType: DecisionActionType.needsReinforcement,
             reason: 'L2 ainda fragil -> refazer L2',
@@ -174,4 +183,22 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
   } catch (_) {
     return _noDecision('erro interno');
   }
+}
+
+bool _shouldSendToSupport(StudentLearningState state, String? marker) {
+  final support = state.extra['support'];
+  if (support is Map && support['active'] == true) return false;
+  final recent = state.attempts.reversed.take(3).toList(growable: false);
+  if (recent.length < 3) return false;
+  final aggravants = recent
+      .where((attempt) =>
+          !attempt.correct || attempt.sinal == DecisionSignal.three)
+      .length;
+  if (aggravants < 3) return false;
+  final attemptCount = support is Map
+      ? (support['support_attempt_count'] as num?)?.toInt() ??
+          (support['attempt_count'] as num?)?.toInt() ??
+          0
+      : 0;
+  return attemptCount < 2;
 }

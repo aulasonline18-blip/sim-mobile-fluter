@@ -7,8 +7,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'sim/billing/payments_functions.dart';
+import 'sim/billing/credit_client.dart';
+import 'sim/billing/credit_purchase_service.dart';
+import 'sim/billing/credit_service.dart';
 import 'sim/billing/sim_pricing.dart';
 import 'sim/billing/sim_server_billing_clients.dart';
+import 'sim/billing/student_billing_ledger.dart';
 import 'sim/auxiliary/aux_room_models.dart';
 import 'sim/auxiliary/aux_room_t02_caller.dart';
 import 'sim/auxiliary/doubt_input_sheet.dart';
@@ -17,12 +21,22 @@ import 'sim/auxiliary/lesson_doubt_controller.dart';
 import 'sim/auxiliary/recovery_room_service.dart';
 import 'sim/auxiliary/review_room_service.dart';
 import 'sim/auxiliary/student_aux_room_service.dart';
+import 'sim/auxiliary/support_room_service.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
+import 'sim/cloud/cloud_queue.dart' show SharedPreferencesCloudQueueStorage;
+import 'sim/history/lesson_history_store.dart'
+    show LessonBackupEnvelope, LessonHistoryEntry, LessonHistoryStore;
+import 'sim/lesson/lesson_models.dart';
+import 'sim/media/audio_core.dart';
+import 'sim/media/audio_preference.dart';
+import 'sim/media/audioplayers_playback_adapter.dart';
+import 'sim/media/lesson_audio_api_contract.dart';
 import 'sim/media/lesson_visual_pipeline.dart';
+import 'sim/media/shared_preferences_audio_storage.dart';
 import 'sim/media/student_lesson_media_service.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_controller.dart';
@@ -112,15 +126,28 @@ class LabSession extends ChangeNotifier {
   String? authError;
   StreamSubscription<AuthState>? _authSub;
   SimAiServerConfig? _serverConfig;
-  SimServerCreditsClient? _creditsClientInstance;
   SimServerPaymentsClient? _paymentsClientInstance;
+  CreditService? _creditService;
+  CreditPurchaseService? _creditPurchaseService;
   SimServerAttachmentClient? _attachmentClientInstance;
   SimOrganismController? _controller;
+  LessonHistoryStore? _lessonHistoryStore;
   ReviewRoomService? _reviewRoomService;
   RecoveryRoomService? _recoveryRoomService;
+  SupportRoomService? _supportRoomService;
   LessonDoubtController? _doubtController;
   SharedPreferences? _imagePrefs;
+  SharedPreferences? _audioPrefs;
+  SharedPreferencesCloudQueueStorage? _cloudQueueStorage;
+  AudioplayersPlaybackAdapter? _audioPlayback;
   LessonRuntimeSnapshot? _lastSnapshot;
+  String audioStatus = 'idle';
+  String? _lastAudioAutoKey;
+  List<LessonHistoryEntry> lessonHistory = const [];
+  String lessonHistoryQuery = '';
+  String? lessonHistoryMessage;
+  bool lessonHistoryLoading = false;
+  List<StudentBillingTransaction> billingTransactions = const [];
 
   ClassroomPhase get classroomPhase =>
       _lastSnapshot?.phase ?? const ClassroomPhase.loading();
@@ -132,6 +159,8 @@ class LabSession extends ChangeNotifier {
   DoubtState get doubtState => _getDoubtController().state;
   ReviewRoomView? reviewRoomView;
   RecoveryRoomView? recoveryRoomView;
+  SupportRoomView? supportRoomView;
+  Timer? _supportExitTimer;
   String doubtText = '';
   DoubtImagePayload? doubtImage;
   String? doubtInputError;
@@ -144,15 +173,27 @@ class LabSession extends ChangeNotifier {
     );
   }
 
-  SimServerCreditsClient _getCreditsClient() {
-    return _creditsClientInstance ??= SimServerCreditsClient(
-      config: _getServerConfig(),
+  Future<CreditService> _getCreditService() async {
+    if (_creditService != null) return _creditService!;
+    final prefs = await SharedPreferences.getInstance();
+    return _creditService = CreditService(
+      client: SimServerCreditClient(config: _getServerConfig()),
+      stateService: _ensureController().organism.stateService,
+      preferences: prefs,
     );
   }
 
   SimServerPaymentsClient _getPaymentsClient() {
     return _paymentsClientInstance ??= SimServerPaymentsClient(
       config: _getServerConfig(),
+    );
+  }
+
+  CreditPurchaseService _getCreditPurchaseService() {
+    return _creditPurchaseService ??= CreditPurchaseService(
+      webStripeProvider: WebStripePurchaseProvider(
+        payments: _getPaymentsClient(),
+      ),
     );
   }
 
@@ -224,6 +265,20 @@ class LabSession extends ChangeNotifier {
     _restoringPersistedState = true;
     try {
       final prefs = await SharedPreferences.getInstance();
+      final historyStore = await _getLessonHistoryStore();
+      _audioPrefs = prefs;
+      _cloudQueueStorage ??= SharedPreferencesCloudQueueStorage(prefs);
+      final audioRaw = prefs.getString(audioPreferenceStorageKey);
+      audioEnabled = audioRaw == null || audioRaw == '1' || audioRaw == 'true';
+      await _refreshLessonHistory(notify: false, recordEvent: false);
+      final activeId = await historyStore.readActiveLessonLocalId();
+      final activeState =
+          activeId == null ? null : await historyStore.readState(activeId);
+      if (activeState != null && activeState.extra['deletedAt'] == null) {
+        _applyPersistedLearningState(activeState);
+        _lastPersistedStateJson = jsonEncode(activeState.toJson());
+        return;
+      }
       final raw = prefs.getString(simPersistedLearningStateKey);
       if (raw != null && raw.trim().isNotEmpty) {
         final decoded = jsonDecode(raw);
@@ -288,6 +343,366 @@ class LabSession extends ChangeNotifier {
   Future<void> _writePersistedLearningState(String raw) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(simPersistedLearningStateKey, raw);
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        final state = StudentLearningState.fromJson(JsonMap.from(decoded));
+        final store = await _getLessonHistoryStore();
+        await store.saveState(state);
+        await store.setActiveLessonLocalId(state.lessonLocalId);
+        await _refreshLessonHistory(notify: false, recordEvent: false);
+      }
+    } catch (_) {
+      // History persistence must never block the active lesson.
+    }
+  }
+
+  Future<LessonHistoryStore> _getLessonHistoryStore() async {
+    return _lessonHistoryStore ??= await LessonHistoryStore.create();
+  }
+
+  Future<void> _refreshLessonHistory({
+    bool notify = true,
+    bool recordEvent = true,
+  }) async {
+    final store = await _getLessonHistoryStore();
+    lessonHistory = await store.readEntries();
+    if (recordEvent && lessonLocalId != null) {
+      final state = await store.readState(lessonLocalId!);
+      if (state != null) {
+        await store.saveState(
+          state.copyWith(
+            events: [
+              ...state.events,
+              _lessonEvent('LESSON_LIST_LOADED', {
+                'count': lessonHistory.length,
+              }),
+            ],
+          ),
+        );
+      }
+    }
+    if (notify) notifyListeners();
+  }
+
+  List<LessonHistoryEntry> get filteredLessonHistory {
+    final q = lessonHistoryQuery.trim().toLowerCase();
+    if (q.isEmpty) return lessonHistory;
+    return lessonHistory
+        .where(
+          (entry) =>
+              entry.title.toLowerCase().contains(q) ||
+              entry.lessonLocalId.toLowerCase().contains(q) ||
+              (entry.lastMarker ?? '').toLowerCase().contains(q),
+        )
+        .toList(growable: false);
+  }
+
+  void setLessonHistoryQuery(String value) {
+    lessonHistoryQuery = value;
+    notifyListeners();
+  }
+
+  StudentLearningEvent _lessonEvent(String type, JsonMap payload) {
+    return StudentLearningEvent(
+      type: type,
+      ts: DateTime.now().millisecondsSinceEpoch,
+      payload: payload,
+    );
+  }
+
+  Future<void> selectLessonFromHistory(String selectedLessonLocalId) async {
+    final store = await _getLessonHistoryStore();
+    final current = _buildPersistedLearningState();
+    await store.saveState(current);
+    final state = await store.readState(selectedLessonLocalId);
+    if (state == null || state.extra['deletedAt'] != null) {
+      lessonHistoryMessage = 'Aula indisponivel no historico.';
+      notifyListeners();
+      return;
+    }
+    await store.setActiveLessonLocalId(selectedLessonLocalId);
+    _controller = null;
+    _applyPersistedLearningState(
+      state.copyWith(
+        events: [
+          ...state.events,
+          _lessonEvent('LESSON_SELECTED', {
+            'lessonLocalId': selectedLessonLocalId,
+          }),
+          _lessonEvent('ACTIVE_LESSON_CHANGED', {
+            'lessonLocalId': selectedLessonLocalId,
+          }),
+        ],
+      ),
+    );
+    route = '/cyber/aula';
+    lessonHistoryMessage = 'Aula retomada do ponto salvo.';
+    _lastPersistedStateJson = null;
+    await store.saveState(_buildPersistedLearningState());
+    await _refreshLessonHistory(notify: false, recordEvent: false);
+    notifyListeners();
+    unawaited(loadT02Content());
+  }
+
+  Future<void> startNewLessonFromHistory() async {
+    final store = await _getLessonHistoryStore();
+    await store.saveState(
+      _buildPersistedLearningState().copyWith(
+        events: [
+          ..._buildPersistedLearningState().events,
+          _lessonEvent('NEW_LESSON_REQUESTED', {
+            'previousLessonLocalId': lessonLocalId,
+          }),
+        ],
+      ),
+    );
+    final nextId =
+        'lesson-${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
+    _controller = null;
+    lessonLocalId = nextId;
+    aulaStep = 0;
+    selectedAnswer = '';
+    aulaMessage = '';
+    resetT02();
+    _persistedCurriculum = null;
+    _persistedCurrentMarker = null;
+    attempts = [];
+    freeText = '';
+    preferredName = '';
+    studentProfileNotes = '';
+    attachments = [];
+    attachmentsText = '';
+    entryStatus = 'idle';
+    route = '/cyber/objeto';
+    await store.setActiveLessonLocalId(nextId);
+    final state = _buildPersistedLearningState().copyWith(
+      events: [
+        _lessonEvent('NEW_LESSON_STARTED', {'lessonLocalId': nextId}),
+        _lessonEvent('ACTIVE_LESSON_CHANGED', {'lessonLocalId': nextId}),
+      ],
+    );
+    await store.saveState(state);
+    lessonHistoryMessage = 'Nova aula iniciada.';
+    _lastPersistedStateJson = null;
+    await _refreshLessonHistory(notify: false, recordEvent: false);
+    notifyListeners();
+  }
+
+  Future<void> renameLessonFromHistory(
+    String selectedLessonLocalId,
+    String title,
+  ) async {
+    final store = await _getLessonHistoryStore();
+    await store.renameLesson(selectedLessonLocalId, title);
+    if (lessonLocalId == selectedLessonLocalId) {
+      final state = _buildPersistedLearningState();
+      await store.saveState(
+        state.copyWith(
+          extra: {...state.extra, 'displayName': title.trim()},
+        ),
+      );
+    }
+    lessonHistoryMessage = 'Aula renomeada.';
+    await _refreshLessonHistory();
+  }
+
+  Future<void> tombstoneLessonFromHistory(String selectedLessonLocalId) async {
+    final store = await _getLessonHistoryStore();
+    final state = await store.readState(selectedLessonLocalId);
+    if (state != null) {
+      await store.saveState(
+        state.copyWith(
+          events: [
+            ...state.events,
+            _lessonEvent('LESSON_DELETE_CONFIRMED', {
+              'lessonLocalId': selectedLessonLocalId,
+              'financialDataDeleted': false,
+            }),
+            _lessonEvent('LESSON_DELETED', {
+              'lessonLocalId': selectedLessonLocalId,
+              'mode': 'tombstone',
+              'financialDataDeleted': false,
+            }),
+          ],
+        ),
+      );
+    }
+    await store.tombstoneLesson(selectedLessonLocalId, userId: userId);
+    if (lessonLocalId == selectedLessonLocalId) {
+      route = '/';
+      lessonLocalId = null;
+      _controller = null;
+      resetT02();
+    }
+    lessonHistoryMessage =
+        'Aula apagada do historico. Dados financeiros preservados.';
+    await _refreshLessonHistory();
+  }
+
+  Future<String?> exportLessonBackup() async {
+    final store = await _getLessonHistoryStore();
+    await store.saveState(
+      _buildPersistedLearningState().copyWith(
+        events: [
+          ..._buildPersistedLearningState().events,
+          _lessonEvent('BACKUP_EXPORTED', {'format': 'json'}),
+        ],
+      ),
+    );
+    final envelope = await store.exportBackup(userId: userId);
+    final data = const JsonEncoder.withIndent('  ').convert(envelope.toJson());
+    final fileName = 'sim-backup-${DateTime.now().millisecondsSinceEpoch}.json';
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: 'Exportar backup do SIM',
+      fileName: fileName,
+      bytes: Uint8List.fromList(utf8.encode(data)),
+    );
+    lessonHistoryMessage =
+        path == null ? 'Exportacao cancelada.' : 'Backup exportado.';
+    notifyListeners();
+    return path;
+  }
+
+  Future<void> importLessonBackup() async {
+    try {
+      final pick = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['json'],
+        withData: true,
+      );
+      final file = pick?.files.single;
+      if (file == null) return;
+      final bytes = file.bytes ??
+          (file.path == null ? null : await File(file.path!).readAsBytes());
+      if (bytes == null) {
+        throw const FormatException('Arquivo sem dados.');
+      }
+      final decoded = jsonDecode(utf8.decode(bytes));
+      if (decoded is! Map) throw const FormatException('JSON invalido.');
+      final backup = LessonBackupEnvelope.fromJson(JsonMap.from(decoded));
+      final store = await _getLessonHistoryStore();
+      await store.importBackup(backup, currentUserId: userId);
+      final active = await store.readActiveLessonLocalId();
+      final state = active == null ? null : await store.readState(active);
+      if (state != null) {
+        _applyPersistedLearningState(
+          state.copyWith(
+            events: [
+              ...state.events,
+              _lessonEvent('BACKUP_VALIDATED', {'lessonLocalId': active}),
+              _lessonEvent('BACKUP_IMPORTED', {'lessonLocalId': active}),
+            ],
+          ),
+        );
+      }
+      lessonHistoryMessage = 'Backup importado.';
+      await _refreshLessonHistory();
+    } catch (e) {
+      lessonHistoryMessage =
+          'Backup rejeitado: ${e.toString().replaceFirst("FormatException: ", "")}';
+      final store = await _getLessonHistoryStore();
+      await store.saveState(
+        _buildPersistedLearningState().copyWith(
+          events: [
+            ..._buildPersistedLearningState().events,
+            _lessonEvent('BACKUP_REJECTED', {'error': lessonHistoryMessage}),
+            _lessonEvent(
+                'BACKUP_IMPORT_FAILED', {'error': lessonHistoryMessage}),
+          ],
+        ),
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> syncLessonHistory() async {
+    lessonHistoryLoading = true;
+    lessonHistoryMessage = 'Sincronizando...';
+    notifyListeners();
+    final state = _buildPersistedLearningState();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _cloudQueueStorage ??= SharedPreferencesCloudQueueStorage(prefs);
+      final ctrl = _ensureController();
+      final store = await _getLessonHistoryStore();
+      await store.saveState(state);
+      ctrl.organism.stateService.write(
+        state.copyWith(
+          events: [
+            ...state.events,
+            _lessonEvent('CLOUD_PULL_STARTED', {
+              'lessonLocalId': state.lessonLocalId,
+            }),
+            _lessonEvent(
+                'SYNC_STARTED', {'lessonLocalId': state.lessonLocalId}),
+          ],
+        ),
+      );
+      final pulled = await ctrl.organism.cloudQueue.pullCloudSnapshots();
+      for (final remoteState in pulled) {
+        await store.saveState(remoteState);
+      }
+      ctrl.organism.stateService.appendEvent(
+        state.lessonLocalId,
+        _lessonEvent('CLOUD_PULL_COMPLETED', {
+          'lessonLocalId': state.lessonLocalId,
+          'restoredSnapshots': pulled.length,
+          'mode': 'anti_regression',
+        }),
+      );
+      ctrl.organism.stateService.appendEvent(
+        state.lessonLocalId,
+        _lessonEvent('CLOUD_PUSH_STARTED', {
+          'lessonLocalId': state.lessonLocalId,
+        }),
+      );
+      ctrl.organism.sync.enqueuePatch(state.lessonLocalId);
+      await ctrl.organism.sync.drain();
+      ctrl.organism.stateService.appendEvent(
+        state.lessonLocalId,
+        _lessonEvent('CLOUD_PUSH_COMPLETED', {
+          'lessonLocalId': state.lessonLocalId,
+        }),
+      );
+      ctrl.organism.stateService.appendEvent(
+        state.lessonLocalId,
+        _lessonEvent('SYNC_COMPLETED', {'lessonLocalId': state.lessonLocalId}),
+      );
+      await store.saveState(
+        ctrl.organism.stateService.read(state.lessonLocalId) ?? state,
+      );
+      final pending = ctrl.organism.sync.debugSnapshot().length;
+      lessonHistoryMessage = pending == 0
+          ? 'Sync concluido sem regressao.'
+          : 'Sync pendente/offline: $pending job(s) preservado(s).';
+    } catch (e) {
+      final ctrl = _controller;
+      if (ctrl == null) {
+        final store = await _getLessonHistoryStore();
+        await store.saveState(
+          state.copyWith(
+            events: [
+              ...state.events,
+              _lessonEvent('SYNC_FAILED', {'error': e.toString()}),
+              _lessonEvent('SYNC_BLOCKED_REGRESSION', {
+                'reason': 'sync_failed_local_preserved',
+              }),
+            ],
+          ),
+        );
+      } else {
+        ctrl.organism.stateService.appendEvent(
+          state.lessonLocalId,
+          _lessonEvent('SYNC_FAILED', {'error': e.toString()}),
+        );
+      }
+      lessonHistoryMessage = 'Sync falhou sem regredir progresso.';
+    } finally {
+      lessonHistoryLoading = false;
+      await _refreshLessonHistory(notify: false, recordEvent: false);
+      notifyListeners();
+    }
   }
 
   StudentLearningState _buildPersistedLearningState() {
@@ -622,8 +1037,16 @@ class LabSession extends ChangeNotifier {
 
   Future<void> _loadCreditsFromServer() async {
     try {
-      final snapshot = await _getCreditsClient().getMyCredits();
+      final service = await _getCreditService();
+      final snapshot = await service.refreshBalance(
+        lessonLocalId: lessonLocalId ?? _controller?.organism.lessonLocalId,
+      );
       credits = snapshot.balance;
+      if (lessonLocalId != null || _controller != null) {
+        billingTransactions = await service.refreshTransactions(
+          lessonLocalId: lessonLocalId ?? _controller!.organism.lessonLocalId,
+        );
+      }
       notifyListeners();
     } catch (_) {}
   }
@@ -634,20 +1057,53 @@ class LabSession extends ChangeNotifier {
 
   Future<String?> createCheckoutUrl(CreditPackId packId) async {
     try {
-      final result = await _getPaymentsClient().createCreditsCheckoutHosted(
-        CreateCreditsCheckoutHostedInput(
-          packId: packId.wire,
-          successUrl:
+      _appendCreditEvent('CREDIT_PURCHASE_REQUESTED', {
+        'packId': packId.wire,
+        'providerStrategy': 'platform_abstraction',
+      });
+      final result = await _getCreditPurchaseService().startPurchase(
+        CreditPurchaseRequest(
+          packId: packId,
+          returnUrl:
               'sim-mobile://checkout/return?session_id={CHECKOUT_SESSION_ID}',
-          cancelUrl: '$simLovableBaseUrl/creditos?canceled=1',
-          environment: StripeEnvironment.live,
-        ).validate(),
+          origin: simLovableBaseUrl,
+        ),
+        laboratoryStripe: true,
       );
-      if (!result.ok) return null;
-      return isValidStripeCheckoutUrl(result.url) ? result.url : null;
-    } catch (_) {
+      if (!result.started || result.url == null) {
+        _appendCreditEvent('CREDIT_PURCHASE_FAILED', {
+          'packId': packId.wire,
+          'provider': result.providerKind?.name,
+          'error': result.error ?? 'provider_not_ready',
+        });
+        return null;
+      }
+      _appendCreditEvent('CREDIT_PURCHASE_STARTED', {
+        'packId': packId.wire,
+        'provider': result.providerKind?.name ?? 'webStripe',
+      });
+      return result.url;
+    } catch (e) {
+      _appendCreditEvent('CREDIT_PURCHASE_FAILED', {
+        'packId': packId.wire,
+        'error': e.toString(),
+      });
       return null;
     }
+  }
+
+  void _appendCreditEvent(String type, JsonMap payload) {
+    try {
+      final ctrl = _ensureController();
+      ctrl.organism.stateService.appendEvent(
+        ctrl.organism.lessonLocalId,
+        StudentLearningEvent(
+          type: type,
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: payload,
+        ),
+      );
+    } catch (_) {}
   }
 
   Future<void> signInWithGoogle() async {
@@ -1181,6 +1637,14 @@ class LabSession extends ChangeNotifier {
     if (signal == DecisionSignal.three) signalsFragile++;
     engine.signal(signal);
     _applySnapshot(engine.snapshot());
+    if (_supportIsActive && supportRoomView == null) {
+      unawaited(startSupportRoom());
+    }
+  }
+
+  bool get _supportIsActive {
+    final support = _ensureController().organism.activeState.extra['support'];
+    return support is Map && support['active'] == true;
   }
 
   int get reviewQueueCount {
@@ -1263,6 +1727,22 @@ class LabSession extends ChangeNotifier {
     return _recoveryRoomService = RecoveryRoomService(auxService);
   }
 
+  SupportRoomService _getSupportRoomService() {
+    if (_supportRoomService != null) return _supportRoomService!;
+    final ctrl = _ensureController();
+    final config = SimAiServerConfig(
+      baseUrl: simServerBaseUrl,
+      accessTokenProvider: () async =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+      t02Path: '/api/complete-lesson',
+    );
+    return _supportRoomService = SupportRoomService(
+      stateService: ctrl.organism.stateService,
+      t00Client: SimServerT00Client(config: config),
+      t02Client: SimServerT02Client(config: config),
+    );
+  }
+
   LessonDoubtController _getDoubtController() {
     if (_doubtController != null) return _doubtController!;
     final doubtConfig = SimAiServerConfig(
@@ -1330,6 +1810,34 @@ class LabSession extends ChangeNotifier {
         notes: studentProfileNotes,
         extra: profile.extra,
       ),
+    );
+  }
+
+  SupportRoomContext _buildSupportContext() {
+    final ctrl = _ensureController();
+    final state = ctrl.organism.activeState;
+    final profile = state.profile;
+    final currentItem = state.current?.itemIdx != null &&
+            state.curriculum != null &&
+            state.current!.itemIdx >= 0 &&
+            state.current!.itemIdx < state.curriculum!.items.length
+        ? state.curriculum!.items[state.current!.itemIdx]
+        : null;
+    return SupportRoomContext(
+      lessonLocalId: ctrl.organism.lessonLocalId,
+      objective: state.curriculum?.topic ?? freeText,
+      currentItem: currentItem?.teacherText ?? freeText,
+      marker: state.current?.marker ?? currentItem?.marker,
+      layer: state.current?.layer ?? state.progress?.layer ?? LessonLayer.l1,
+      profile: AuxRoomProfile(
+        stableLang: profile.stableLang ?? stableLang,
+        academicLevel: profile.academicLevel ?? profile.nivel,
+        preferredName: profile.preferredName ?? preferredName,
+        notes: studentProfileNotes,
+        extra: profile.extra,
+      ),
+      currentMaterial: state.currentLessonMaterial ?? const {},
+      recentAttempts: state.attempts.reversed.take(6).toList(growable: false),
     );
   }
 
@@ -1534,6 +2042,88 @@ class LabSession extends ChangeNotifier {
       }
     }
     recoveryRoomView = null;
+    final engine = _controller?.organism.lessonRuntimeEngine;
+    if (engine != null) _applySnapshot(engine.snapshot());
+    notifyListeners();
+  }
+
+  Future<void> startSupportRoom() async {
+    final service = _getSupportRoomService();
+    final lessonLocalId = _ensureController().organism.lessonLocalId;
+    supportRoomView = service.preparingView(lessonLocalId);
+    notifyListeners();
+    _scheduleSupportExitOptions(lessonLocalId);
+    supportRoomView = await service.start(_buildSupportContext());
+    _supportExitTimer?.cancel();
+    notifyListeners();
+  }
+
+  void _scheduleSupportExitOptions(String lessonLocalId) {
+    _supportExitTimer?.cancel();
+    _supportExitTimer = Timer(const Duration(seconds: 20), () {
+      final view = supportRoomView;
+      if (view == null ||
+          view.status != SupportRoomStatus.preparing ||
+          view.showExitOptions) {
+        return;
+      }
+      _ensureController().organism.stateService.appendEvent(
+            lessonLocalId,
+            StudentLearningEvent(
+              type: 'SUPPORT_PREPARATION_PROGRESS',
+              ts: DateTime.now().millisecondsSinceEpoch,
+              payload: const {'exitOptionsShown': true},
+            ),
+          );
+      supportRoomView = view.copyWith(showExitOptions: true);
+      notifyListeners();
+    });
+  }
+
+  void submitSupportAnswer(String letter) {
+    final view = supportRoomView;
+    if (view == null) return;
+    final answerLetter = AnswerLetter.values.firstWhere(
+      (value) => value.name == letter,
+      orElse: () => AnswerLetter.A,
+    );
+    supportRoomView = _getSupportRoomService().selectAnswer(view, answerLetter);
+    notifyListeners();
+  }
+
+  void submitSupportQualifier(DecisionSignal signal) {
+    final view = supportRoomView;
+    if (view == null) return;
+    supportRoomView = _getSupportRoomService()
+        .submitQualifier(_buildSupportContext(), view, signal);
+    notifyListeners();
+  }
+
+  Future<void> nextSupportStation() async {
+    final view = supportRoomView;
+    if (view == null) return;
+    if (view.status == SupportRoomStatus.retryAvailable ||
+        (view.status == SupportRoomStatus.preparing && view.showExitOptions)) {
+      supportRoomView = _getSupportRoomService()
+          .retryRequested(_ensureController().organism.lessonLocalId);
+      notifyListeners();
+      supportRoomView =
+          await _getSupportRoomService().start(_buildSupportContext());
+      notifyListeners();
+      return;
+    }
+    supportRoomView =
+        await _getSupportRoomService().next(_buildSupportContext(), view);
+    notifyListeners();
+  }
+
+  void returnFromSupport({bool afterFailure = false}) {
+    final lessonLocalId = _ensureController().organism.lessonLocalId;
+    _getSupportRoomService().returnToLesson(
+      lessonLocalId,
+      afterFailure: afterFailure,
+    );
+    supportRoomView = null;
     final engine = _controller?.organism.lessonRuntimeEngine;
     if (engine != null) _applySnapshot(engine.snapshot());
     notifyListeners();
@@ -1750,20 +2340,173 @@ class LabSession extends ChangeNotifier {
   }
 
   Future<void> toggleAudio() async {
-    if (audioLoading) return;
+    await _ensureAudioPreferenceReady();
     audioError = null;
-    if (!audioEnabled) {
-      audioEnabled = true;
+    final ctrl = _ensureController();
+    if (audioEnabled) {
+      ctrl.organism.audioPreference.setAudioEnabled(false);
+      ctrl.organism.lessonAudioController.pararAudio();
+      audioEnabled = false;
+      audioLoading = false;
+      audioStatus = 'paused';
+      _appendAudioEvent('AUDIO_PREFERENCE_CHANGED', {'enabled': false});
+      _appendAudioEvent('AUDIO_PAUSED', _audioEventPayload());
       notifyListeners();
       return;
     }
+    ctrl.organism.audioPreference.setAudioEnabled(true);
+    audioEnabled = true;
+    audioStatus = 'idle';
+    _appendAudioEvent('AUDIO_PREFERENCE_CHANGED', {'enabled': true});
+    notifyListeners();
+    await playLessonAudio();
+  }
+
+  Future<void> playLessonAudio({bool automatic = false}) async {
+    await _ensureAudioPreferenceReady();
+    if (!audioEnabled || audioLoading || audioStatus == 'playing') return;
+    final ctrl = _ensureController();
+    if (!ctrl.organism.audioPreference.getAudioEnabled()) return;
+    final content = _lastSnapshot?.conteudo;
+    if (content == null) return;
+    final parts = [
+      content.explanation,
+      content.question,
+      if ((content.options[AnswerLetter.A] ?? '').isNotEmpty)
+        'A: ${content.options[AnswerLetter.A]}',
+      if ((content.options[AnswerLetter.B] ?? '').isNotEmpty)
+        'B: ${content.options[AnswerLetter.B]}',
+      if ((content.options[AnswerLetter.C] ?? '').isNotEmpty)
+        'C: ${content.options[AnswerLetter.C]}',
+    ];
+    final text = parts
+        .whereType<String>()
+        .where((part) => part.trim().isNotEmpty)
+        .join('. ');
+    if (text.trim().isEmpty) return;
+    final active = ctrl.organism.activeState;
+    final marker = active.current?.marker;
+    final layer = active.current?.layer ?? LessonLayer.l1;
+    final lang = stableLangToBCP47(stableLang);
+    final voice = voiceByLang(lang);
+    final cacheKey = [
+      ctrl.organism.lessonLocalId,
+      marker ?? 'no-marker',
+      layer.value,
+      lang,
+      voice,
+      hashString(text),
+    ].join(':');
     audioLoading = true;
+    audioStatus = 'loading';
+    audioError = null;
+    _appendAudioEvent('AUDIO_GENERATION_REQUESTED', {
+      ..._audioEventPayload(cacheKey: cacheKey),
+      'automatic': automatic,
+    });
     notifyListeners();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    try {
+      final started = await ctrl.organism.mediaService.playLessonAudioSequence(
+        LessonMediaPosition(
+          lessonLocalId: ctrl.organism.lessonLocalId,
+          itemMarker: marker,
+          layer: layer,
+        ),
+        parts,
+        lang: lang,
+        voice: voice,
+        onStart: () {
+          audioLoading = false;
+          audioStatus = 'playing';
+          _appendAudioEvent('AUDIO_GENERATED', {
+            ..._audioEventPayload(cacheKey: cacheKey),
+            'voice': voice,
+            'language': lang,
+          });
+          _appendAudioEvent(
+            'AUDIO_PLAYED',
+            _audioEventPayload(cacheKey: cacheKey),
+          );
+          notifyListeners();
+        },
+        onEnd: () {
+          audioLoading = false;
+          audioStatus = audioEnabled ? 'idle' : 'paused';
+          _appendAudioEvent(
+            'AUDIO_STOPPED',
+            _audioEventPayload(cacheKey: cacheKey),
+          );
+          notifyListeners();
+        },
+      );
+      if (!started) {
+        audioLoading = false;
+        audioStatus = 'error';
+        audioError = 'Audio indisponivel para este trecho.';
+        _appendAudioEvent('AUDIO_FAILED', {
+          ..._audioEventPayload(cacheKey: cacheKey),
+          'error': audioError,
+        });
+        notifyListeners();
+      }
+    } catch (e) {
+      audioLoading = false;
+      audioStatus = 'error';
+      audioError =
+          'Erro ao gerar audio: ${e.toString().replaceFirst("Exception: ", "")}';
+      _appendAudioEvent('AUDIO_FAILED', {
+        ..._audioEventPayload(cacheKey: cacheKey),
+        'error': audioError,
+      });
+      notifyListeners();
+    }
+  }
+
+  void stopLessonAudio() {
+    final ctrl = _controller;
+    ctrl?.organism.lessonAudioController.pararAudio();
     audioLoading = false;
-    audioEnabled = false;
-    audioError = 'ÃƒÆ’Ã‚Âudio pausado.';
+    audioStatus = 'paused';
+    _appendAudioEvent('AUDIO_PAUSED', _audioEventPayload());
     notifyListeners();
+  }
+
+  Future<void> _ensureAudioPreferenceReady() async {
+    final prefs = _audioPrefs ??= await SharedPreferences.getInstance();
+    final raw = prefs.getString(audioPreferenceStorageKey);
+    audioEnabled = raw == null || raw == '1' || raw == 'true';
+    final ctrl = _controller;
+    if (ctrl != null &&
+        ctrl.organism.audioPreference.getAudioEnabled() != audioEnabled) {
+      ctrl.organism.audioPreference.setAudioEnabled(audioEnabled);
+    }
+  }
+
+  JsonMap _audioEventPayload({String? cacheKey}) {
+    final ctrl = _controller;
+    final state = ctrl?.organism.activeState;
+    final lang = stableLangToBCP47(stableLang);
+    return {
+      'lessonLocalId': ctrl?.organism.lessonLocalId ?? lessonLocalId,
+      'marker': state?.current?.marker,
+      'layer': state?.current?.layer.value,
+      'language': lang,
+      'voice': voiceByLang(lang),
+      if (cacheKey != null) 'cacheKey': cacheKey,
+    };
+  }
+
+  void _appendAudioEvent(String type, JsonMap payload) {
+    final ctrl = _controller;
+    if (ctrl == null) return;
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: type,
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: payload,
+      ),
+    );
   }
 
   Future<void> requestLessonImage() async {
@@ -1795,17 +2538,6 @@ class LabSession extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (credits < 10) {
-      imageStatus = 'idle';
-      imageError = 'Creditos insuficientes para gerar imagem.';
-      _appendVisualEvent('VISUAL_AI_FAILED', {
-        'cacheKey': cacheKey,
-        'reason': 'insufficient_credits',
-      });
-      route = '/creditos';
-      notifyListeners();
-      return;
-    }
     imageStatus = 'loading';
     _appendVisualEvent('VISUAL_AI_REQUESTED', {
       'cacheKey': cacheKey,
@@ -1827,18 +2559,30 @@ class LabSession extends ChangeNotifier {
       );
       final softwareImage =
           await pipeline.renderMathTemplateVisual(triggerJson);
+      final prompt = pipeline.buildPromptForTrigger(
+        topic: state.curriculum?.topic ?? freeText,
+        trigger: trigger,
+        lang: stableLang,
+      );
       final dataUrl = softwareImage ??
-          await pipeline.fetchPaidLessonImage(
-            pipeline.buildPromptForTrigger(
-              topic: state.curriculum?.topic ?? freeText,
-              trigger: trigger,
-              lang: stableLang,
-            ),
-            cacheKey,
+          await (await _getCreditService()).runReserved<String?>(
+            lessonLocalId: ctrl.organism.lessonLocalId,
+            amount: simCreditCosts.imageGeneration,
+            reason: 'image_generation',
+            idempotencyKey: 'image:$cacheKey',
+            metadata: {
+              'lessonLocalId': ctrl.organism.lessonLocalId,
+              'marker': state.current?.marker,
+              'layer': state.current?.layer.value,
+              'cacheKey': cacheKey,
+              'provider': 'server-ai',
+            },
+            operation: (_) => pipeline.fetchPaidLessonImage(prompt, cacheKey),
           );
       if (dataUrl == null || dataUrl.isEmpty) {
         throw Exception('Servidor nao retornou imagem utilizavel.');
       }
+      credits = (await _getCreditService()).cachedBalance;
       lessonImageDataUrl = dataUrl;
       imageStatus = 'ready';
       await prefs.setString(cacheKey, dataUrl);
@@ -1853,6 +2597,18 @@ class LabSession extends ChangeNotifier {
         'cacheKey': cacheKey,
         'cacheHit': false,
         'provider': softwareImage == null ? 'server-ai' : 'software-template',
+      });
+    } on CreditClientException catch (e) {
+      imageStatus = 'idle';
+      imageError = e.insufficientCredits
+          ? 'Creditos insuficientes para gerar imagem.'
+          : e.toString();
+      if (e.insufficientCredits) route = '/creditos';
+      _markVisualState(cacheKey: cacheKey, status: 'failed');
+      _appendVisualEvent('VISUAL_AI_FAILED', {
+        'cacheKey': cacheKey,
+        'reason': imageError,
+        'creditFailure': true,
       });
     } catch (e) {
       imageStatus = 'error';
@@ -1946,10 +2702,41 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
     try {
       final ctrl = _ensureController();
-      final snapshot = await ctrl.organism.lessonRuntimeEngine.open(
-        lessonLocalId: ctrl.organism.lessonLocalId,
-      );
+      final material = ctrl.organism.activeState.currentLessonMaterial;
+      final hasReadyMaterial = material != null &&
+          (material['text_status'] == 'ready' ||
+              material['explanation'] != null);
+      final marker = ctrl.organism.activeState.current?.marker ?? 'current';
+      final snapshot = hasReadyMaterial
+          ? await ctrl.organism.lessonRuntimeEngine.open(
+              lessonLocalId: ctrl.organism.lessonLocalId,
+            )
+          : await (await _getCreditService()).runReserved(
+              lessonLocalId: ctrl.organism.lessonLocalId,
+              amount: simCreditCosts.lessonGeneration,
+              reason: 'lesson_generation',
+              idempotencyKey:
+                  'lesson:${ctrl.organism.lessonLocalId}:t02:$aulaStep:$marker',
+              metadata: {
+                'lessonLocalId': ctrl.organism.lessonLocalId,
+                'marker': marker,
+                'layer': ctrl.organism.activeState.current?.layer.value,
+                'aulaStep': aulaStep,
+                'mode': 'lesson_runtime_open',
+              },
+              operation: (_) => ctrl.organism.lessonRuntimeEngine.open(
+                lessonLocalId: ctrl.organism.lessonLocalId,
+              ),
+            );
+      credits = (await _getCreditService()).cachedBalance;
       _applySnapshot(snapshot);
+    } on CreditClientException catch (e) {
+      t02Loading = false;
+      t02Error = e.insufficientCredits
+          ? 'Creditos insuficientes para preparar a aula.'
+          : 'Erro de creditos: ${e.toString()}';
+      if (e.insufficientCredits) route = '/creditos';
+      notifyListeners();
     } catch (e) {
       t02Loading = false;
       t02Error =
@@ -1972,6 +2759,9 @@ class LabSession extends ChangeNotifier {
   @override
   void dispose() {
     _authSub?.cancel();
+    _supportExitTimer?.cancel();
+    _controller?.organism.lessonAudioController.pararAudio();
+    unawaited(_audioPlayback?.dispose());
     super.dispose();
   }
 
@@ -1979,7 +2769,13 @@ class LabSession extends ChangeNotifier {
     if (_controller != null) return _controller!;
     final organism = SimOrganism.production(
       lessonLocalId: lessonLocalId ?? 'live-entry',
+      playback: _audioPlayback ??= AudioplayersPlaybackAdapter(),
+      audioPreferenceStorage: _audioPrefs == null
+          ? null
+          : SharedPreferencesAudioPreferenceStorage(_audioPrefs!),
+      cloudQueueStorage: _cloudQueueStorage,
     );
+    audioEnabled = organism.audioPreference.getAudioEnabled();
     organism.stateService.mutate(
       organism.lessonLocalId,
       (state) => state.copyWith(userId: userId),
@@ -2069,7 +2865,38 @@ class LabSession extends ChangeNotifier {
       imageStatus = 'idle';
       imageError = null;
     }
+    final audioAutoKey = _lessonAudioAutoKey(c, activeState);
+    if (audioEnabled &&
+        c != null &&
+        audioAutoKey != null &&
+        audioAutoKey != _lastAudioAutoKey) {
+      _lastAudioAutoKey = audioAutoKey;
+      unawaited(playLessonAudio(automatic: true));
+    }
     notifyListeners();
+  }
+
+  String? _lessonAudioAutoKey(
+    LessonContent? content,
+    StudentLearningState? state,
+  ) {
+    if (content == null) return null;
+    final text = [
+      content.explanation,
+      content.question,
+      content.options[AnswerLetter.A],
+      content.options[AnswerLetter.B],
+      content.options[AnswerLetter.C],
+    ].whereType<String>().where((part) => part.trim().isNotEmpty).join('|');
+    if (text.isEmpty) return null;
+    final lang = stableLangToBCP47(stableLang);
+    return [
+      state?.current?.marker ?? 'no-marker',
+      state?.current?.layer.value ?? 'L?',
+      lang,
+      voiceByLang(lang),
+      hashString(text),
+    ].join(':');
   }
 
   Future<void> _advanceEngine() async {
@@ -2295,86 +3122,362 @@ class PortalScreen extends StatelessWidget {
   void _showLabDrawer(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Menu',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: simDark,
-              ),
-            ),
-            const SizedBox(height: 10),
-            _PortalDrawerBody(session: session),
-          ],
-        ),
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * .82,
+        child: _LessonHistoryDrawer(session: session),
       ),
     );
   }
 }
 
-class _PortalDrawerBody extends StatelessWidget {
-  const _PortalDrawerBody({required this.session});
+class _LessonHistoryDrawer extends StatefulWidget {
+  const _LessonHistoryDrawer({required this.session});
 
   final LabSession session;
 
   @override
+  State<_LessonHistoryDrawer> createState() => _LessonHistoryDrawerState();
+}
+
+class _LessonHistoryDrawerState extends State<_LessonHistoryDrawer> {
+  late final TextEditingController _searchController;
+
+  LabSession get session => widget.session;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(text: session.lessonHistoryQuery);
+    unawaited(session._refreshLessonHistory());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        MenuLine(
-          label: 'Abrir aula',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/cyber/aula');
-          },
+    return AnimatedBuilder(
+      animation: session,
+      builder: (context, _) {
+        final lessons = session.filteredLessonHistory;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Historico',
+                      style: TextStyle(
+                        color: simDark,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _searchController,
+                onChanged: session.setLessonHistoryQuery,
+                decoration: InputDecoration(
+                  hintText: 'Buscar aulas',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: const Color(0xFFF9FAFB),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: simBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: simBorder),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _DrawerActionChip(
+                    icon: Icons.add,
+                    label: 'Nova aula',
+                    onTap: () async {
+                      await session.startNewLessonFromHistory();
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                  ),
+                  _DrawerActionChip(
+                    icon: Icons.download,
+                    label: 'Exportar',
+                    onTap: session.exportLessonBackup,
+                  ),
+                  _DrawerActionChip(
+                    icon: Icons.upload_file,
+                    label: 'Importar',
+                    onTap: session.importLessonBackup,
+                  ),
+                  _DrawerActionChip(
+                    icon: Icons.sync,
+                    label: 'Sync',
+                    onTap: session.lessonHistoryLoading
+                        ? null
+                        : session.syncLessonHistory,
+                  ),
+                ],
+              ),
+              if (session.lessonHistoryMessage != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  session.lessonHistoryMessage!,
+                  style: const TextStyle(color: simMuted, fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Expanded(
+                child: lessons.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Nenhuma aula salva ainda.',
+                          style: TextStyle(color: simMuted),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: lessons.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final entry = lessons[index];
+                          return _LessonHistoryTile(
+                            entry: entry,
+                            active:
+                                entry.lessonLocalId == session.lessonLocalId,
+                            onTap: () async {
+                              await session.selectLessonFromHistory(
+                                entry.lessonLocalId,
+                              );
+                              if (context.mounted) Navigator.pop(context);
+                            },
+                            onRename: () => _rename(entry),
+                            onDelete: () => _delete(entry),
+                          );
+                        },
+                      ),
+              ),
+              const Divider(height: 22),
+              MenuLine(
+                label: 'Creditos',
+                onTap: () {
+                  Navigator.pop(context);
+                  session.openCredits();
+                },
+              ),
+              MenuLine(
+                label: 'Painel do Pai',
+                onTap: () {
+                  Navigator.pop(context);
+                  session.openSupport('/pai');
+                },
+              ),
+              MenuLine(
+                label: 'Privacidade',
+                onTap: () {
+                  Navigator.pop(context);
+                  session.openSupport('/privacidade');
+                },
+              ),
+              MenuLine(
+                label: 'Termos',
+                onTap: () {
+                  Navigator.pop(context);
+                  session.openSupport('/termos');
+                },
+              ),
+              MenuLine(
+                label: 'Solicitar exclusao da conta',
+                onTap: () {
+                  Navigator.pop(context);
+                  session.openSupport('/conta/deletar');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _rename(LessonHistoryEntry entry) async {
+    final controller = TextEditingController(text: entry.title);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Renomear aula'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Nome da aula'),
         ),
-        MenuLine(
-          label: 'CrÃƒÆ’Ã‚Â©ditos',
-          onTap: () {
-            Navigator.pop(context);
-            session.openCredits();
-          },
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title != null) {
+      await session.renameLessonFromHistory(entry.lessonLocalId, title);
+    }
+  }
+
+  Future<void> _delete(LessonHistoryEntry entry) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar aula?'),
+        content: Text(
+          'A aula "${entry.title}" sera removida do historico. '
+          'Dados financeiros e auditoria nao serao apagados.',
         ),
-        MenuLine(
-          label: 'Painel do Pai',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/pai');
-          },
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await session.tombstoneLessonFromHistory(entry.lessonLocalId);
+    } else {
+      final store = await session._getLessonHistoryStore();
+      final state = session._buildPersistedLearningState();
+      await store.saveState(
+        state.copyWith(
+          events: [
+            ...state.events,
+            session._lessonEvent('LESSON_DELETE_CANCELLED', {
+              'lessonLocalId': entry.lessonLocalId,
+            }),
+          ],
         ),
-        MenuLine(
-          label: 'Privacidade',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/privacidade');
-          },
+      );
+    }
+  }
+}
+
+class _DrawerActionChip extends StatelessWidget {
+  const _DrawerActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final FutureOr<void> Function()? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: Icon(icon, size: 18, color: simDark),
+      label: Text(label),
+      onPressed: onTap == null ? null : () => onTap!(),
+      backgroundColor: Colors.white,
+      side: const BorderSide(color: simBorder),
+      labelStyle: const TextStyle(
+        color: simDark,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _LessonHistoryTile extends StatelessWidget {
+  const _LessonHistoryTile({
+    required this.entry,
+    required this.active,
+    required this.onTap,
+    required this.onRename,
+    required this.onDelete,
+  });
+
+  final LessonHistoryEntry entry;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = entry.status == 'concluida'
+        ? Icons.check_circle
+        : entry.status == 'apagada'
+            ? Icons.delete
+            : Icons.play_circle;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: active ? simLight : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: active ? simDark : simBorder),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: Icon(icon, color: active ? simDark : simMuted),
+        title: Text(
+          entry.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
-        MenuLine(
-          label: 'Termos',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/termos');
-          },
+        subtitle: Text(
+          '${entry.progressPercent}% - ${entry.status.replaceAll('_', ' ')}'
+          '${entry.lastMarker == null ? '' : ' - ${entry.lastMarker}'}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
-        MenuLine(
-          label: 'Solicitar exclusÃƒÆ’Ã‚Â£o da conta',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/conta/deletar');
-          },
+        trailing: Wrap(
+          spacing: 2,
+          children: [
+            IconButton(
+              tooltip: 'Renomear',
+              icon: const Icon(Icons.edit, size: 19),
+              onPressed: onRename,
+            ),
+            IconButton(
+              tooltip: 'Apagar',
+              icon: const Icon(Icons.delete_outline, size: 19),
+              onPressed: onDelete,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -4674,12 +5777,40 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 10),
                           StatusLine(
                             icon: session.audioEnabled
-                                ? Icons.volume_up_outlined
+                                ? session.audioStatus == 'playing'
+                                    ? Icons.pause_circle_outline
+                                    : Icons.volume_up_outlined
                                 : Icons.volume_off_outlined,
                             text: session.audioEnabled
-                                ? 'ÃƒÆ’Ã‚Âudio da aula ligado'
-                                : 'ÃƒÆ’Ã‚Âudio da aula pausado',
+                                ? session.audioStatus == 'playing'
+                                    ? 'Audio da aula tocando'
+                                    : 'Audio da aula ligado'
+                                : 'Audio da aula desligado',
                           ),
+                          if (session.audioEnabled &&
+                              !session.audioLoading &&
+                              session.t02Explanation != null) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: session.audioStatus == 'playing'
+                                    ? session.stopLessonAudio
+                                    : session.playLessonAudio,
+                                icon: Icon(
+                                  session.audioStatus == 'playing'
+                                      ? Icons.pause
+                                      : Icons.play_arrow,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  session.audioStatus == 'playing'
+                                      ? 'Pausar audio'
+                                      : 'Tocar audio',
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 14),
                           const Text(
                             'Pergunta',
@@ -4832,6 +5963,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ],
                       ),
                     ),
+                    if (session.supportRoomView != null) ...[
+                      const SizedBox(height: 14),
+                      SupportRoomPanel(session: session),
+                    ],
                     if (session.reviewRoomView != null ||
                         session.reviewQueueCount > 0) ...[
                       const SizedBox(height: 14),
@@ -4854,6 +5989,217 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class SupportRoomPanel extends StatelessWidget {
+  const SupportRoomPanel({required this.session, super.key});
+
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final view = session.supportRoomView;
+    if (view == null) return const SizedBox.shrink();
+    final station = view.station;
+    final content = station?.content;
+    return SimCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/monkey-logo.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Amparo',
+                  style: TextStyle(
+                    color: simDark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            view.message,
+            style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: view.status == SupportRoomStatus.preparing
+                ? null
+                : (view.progress.clamp(5, 100) / 100),
+            minHeight: 4,
+            backgroundColor: simLight,
+            color: simDark,
+          ),
+          const SizedBox(height: 12),
+          if (view.status == SupportRoomStatus.preparing) ...[
+            const StatusLine(
+              icon: Icons.auto_awesome,
+              text: 'Preparando o caminho...',
+              loading: true,
+            ),
+            if (view.showExitOptions) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'A preparacao continua. Se preferir, voce pode tentar de novo ou voltar para a aula no mesmo ponto.',
+                style: TextStyle(color: simMuted, fontSize: 13, height: 1.35),
+              ),
+              const SizedBox(height: 10),
+              PrimaryWideButton(
+                label: 'Tentar de novo',
+                onTap: session.nextSupportStation,
+              ),
+              const SizedBox(height: 8),
+              SecondaryWideButton(
+                label: 'Voltar para a aula',
+                onTap: () => session.returnFromSupport(afterFailure: true),
+              ),
+            ],
+          ] else if (view.status == SupportRoomStatus.failed) ...[
+            Text(
+              view.error ??
+                  'Nao foi possivel preparar este amparo agora. Voce pode tentar novamente ou voltar para a aula no mesmo ponto.',
+              style: const TextStyle(color: Colors.red, fontSize: 14),
+            ),
+            const SizedBox(height: 10),
+            PrimaryWideButton(
+              label: 'Tentar de novo',
+              onTap: () => session.nextSupportStation(),
+            ),
+            const SizedBox(height: 8),
+            SecondaryWideButton(
+              label: 'Voltar para a aula',
+              onTap: () => session.returnFromSupport(afterFailure: true),
+            ),
+          ] else if (view.status == SupportRoomStatus.crossed) ...[
+            const Text(
+              'Pronto. O caminho foi ajustado. Vamos voltar para a aula no mesmo ponto.',
+              style: TextStyle(color: simDark, fontSize: 15, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            PrimaryWideButton(
+              label: 'Voltar para a aula',
+              onTap: () => session.returnFromSupport(),
+            ),
+          ] else if (view.status == SupportRoomStatus.retryAvailable) ...[
+            const Text(
+              'Vamos fazer mais uma travessia curta, por outro caminho.',
+              style: TextStyle(color: simDark, fontSize: 15, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            PrimaryWideButton(
+              label: 'Continuar',
+              onTap: session.nextSupportStation,
+            ),
+          ] else if (view.status == SupportRoomStatus.maxReached) ...[
+            const Text(
+              'Vamos voltar para a aula no mesmo ponto e seguir com mais cuidado.',
+              style: TextStyle(color: simDark, fontSize: 15, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            PrimaryWideButton(
+              label: 'Voltar para a aula',
+              onTap: () => session.returnFromSupport(),
+            ),
+          ] else if (content != null && station != null) ...[
+            Text(
+              'Passo ${view.index + 1}/3 - ${station.title}',
+              style: const TextStyle(
+                color: simDark,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              content.explanation,
+              style:
+                  const TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              content.question,
+              style: const TextStyle(color: simDark, fontSize: 15, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            for (final letter in AnswerLetter.values)
+              AnswerButton(
+                label: letter.name,
+                text: content.options[letter] ?? '',
+                active: view.letra == letter,
+                locked: view.status == SupportRoomStatus.result,
+                correct: view.status == SupportRoomStatus.result &&
+                    content.correctAnswer == letter,
+                onTap: view.status == SupportRoomStatus.result
+                    ? null
+                    : () => session.submitSupportAnswer(letter.name),
+              ),
+            if (view.letra != null &&
+                view.status != SupportRoomStatus.result) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Como ficou este passo?',
+                style: TextStyle(
+                  color: simDark,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              QualifierButton(
+                label: '1',
+                text: 'Ficou solido',
+                onTap: () => session.submitSupportQualifier(DecisionSignal.one),
+              ),
+              QualifierButton(
+                label: '2',
+                text: 'Entendi, mas quero revisar',
+                onTap: () => session.submitSupportQualifier(DecisionSignal.two),
+              ),
+              QualifierButton(
+                label: '3',
+                text: 'Ainda esta fragil',
+                onTap: () =>
+                    session.submitSupportQualifier(DecisionSignal.three),
+              ),
+            ],
+            if (view.status == SupportRoomStatus.result) ...[
+              const SizedBox(height: 12),
+              _FeedbackBanner(
+                message: view.resultCorrect == true
+                    ? 'Esse passo ficou claro.'
+                    : 'Vamos seguir ajustando o caminho.',
+                wasCorrect: view.resultCorrect == true,
+              ),
+              const SizedBox(height: 10),
+              PrimaryWideButton(
+                label: view.index >= 2 ? 'Concluir amparo' : 'Proximo passo',
+                onTap: session.nextSupportStation,
+              ),
+            ],
+            const SizedBox(height: 8),
+            SecondaryWideButton(
+              label: 'Voltar para a aula',
+              onTap: () => session.returnFromSupport(),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -5708,12 +7054,15 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'CrÃƒÆ’Ã‚Â©ditos',
-                      style: TextStyle(
-                        color: simDark,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
+                    const Expanded(
+                      child: Text(
+                        'Creditos',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: simDark,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -5750,6 +7099,11 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                   '3 crÃƒÆ’Ã‚Â©ditos por aula  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  10 por imagem',
                   style: TextStyle(color: simMuted, fontSize: 13),
                 ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Audio e preparo T00 ficam sem cobranca real enquanto nao houver politica oficial no servidor.',
+                  style: TextStyle(color: simMuted, fontSize: 12),
+                ),
                 const SizedBox(height: 18),
                 for (final pack in simPricing.creditPacks)
                   _SimCreditPackButton(
@@ -5770,6 +7124,10 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                   'ApÃƒÆ’Ã‚Â³s o pagamento, toque em ÃƒÂ¢Ã¢â‚¬Â Ã‚Âº para atualizar o saldo.',
                   style: TextStyle(color: simMuted, fontSize: 12),
                 ),
+                const SizedBox(height: 18),
+                _CreditLedgerPreview(
+                  transactions: widget.session.billingTransactions,
+                ),
                 const SizedBox(height: 16),
                 PrimaryWideButton(
                   label: 'Voltar para aula',
@@ -5784,6 +7142,76 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CreditLedgerPreview extends StatelessWidget {
+  const _CreditLedgerPreview({required this.transactions});
+
+  final List<StudentBillingTransaction> transactions;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = transactions.reversed.take(6).toList(growable: false);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        border: Border.all(color: simBorder),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Historico de creditos',
+            style: TextStyle(
+              color: simDark,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (visible.isEmpty)
+            const Text(
+              'Nenhuma transacao carregada ainda.',
+              style: TextStyle(color: simMuted, fontSize: 13),
+            )
+          else
+            for (final tx in visible)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      tx.amount >= 0 ? Icons.add_circle : Icons.remove_circle,
+                      color: tx.amount >= 0 ? Colors.green : Colors.redAccent,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${tx.reason} - ${tx.status.name}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: simDark, fontSize: 13),
+                      ),
+                    ),
+                    Text(
+                      tx.amount > 0 ? '+${tx.amount}' : '${tx.amount}',
+                      style: const TextStyle(
+                        color: simDark,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        ],
       ),
     );
   }
@@ -6843,52 +8271,14 @@ class QualifierButton extends StatelessWidget {
 void showAulaMenu(BuildContext context, LabSession session) {
   showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
     ),
-    builder: (context) => Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MenuLine(
-            label: 'Recarregar crÃƒÆ’Ã‚Â©ditos',
-            onTap: () {
-              Navigator.pop(context);
-              session.openCredits();
-            },
-          ),
-          MenuLine(
-            label: 'Painel do Pai',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/pai');
-            },
-          ),
-          MenuLine(
-            label: 'Privacidade',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/privacidade');
-            },
-          ),
-          MenuLine(
-            label: 'Termos',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/termos');
-            },
-          ),
-          MenuLine(
-            label: 'Solicitar exclusÃƒÆ’Ã‚Â£o da conta',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/conta/deletar');
-            },
-          ),
-        ],
-      ),
+    builder: (context) => SizedBox(
+      height: MediaQuery.of(context).size.height * .82,
+      child: _LessonHistoryDrawer(session: session),
     ),
   );
 }
@@ -6911,28 +8301,28 @@ const supportedLangs = <SupportedLang>[
       code: 'en',
       name: 'English',
       native: 'English',
-      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚ÂºÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¸'),
+      flag: 'Ã°Å¸â€¡ÂºÃ°Å¸â€¡Â¸'),
   SupportedLang(
     code: 'pt',
     name: 'Portuguese',
-    native: 'PortuguÃƒÆ’Ã‚Âªs',
-    flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â§ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â·',
+    native: 'PortuguÃƒÂªs',
+    flag: 'Ã°Å¸â€¡Â§Ã°Å¸â€¡Â·',
   ),
   SupportedLang(
       code: 'es',
       name: 'Spanish',
-      native: 'EspaÃƒÆ’Ã‚Â±ol',
-      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚ÂªÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¸'),
+      native: 'EspaÃƒÂ±ol',
+      flag: 'Ã°Å¸â€¡ÂªÃ°Å¸â€¡Â¸'),
   SupportedLang(
       code: 'fr',
       name: 'French',
-      native: 'FranÃƒÆ’Ã‚Â§ais',
-      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â«ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â·'),
+      native: 'FranÃƒÂ§ais',
+      flag: 'Ã°Å¸â€¡Â«Ã°Å¸â€¡Â·'),
   SupportedLang(
       code: 'ja',
       name: 'Japanese',
-      native: 'ÃƒÂ¦Ã¢â‚¬â€Ã‚Â¥ÃƒÂ¦Ã…â€œÃ‚Â¬ÃƒÂ¨Ã‚ÂªÃ…Â¾',
-      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¯ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Âµ'),
+      native: 'Ã¦â€”Â¥Ã¦Å“Â¬Ã¨ÂªÅ¾',
+      flag: 'Ã°Å¸â€¡Â¯Ã°Å¸â€¡Âµ'),
 ];
 
 class LanguageButton extends StatelessWidget {
@@ -6951,7 +8341,7 @@ class LanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = language.native.isEmpty
         ? language.name
-        : '${language.name} Ãƒâ€šÃ‚Â· ${language.native}';
+        : '${language.name} Ã‚Â· ${language.native}';
     return SizedBox(
       width: double.infinity,
       height: 64,
@@ -6975,6 +8365,7 @@ class LanguageButton extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: simDark,
             alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -6986,6 +8377,8 @@ class LanguageButton extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,

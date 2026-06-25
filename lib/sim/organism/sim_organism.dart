@@ -10,8 +10,10 @@ import '../classroom/lesson_position_engine.dart';
 import '../classroom/lesson_runtime_engine.dart';
 import '../classroom/lesson_session_engine.dart';
 import '../cloud/cloud_queue.dart';
+import '../cloud/cloud_functions.dart';
 import '../cloud/lesson_cloud_bootstrap.dart';
 import '../cloud/lesson_curriculum_sync_engine.dart';
+import '../cloud/sim_server_cloud_functions.dart';
 import '../cloud/supabase_client_contract.dart';
 import '../cloud/supabase_flutter_session_provider.dart';
 import '../cloud/student_learning_sync.dart';
@@ -109,6 +111,10 @@ class SimOrganism {
     required LessonImageClient imageClient,
     required SupabaseSessionProvider sessionProvider,
     required StudentLearningStateService stateService,
+    CloudQueueStorage? cloudQueueStorage,
+    StudentStateCloudFunctions? cloudFunctions,
+    AudioPlaybackAdapter? playback,
+    AudioPreferenceStorage? audioPreferenceStorage,
   }) {
     final cache = LessonMaterialCache();
     final eventBus = LessonEventBus();
@@ -177,20 +183,20 @@ class SimOrganism {
     );
 
     final cloudQueue = CloudQueue(
-      storage: MemoryCloudQueueStorage(),
+      storage: cloudQueueStorage ?? MemoryCloudQueueStorage(),
       stateService: stateService,
       sessionProvider: sessionProvider,
-      cloudFunctions: LaboratoryStudentStateCloudFunctions(),
+      cloudFunctions: cloudFunctions ?? LaboratoryStudentStateCloudFunctions(),
     );
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
     final curriculumSync =
         LessonCurriculumSyncEngine(stateService: stateService);
 
-    final audioPreference = AudioPreference();
+    final audioPreference = AudioPreference(storage: audioPreferenceStorage);
     final audioCore = AudioCore(
       preference: audioPreference,
-      playback: NoopAudioPlaybackAdapter(),
+      playback: playback ?? NoopAudioPlaybackAdapter(),
       generatedAudioClient: audioClient,
       stableLangProvider: () =>
           stateService.read(lessonLocalId)?.profile.stableLang ?? '',
@@ -246,7 +252,11 @@ class SimOrganism {
     );
   }
 
-  static SimOrganism laboratory({String lessonLocalId = 'lab-live-entry'}) {
+  static SimOrganism laboratory({
+    String lessonLocalId = 'lab-live-entry',
+    CloudQueueStorage? cloudQueueStorage,
+    StudentStateCloudFunctions? cloudFunctions,
+  }) {
     final stateService = StudentLearningStateService();
     stateService.ensure(lessonLocalId: lessonLocalId, userId: 'lab-user');
     return _build(
@@ -259,10 +269,18 @@ class SimOrganism {
         session: SupabaseSession(accessToken: 'lab-token', userId: 'lab-user'),
       ),
       stateService: stateService,
+      cloudQueueStorage: cloudQueueStorage,
+      cloudFunctions: cloudFunctions,
     );
   }
 
-  static SimOrganism production({String lessonLocalId = 'live-entry'}) {
+  static SimOrganism production({
+    String lessonLocalId = 'live-entry',
+    AudioPlaybackAdapter? playback,
+    AudioPreferenceStorage? audioPreferenceStorage,
+    CloudQueueStorage? cloudQueueStorage,
+    StudentStateCloudFunctions? cloudFunctions,
+  }) {
     Future<String?> tokenProvider() async =>
         Supabase.instance.client.auth.currentSession?.accessToken;
 
@@ -283,10 +301,15 @@ class SimOrganism {
       lessonLocalId: lessonLocalId,
       t02Client: SimServerT02Client(config: vmConfig),
       t00Client: SimServerT00Client(config: lovableConfig),
-      audioClient: SimServerGeneratedAudioClient(config: lovableConfig),
+      audioClient: SimServerGeneratedAudioClient(config: vmConfig),
       imageClient: SimServerLessonImageClient(config: lovableConfig),
       sessionProvider: const SupabaseFlutterSessionProvider(),
       stateService: stateService,
+      cloudQueueStorage: cloudQueueStorage,
+      cloudFunctions:
+          cloudFunctions ?? SimServerCloudFunctions(config: vmConfig),
+      playback: playback,
+      audioPreferenceStorage: audioPreferenceStorage,
     );
   }
 }

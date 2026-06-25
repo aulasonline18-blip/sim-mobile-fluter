@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/sim/cloud/cloud_functions.dart';
 import 'package:sim_mobile/sim/cloud/cloud_queue.dart';
 import 'package:sim_mobile/sim/cloud/lesson_cloud_bootstrap.dart';
@@ -24,6 +25,7 @@ class FakeCloudFunctions implements StudentStateCloudFunctions {
   int persistCalls = 0;
   int deleteCalls = 0;
   PersistStudentStateResult? nextPersist;
+  List<StudentStateRow> remoteRows = const [];
 
   @override
   Future<void> deleteStudentStateByLesson(
@@ -42,8 +44,9 @@ class FakeCloudFunctions implements StudentStateCloudFunctions {
   }
 
   @override
-  Future<List<StudentStateRow>> listStudentStates(SupabaseSession session) async {
-    return const [];
+  Future<List<StudentStateRow>> listStudentStates(
+      SupabaseSession session) async {
+    return remoteRows;
   }
 
   @override
@@ -124,9 +127,13 @@ void main() {
     expect(restored.auxRooms?['pendingMap'], isA<List>());
   });
 
-  test('cloud queue persists patch and removes it after successful drain', () async {
+  test('cloud queue persists patch and removes it after successful drain',
+      () async {
     final states = StudentLearningStateService(
-      seed: {'l1': stateWithProgress(id: 'l1', itemIdx: 1, layer: LessonLayer.l1, mainAdvances: 1)},
+      seed: {
+        'l1': stateWithProgress(
+            id: 'l1', itemIdx: 1, layer: LessonLayer.l1, mainAdvances: 1)
+      },
     );
     final cloud = FakeCloudFunctions();
     final queue = CloudQueue(
@@ -144,9 +151,43 @@ void main() {
     expect(queue.getQueueSnapshot(), isEmpty);
   });
 
-  test('cloud queue merges remote state when server rejects regression', () async {
-    final local = stateWithProgress(id: 'l1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0);
-    final remote = stateWithProgress(id: 'l1', itemIdx: 2, layer: LessonLayer.l3, mainAdvances: 2);
+  test('cloud queue storage persists pending jobs and last hashes', () {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = SharedPreferences.getInstance();
+    expect(prefs, completes);
+  });
+
+  test('shared preferences cloud queue storage restores pending jobs',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final storage = SharedPreferencesCloudQueueStorage(prefs);
+    storage.writeQueue({
+      'l1': const CloudQueueEntry(
+        lessonLocalId: 'l1',
+        operation: StudentLearningSyncOperation.syncState,
+        pendingSince: 100,
+        attempts: 1,
+        nextRetryAt: 200,
+        jobId: 'job-1',
+        idempotencyKey: 'syncState:l1',
+        status: 'pending',
+      ),
+    });
+    storage.writeLastHash('l1', 'hash-1');
+
+    final restored = SharedPreferencesCloudQueueStorage(prefs);
+    expect(restored.readQueue()['l1']?.idempotencyKey, 'syncState:l1');
+    expect(restored.readQueue()['l1']?.attempts, 1);
+    expect(restored.readLastHashes()['l1'], 'hash-1');
+  });
+
+  test('cloud queue merges remote state when server rejects regression',
+      () async {
+    final local = stateWithProgress(
+        id: 'l1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0);
+    final remote = stateWithProgress(
+        id: 'l1', itemIdx: 2, layer: LessonLayer.l3, mainAdvances: 2);
     final states = StudentLearningStateService(seed: {'l1': local});
     final cloud = FakeCloudFunctions()
       ..nextPersist = PersistStudentStateResult.rejectedRegression(
@@ -165,6 +206,75 @@ void main() {
     await queue.drainQueue();
     expect(states.read('l1')?.progress?.itemIdx, 2);
     expect(queue.getQueueSnapshot(), contains('l1'));
+  });
+
+  test('cloud pull restores remote snapshot when local is empty', () async {
+    final remote = stateWithProgress(
+        id: 'l1', itemIdx: 2, layer: LessonLayer.l2, mainAdvances: 2);
+    final states = StudentLearningStateService();
+    final cloud = FakeCloudFunctions()
+      ..remoteRows = [
+        StudentStateRow(
+          lessonLocalId: 'l1',
+          state: remote,
+          highWaterMark: scoreOfStudentLearningState(remote),
+          schemaVersion: remote.stateVersion,
+        ),
+      ];
+    final queue = CloudQueue(
+      storage: MemoryCloudQueueStorage(),
+      stateService: states,
+      sessionProvider: FakeSessionProvider(),
+      cloudFunctions: cloud,
+      now: () => 1000,
+    );
+
+    final restored = await queue.pullCloudSnapshots();
+    expect(restored.single.lessonLocalId, 'l1');
+    expect(states.read('l1')?.progress?.itemIdx, 2);
+    expect(
+      states.read('l1')?.events.map((event) => event.type),
+      contains('SNAPSHOT_RESTORED'),
+    );
+  });
+
+  test('cloud pull does not resurrect local tombstone with older remote',
+      () async {
+    final local = stateWithProgress(
+      id: 'l1',
+      itemIdx: 2,
+      layer: LessonLayer.l3,
+      mainAdvances: 2,
+    ).copyWith(
+      updatedAt: 3000,
+      extra: const {'deletedAt': 3000, 'highWaterMark': 999999},
+    );
+    final remote = stateWithProgress(
+            id: 'l1', itemIdx: 2, layer: LessonLayer.l3, mainAdvances: 2)
+        .copyWith(updatedAt: 1000);
+    final states = StudentLearningStateService(seed: {'l1': local});
+    final cloud = FakeCloudFunctions()
+      ..remoteRows = [
+        StudentStateRow(
+          lessonLocalId: 'l1',
+          state: remote,
+          highWaterMark: scoreOfStudentLearningState(remote),
+          schemaVersion: remote.stateVersion,
+        ),
+      ];
+    final queue = CloudQueue(
+      storage: MemoryCloudQueueStorage(),
+      stateService: states,
+      sessionProvider: FakeSessionProvider(),
+      cloudFunctions: cloud,
+      now: () => 1000,
+    );
+
+    await queue.pullCloudSnapshots();
+    expect(states.read('l1')?.extra['deletedAt'], 3000);
+    expect(queue.getQueueSnapshot(), contains('l1'));
+    expect(queue.getQueueSnapshot()['l1']?.operation,
+        StudentLearningSyncOperation.tombstone);
   });
 
   test('progress service picks the most advanced progress', () {
@@ -186,7 +296,10 @@ void main() {
 
   test('cloud progress publishes position and enqueues sync', () {
     final states = StudentLearningStateService(
-      seed: {'l1': stateWithProgress(id: 'l1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0)},
+      seed: {
+        'l1': stateWithProgress(
+            id: 'l1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0)
+      },
     );
     final queue = CloudQueue(
       storage: MemoryCloudQueueStorage(),
@@ -215,10 +328,12 @@ void main() {
     expect(queue.getQueueSnapshot(), contains('l1'));
   });
 
-  test('lesson cloud bootstrap enqueues and drains when curriculum is ready', () async {
+  test('lesson cloud bootstrap enqueues and drains when curriculum is ready',
+      () async {
     final states = StudentLearningStateService(
       seed: {
-        'local-1': stateWithProgress(id: 'local-1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0),
+        'local-1': stateWithProgress(
+            id: 'local-1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0),
       },
     );
     final cloud = FakeCloudFunctions();
@@ -246,7 +361,10 @@ void main() {
 
   test('curriculum sync settles from official state when UI has none', () {
     final states = StudentLearningStateService(
-      seed: {'l1': stateWithProgress(id: 'l1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0)},
+      seed: {
+        'l1': stateWithProgress(
+            id: 'l1', itemIdx: 0, layer: LessonLayer.l1, mainAdvances: 0)
+      },
     );
     final engine = LessonCurriculumSyncEngine(stateService: states);
 

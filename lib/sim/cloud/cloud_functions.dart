@@ -132,8 +132,47 @@ abstract interface class StudentStateCloudFunctions {
 int scoreOfStudentLearningState(StudentLearningState? state) {
   if (state == null) return -1;
   final progress = state.progress;
-  if (progress == null) return 0;
-  return progress.mainAdvances * 1000 + progress.itemIdx * 10 + progress.layer.value;
+  final current = state.current;
+  final curriculumSize = state.curriculum?.items.length ?? 0;
+  final attempts = state.attempts.length;
+  final eventCount = state.events.length;
+  final reviewCount = _auxQueueCount(state.auxRooms, 'review');
+  final recoveryCount = _auxQueueCount(state.auxRooms, 'recovery');
+  final highWater = (state.extra['highWaterMark'] as num?)?.toInt();
+  final progressScore = progress == null
+      ? 0
+      : progress.mainAdvances * 100000 +
+          progress.itemIdx * 1000 +
+          progress.layer.value * 100 +
+          progress.concluidos.length * 50;
+  final currentScore =
+      current == null ? 0 : current.itemIdx * 1000 + current.layer.value * 100;
+  return [
+        highWater ?? 0,
+        progressScore,
+        currentScore,
+      ].reduce((a, b) => a > b ? a : b) +
+      curriculumSize * 10 +
+      attempts * 5 +
+      eventCount +
+      reviewCount * 2 +
+      recoveryCount * 3;
+}
+
+int _auxQueueCount(JsonMap? auxRooms, String key) {
+  if (auxRooms == null) return 0;
+  final room = auxRooms[key];
+  if (room is Map) {
+    final entries = room['entries'];
+    if (entries is List) return entries.length;
+    final queue = room['queue'];
+    if (queue is List) return queue.length;
+    final pending = room['pendingMap'];
+    if (pending is Map) return pending.length;
+  }
+  final queue = auxRooms['${key}_queue'];
+  if (queue is List) return queue.length;
+  return 0;
 }
 
 StudentStateSummaryRow? summarizeStudentStateRow(StudentStateRow row) {
@@ -159,7 +198,8 @@ StudentStateSummaryRow? summarizeStudentStateRow(StudentStateRow row) {
         : null,
     updatedAt: row.updatedAt ??
         (state.updatedAt > 0
-            ? DateTime.fromMillisecondsSinceEpoch(state.updatedAt).toIso8601String()
+            ? DateTime.fromMillisecondsSinceEpoch(state.updatedAt)
+                .toIso8601String()
             : null),
     totalItens: items.length > (progress?.totalItems ?? 0)
         ? items.length

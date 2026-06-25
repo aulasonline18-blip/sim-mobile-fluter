@@ -35,7 +35,13 @@ class SimServerT00Client implements T00BootstrapClient {
       if (request.onboarding['free_text'] == null)
         'free_text': request.onboarding['objetivo'] ?? '',
     };
-    final body = {'ficha': ficha, 'timeoutMs': timeout.inMilliseconds};
+    final supportMode = request.onboarding['modo'] == 'amparo' ||
+        request.onboarding['mode'] == 'support';
+    final body = {
+      if (supportMode) 'modo': 'amparo',
+      'ficha': ficha,
+      'timeoutMs': timeout.inMilliseconds,
+    };
     await for (final line in transport.postEventStream(
       config.uri(simT00BootstrapPath),
       headers: await config.streamHeaders(),
@@ -138,6 +144,8 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
       body: {
         'text': request.text,
         'lang': request.lang,
+        'language': request.lang,
+        'voice': voice,
         'lessonKey': request.lessonKey,
       },
       timeout: timeout,
@@ -150,6 +158,15 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) return null;
+    final dataUrl = decoded['dataUrl']?.toString();
+    if (dataUrl != null && dataUrl.isNotEmpty) return dataUrl;
+    final audioUrl = decoded['audio_url']?.toString();
+    if (audioUrl != null && audioUrl.isNotEmpty) return audioUrl;
+    final audioBase64 = decoded['audio_base64']?.toString();
+    if (audioBase64 != null && audioBase64.isNotEmpty) {
+      final mime = decoded['mime_type']?.toString() ?? 'audio/wav';
+      return 'data:$mime;base64,$audioBase64';
+    }
     final parsed = GenerateLessonAudioResponse(
       dataUrl: decoded['dataUrl']?.toString() ?? '',
       voice: decoded['voice']?.toString() ?? voiceByLang(request.lang),
@@ -204,7 +221,8 @@ class SimServerT02Client implements T02LessonClient {
       config.uri(path),
       headers: await config.jsonHeaders(),
       body: {
-        'mode': mode,
+        'mode': request.mode == 'amparo' ? 'amparo' : mode,
+        if (request.mode == 'amparo') 'modo': 'amparo',
         'lessonLocalId': request.lessonLocalId,
         'item': request.item,
         'stable_lang': request.lang,

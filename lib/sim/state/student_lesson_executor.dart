@@ -122,6 +122,7 @@ ApplyDecisionResult applyStudentDecision(
       return ApplyDecisionResult(nextProgress: inputProgress, applied: false);
     case DecisionActionType.showCurrentLesson:
     case DecisionActionType.needsReinforcement:
+    case DecisionActionType.sendToSupport:
     case DecisionActionType.waitForLessonText:
       return ApplyDecisionResult(nextProgress: inputProgress, applied: true);
     case DecisionActionType.noSafeDecision:
@@ -259,6 +260,41 @@ StudentLearningState processAnswerWithEngine(
     mastery: mastery,
     attempt: attempt,
   );
+  final extra = decision.actionType == DecisionActionType.sendToSupport
+      ? _nextSupportExtra(
+          withTruth.extra,
+          lessonLocalId: state.lessonLocalId,
+          marker: item.marker,
+          itemIdx: idx,
+          layer: progress.layer,
+          attempt: attempt,
+          state: state,
+        )
+      : withTruth.extra;
+  final supportEvents = decision.actionType == DecisionActionType.sendToSupport
+      ? [
+          StudentLearningEvent(
+            type: 'SUPPORT_TRIGGERED',
+            ts: ts,
+            payload: {
+              'marker': item.marker,
+              'itemIdx': idx,
+              'layer': progress.layer.value,
+              'reason': decision.reason,
+            },
+          ),
+          StudentLearningEvent(
+            type: 'SUPPORT_STARTED',
+            ts: ts,
+            payload: {
+              'marker': item.marker,
+              'attemptCount': extra['support'] is Map
+                  ? ((extra['support'] as Map)['support_attempt_count'] ?? 1)
+                  : 1,
+            },
+          ),
+        ]
+      : const <StudentLearningEvent>[];
 
   return withTruth.copyWith(
     updatedAt: ts,
@@ -279,10 +315,54 @@ StudentLearningState processAnswerWithEngine(
       decisionEvent,
       if (reviewQueueEvent != null) reviewQueueEvent,
       if (recoveryRequiredEvent != null) recoveryRequiredEvent,
+      ...supportEvents,
       event,
     ],
     auxRooms: auxRooms,
+    extra: extra,
   );
+}
+
+JsonMap _nextSupportExtra(
+  JsonMap current, {
+  required String lessonLocalId,
+  required String marker,
+  required int itemIdx,
+  required LessonLayer layer,
+  required LessonAttempt attempt,
+  required StudentLearningState state,
+}) {
+  final next = JsonMap.from(current);
+  final previous = next['support'];
+  final support = JsonMap.from(previous is Map ? previous : const {});
+  final previousCount = (support['support_attempt_count'] as num?)?.toInt() ??
+      (support['attempt_count'] as num?)?.toInt() ??
+      0;
+  final now = attempt.ts;
+  support
+    ..['active'] = true
+    ..['status'] = 'preparing'
+    ..['support_attempt_count'] = previousCount + 1
+    ..['attempt_count'] = previousCount + 1
+    ..['max_attempts'] = 2
+    ..['stations'] = support['stations'] ?? const []
+    ..['current_index'] = support['current_index'] ?? 0
+    ..['results'] = support['results'] ?? const []
+    ..['crossed'] = false
+    ..['return_to_lesson'] = false
+    ..['updatedAt'] = now
+    ..['return_snapshot'] = {
+      'lessonLocalId': lessonLocalId,
+      'marker': marker,
+      'layer': layer.value,
+      'itemIndex': itemIdx,
+      'progress': state.progress?.toJson(),
+      'current': state.current?.toJson(),
+      'auxRooms': state.auxRooms,
+      'currentLessonMaterial': state.currentLessonMaterial,
+    };
+  next['support'] = support;
+  return next;
 }
 
 JsonMap? _nextAuxRooms(

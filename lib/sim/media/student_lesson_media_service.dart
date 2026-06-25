@@ -28,7 +28,8 @@ class StudentLessonMediaService {
     LessonMediaPosition position,
     List<String?> parts,
   ) {
-    final text = parts.whereType<String>().where((p) => p.isNotEmpty).join('. ');
+    final text =
+        parts.whereType<String>().where((p) => p.isNotEmpty).join('. ');
     if (text.isEmpty) return;
     audioCore.prepareText(text);
     _appendMediaEvent(position, 'AUDIO_READY', {
@@ -52,6 +53,8 @@ class StudentLessonMediaService {
   Future<bool> playLessonAudioSequence(
     LessonMediaPosition position,
     List<String?> parts, {
+    String? lang,
+    String voice = 'Charon',
     void Function()? onEnd,
     void Function()? onStart,
   }) {
@@ -69,6 +72,8 @@ class StudentLessonMediaService {
           position.itemMarker ?? 'no-marker',
           position.layer?.value ?? 'L?',
         ].join(':'),
+        lang: lang,
+        voice: voice,
         onStart: onStart,
         onEnd: onEnd,
       ),
