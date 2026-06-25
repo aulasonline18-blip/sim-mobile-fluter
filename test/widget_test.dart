@@ -30,9 +30,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save and continue'));
-    await tester.pump(const Duration(milliseconds: 250));
-    expect(session.route, '/cyber/curriculo');
-    expect(session.entryStatus, 'pedido_recebido');
+    await tester.pumpAndSettle();
+    expect(find.text('Preparando aula'), findsOneWidget);
     await tester.binding.setSurfaceSize(null);
   });
 
@@ -49,7 +48,10 @@ void main() {
     await tester.tap(find.text('3'));
     await tester.pumpAndSettle();
     expect(find.text('Créditos'), findsOneWidget);
-    expect(find.textContaining('100 créditos'), findsOneWidget);
+    await tester.tap(find.textContaining('100 créditos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Créditos'), findsOneWidget);
+    expect(find.textContaining('500 créditos'), findsOneWidget);
 
     session.openSupport('/privacidade');
     await tester.pumpAndSettle();
