@@ -170,6 +170,7 @@ class LabSession extends ChangeNotifier {
       baseUrl: simLovableBaseUrl,
       accessTokenProvider: () async =>
           Supabase.instance.client.auth.currentSession?.accessToken,
+      t02Path: '/api/complete-lesson',
     );
   }
 
