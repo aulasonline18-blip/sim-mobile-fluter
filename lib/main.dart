@@ -207,7 +207,11 @@ class LabSession extends ChangeNotifier {
 
   SimServerAttachmentClient _getAttachmentClient() {
     return _attachmentClientInstance ??= SimServerAttachmentClient(
-      config: _getServerConfig(),
+      config: SimAiServerConfig(
+        baseUrl: simServerBaseUrl,
+        accessTokenProvider: () async =>
+            Supabase.instance.client.auth.currentSession?.accessToken,
+      ),
     );
   }
 
@@ -1292,14 +1296,14 @@ class LabSession extends ChangeNotifier {
         final ext = name.split('.').last.toLowerCase();
         contentType = switch (ext) {
           'png' => 'image/png',
-          'gif' => 'image/gif',
           'webp' => 'image/webp',
-          _ => 'image/jpeg',
+          'jpg' || 'jpeg' => 'image/jpeg',
+          _ => 'application/octet-stream',
         };
       } else {
         final result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
-          allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'csv', 'rtf'],
+          allowedExtensions: ['pdf', 'txt', 'csv'],
           withData: true,
         );
         if (result == null || result.files.isEmpty) return;
@@ -1310,11 +1314,8 @@ class LabSession extends ChangeNotifier {
         contentType = switch (ext) {
           'txt' => 'text/plain',
           'csv' => 'text/csv',
-          'rtf' => 'application/rtf',
-          'doc' => 'application/msword',
-          'docx' =>
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          _ => 'application/pdf',
+          'pdf' => 'application/pdf',
+          _ => 'application/octet-stream',
         };
       }
     } catch (_) {
@@ -1322,6 +1323,30 @@ class LabSession extends ChangeNotifier {
     }
 
     if (bytes == null || bytes.isEmpty) return;
+
+    const supportedAttachmentTypes = {
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/pdf',
+      'text/plain',
+      'text/csv',
+    };
+    if (!supportedAttachmentTypes.contains(contentType)) {
+      attachments = [
+        ...attachments,
+        AttachmentDraft(
+          id: draftId,
+          name: name,
+          type: contentType,
+          size: bytes.length,
+          status: 'error',
+          error: 'Tipo de arquivo nao suportado. Envie imagem, PDF ou texto.',
+        ),
+      ];
+      notifyListeners();
+      return;
+    }
 
     if (contentType.startsWith('audio/')) {
       attachments = [

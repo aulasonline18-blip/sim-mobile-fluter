@@ -6,6 +6,14 @@ import 'sim_http_transport.dart';
 
 const String simProcessAttachmentPath = '/api/process-attachment';
 const int simMaxAttachmentBytes = 10 * 1024 * 1024;
+const Set<String> simSupportedAttachmentMimeTypes = {
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+  'text/csv',
+};
 
 class SimAttachmentFile {
   const SimAttachmentFile({
@@ -90,6 +98,9 @@ class SimServerAttachmentClient {
     }
     if (file.contentType.startsWith('video/')) {
       throw const SimExternalAiException('VIDEO_NOT_SUPPORTED');
+    }
+    if (!simSupportedAttachmentMimeTypes.contains(file.contentType)) {
+      throw const SimExternalAiException('ATTACHMENT_TYPE_NOT_SUPPORTED');
     }
   }
 }
