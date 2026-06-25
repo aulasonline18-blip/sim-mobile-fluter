@@ -31,8 +31,7 @@ class DoubtT02Caller {
     if (validation != null && validation != emptyDoubtMessage) {
       throw ArgumentError(validation);
     }
-    final text =
-        draft.cleanText.isEmpty ? defaultDoubtText : draft.cleanText;
+    final text = draft.cleanText.isEmpty ? defaultDoubtText : draft.cleanText;
     final material = await client.doubt(
       T02LessonRequest(
         lessonLocalId: lessonLocalId,
@@ -46,13 +45,17 @@ class DoubtT02Caller {
         marker: marker,
         profile: {
           ...profile.toJson(),
+          'aux_mode': AuxRoomMode.doubt.name,
           'student_doubt': text,
+          'current_content': currentContent,
+          'item_idx': itemIdx,
+          'layer': layer.value,
           if (doubtImage != null)
             'doubt_image': {
               'name': doubtImage.name,
               'type': doubtImage.type,
               'size': doubtImage.size,
-              'hasDataUrl': doubtImage.dataUrl.isNotEmpty,
+              'dataUrl': doubtImage.dataUrl,
             },
         },
         addendum: getAuxRoomAddonReference(AuxRoomMode.doubt),

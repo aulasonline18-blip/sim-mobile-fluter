@@ -121,8 +121,13 @@ class LessonRuntimeEngine {
 
   void select(AnswerLetter letter) {
     final position = _position;
-    if (position == null) return;
-    answerController.selecionar(position, letter);
+    final session = _session;
+    if (position == null || session == null) return;
+    answerController.selecionar(
+      lessonLocalId: session.lessonLocalId,
+      position: position,
+      letter: letter,
+    );
   }
 
   void signal(DecisionSignal signal) {

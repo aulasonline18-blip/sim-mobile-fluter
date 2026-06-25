@@ -110,7 +110,8 @@ class StudentAuxRoomService {
           generatedAt: DateTime.now().millisecondsSinceEpoch,
           provisional: false,
           items: normalized
-              .map((item) => CurriculumItem(marker: item.marker!, text: item.text!))
+              .map((item) =>
+                  CurriculumItem(marker: item.marker!, text: item.text!))
               .toList(growable: false),
         ),
       );
@@ -136,8 +137,7 @@ class StudentAuxRoomService {
     required String? marker,
     required DecisionSignal signal,
   }) async {
-    final picked =
-        marker == null ? null : pickAuxRoomItem(marker, items);
+    final picked = marker == null ? null : pickAuxRoomItem(marker, items);
     if (picked == null) {
       return const PreparedAuxRoomQuestion.failed('no item for marker');
     }
@@ -202,6 +202,9 @@ class StudentAuxRoomService {
       state.copyWith(attempts: [...state.attempts, attempt]),
       attempt,
     );
+    if (sinal == DecisionSignal.three && letra == conteudo.correctAnswer) {
+      state = aux_state.clearRecoveryPending(state, marker);
+    }
     writeState(state);
   }
 

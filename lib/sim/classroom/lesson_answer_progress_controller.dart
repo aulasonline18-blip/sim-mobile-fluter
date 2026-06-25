@@ -20,12 +20,49 @@ class LessonAnswerProgressController {
   final StudentLessonMaterialService materialService;
   final LessonMaterialController materialController;
 
-  void selecionar(LessonPositionState position, AnswerLetter letter) {
+  void selecionar({
+    required String lessonLocalId,
+    required LessonPositionState position,
+    required AnswerLetter letter,
+  }) {
     if (position.phase.type != ClassroomPhaseType.lendo &&
         position.phase.type != ClassroomPhaseType.expandida) {
       return;
     }
     position.phase = ClassroomPhase.expanded(letter);
+    final content = position.conteudo;
+    final item = position.itemAtivo;
+    if (content == null || item == null) return;
+    final correct = letter == content.correctAnswer;
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    stateService.appendEvent(
+      lessonLocalId,
+      StudentLearningEvent(
+        type: 'ANSWER_SUBMITTED',
+        ts: ts,
+        payload: {
+          'marker': item.marker,
+          'layer': position.layer.value,
+          'letra': letter.name,
+          'correct': correct,
+        },
+      ),
+    );
+    stateService.appendEvent(
+      lessonLocalId,
+      StudentLearningEvent(
+        type: 'FEEDBACK_SHOWN',
+        ts: ts,
+        payload: {
+          'marker': item.marker,
+          'layer': position.layer.value,
+          'letra': letter.name,
+          'correct': correct,
+          'why_correct': content.whyCorrect,
+          'why_wrong': content.whyWrong,
+        },
+      ),
+    );
   }
 
   void enviarSinal({
@@ -47,6 +84,21 @@ class LessonAnswerProgressController {
 
     final letter = phase.letter!;
     final correct = letter == content.correctAnswer;
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    stateService.appendEvent(
+      lessonLocalId,
+      StudentLearningEvent(
+        type: 'QUALIFIER_SUBMITTED',
+        ts: ts,
+        payload: {
+          'marker': item.marker,
+          'layer': position.layer.value,
+          'letra': letter.name,
+          'sinal': signal.value,
+          'correct': correct,
+        },
+      ),
+    );
     final questionId = [
       item.marker,
       'layer-${position.layer.value}',
@@ -56,9 +108,12 @@ class LessonAnswerProgressController {
       id: questionId,
       text: content.question,
       options: [
-        QuestionOptionEntry(id: AnswerLetter.A, text: content.options[AnswerLetter.A] ?? ''),
-        QuestionOptionEntry(id: AnswerLetter.B, text: content.options[AnswerLetter.B] ?? ''),
-        QuestionOptionEntry(id: AnswerLetter.C, text: content.options[AnswerLetter.C] ?? ''),
+        QuestionOptionEntry(
+            id: AnswerLetter.A, text: content.options[AnswerLetter.A] ?? ''),
+        QuestionOptionEntry(
+            id: AnswerLetter.B, text: content.options[AnswerLetter.B] ?? ''),
+        QuestionOptionEntry(
+            id: AnswerLetter.C, text: content.options[AnswerLetter.C] ?? ''),
       ],
       chosenOptionId: letter,
       correct: correct,
@@ -94,6 +149,7 @@ class LessonAnswerProgressController {
           sinal: signal,
           correctAnswer: content.correctAnswer,
         ),
+        now: ts,
       );
       stateService.write(nextState);
       final view = activeLessonView(nextState);
@@ -104,7 +160,8 @@ class LessonAnswerProgressController {
           itemIdx: view.itemIdx,
           layer: view.layer,
           items: baseItems
-              .map((item) => DopamineWindowItem(text: item.text, marker: item.marker))
+              .map((item) =>
+                  DopamineWindowItem(text: item.text, marker: item.marker))
               .toList(),
           source: 'cyber.aula.after-signal',
           priority: 'active',
@@ -122,21 +179,6 @@ class LessonAnswerProgressController {
       message: message,
       wasCorrect: correct,
       signal: signal,
-    );
-    stateService.appendEvent(
-      lessonLocalId,
-      StudentLearningEvent(
-        type: 'ANSWER_SUBMITTED',
-        ts: DateTime.now().millisecondsSinceEpoch,
-        payload: {
-          'marker': item.marker,
-          'layer': position.layer.value,
-          'letra': letter.name,
-          'sinal': signal.value,
-          'correct': correct,
-          'isReview': position.isReviewAtivo,
-        },
-      ),
     );
   }
 
@@ -211,7 +253,8 @@ class LessonAnswerProgressController {
       itemIdx: view.itemIdx,
       layer: view.layer,
       items: baseItems
-          .map((item) => DopamineWindowItem(text: item.text, marker: item.marker))
+          .map((item) =>
+              DopamineWindowItem(text: item.text, marker: item.marker))
           .toList(),
       source: 'cyber.aula.after-answer',
       priority: 'background',

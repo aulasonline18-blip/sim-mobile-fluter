@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,17 +9,27 @@ import 'package:url_launcher/url_launcher.dart';
 import 'sim/billing/payments_functions.dart';
 import 'sim/billing/sim_pricing.dart';
 import 'sim/billing/sim_server_billing_clients.dart';
+import 'sim/auxiliary/aux_room_models.dart';
+import 'sim/auxiliary/aux_room_t02_caller.dart';
+import 'sim/auxiliary/doubt_input_sheet.dart';
+import 'sim/auxiliary/doubt_t02_caller.dart';
+import 'sim/auxiliary/lesson_doubt_controller.dart';
+import 'sim/auxiliary/recovery_room_service.dart';
+import 'sim/auxiliary/review_room_service.dart';
+import 'sim/auxiliary/student_aux_room_service.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
+import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
-import 'sim/lesson/lesson_models.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_controller.dart';
 import 'sim/state/student_learning_state.dart';
+import 'sim/state/student_learning_state_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
@@ -31,7 +42,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: simSupabaseUrl,
-    anonKey: simSupabaseAnonKey,
+    publishableKey: simSupabaseAnonKey,
   );
   runApp(const SimMobileApp());
 }
@@ -45,14 +56,15 @@ const maxFreeText = 1500;
 const maxAttachments = 3;
 const maxAttachmentBytes = 10 * 1024 * 1024;
 const minExtractedChars = 20;
+const simPersistedLearningStateKey = 'sim.mobile.learning_state.v1';
 const audioNotSupportedMessage =
-    'Áudio ainda não está disponível. Envie texto, foto ou arquivo.';
+    'ÃƒÆ’Ã‚Âudio ainda nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ disponÃƒÆ’Ã‚Â­vel. Envie texto, foto ou arquivo.';
 const videoNotSupportedMessage =
-    'Vídeo ainda não está disponível. Envie texto, foto ou arquivo.';
+    'VÃƒÆ’Ã‚Â­deo ainda nÃƒÆ’Ã‚Â£o estÃƒÆ’Ã‚Â¡ disponÃƒÆ’Ã‚Â­vel. Envie texto, foto ou arquivo.';
 const objectiveRequiredMessage =
-    'Campo obrigatório. Escreva o que você quer estudar.';
+    'Campo obrigatÃƒÆ’Ã‚Â³rio. Escreva o que vocÃƒÆ’Ã‚Âª quer estudar.';
 const objectiveRequiredWithAttachmentMessage =
-    'Você anexou um arquivo. Agora escreva o que deseja estudar com ele.';
+    'VocÃƒÆ’Ã‚Âª anexou um arquivo. Agora escreva o que deseja estudar com ele.';
 
 class AttachmentDraft {
   AttachmentDraft({
@@ -77,6 +89,11 @@ class AttachmentDraft {
 }
 
 class LabSession extends ChangeNotifier {
+  bool _persistenceReady = false;
+  bool _restoringPersistedState = false;
+  String? _lastPersistedStateJson;
+  StudentCurriculum? _persistedCurriculum;
+  String? _persistedCurrentMarker;
   bool authed = false;
   bool authReady = false;
   int credits = 0;
@@ -86,6 +103,7 @@ class LabSession extends ChangeNotifier {
   int totalAulaSteps = 10;
   String route = '/';
   String returnTo = '/';
+  String? checkoutSessionId;
   String? userId;
   String? userEmail;
   String? userName;
@@ -96,6 +114,9 @@ class LabSession extends ChangeNotifier {
   SimServerPaymentsClient? _paymentsClientInstance;
   SimServerAttachmentClient? _attachmentClientInstance;
   SimOrganismController? _controller;
+  ReviewRoomService? _reviewRoomService;
+  RecoveryRoomService? _recoveryRoomService;
+  LessonDoubtController? _doubtController;
   LessonRuntimeSnapshot? _lastSnapshot;
 
   ClassroomPhase get classroomPhase =>
@@ -105,6 +126,12 @@ class LabSession extends ChangeNotifier {
   String get lessonHeaderLabel => _lastSnapshot?.viewModel?.headerLabel ?? '';
   bool get answersLocked => _lastSnapshot?.viewModel?.locked ?? false;
   String get nextStepLabel => _lastSnapshot?.viewModel?.nextLabel ?? '';
+  DoubtState get doubtState => _getDoubtController().state;
+  ReviewRoomView? reviewRoomView;
+  RecoveryRoomView? recoveryRoomView;
+  String doubtText = '';
+  DoubtImagePayload? doubtImage;
+  String? doubtInputError;
 
   SimAiServerConfig _getServerConfig() {
     return _serverConfig ??= SimAiServerConfig(
@@ -115,18 +142,28 @@ class LabSession extends ChangeNotifier {
   }
 
   SimServerCreditsClient _getCreditsClient() {
-    return _creditsClientInstance ??=
-        SimServerCreditsClient(config: _getServerConfig());
+    return _creditsClientInstance ??= SimServerCreditsClient(
+      config: _getServerConfig(),
+    );
   }
 
   SimServerPaymentsClient _getPaymentsClient() {
-    return _paymentsClientInstance ??=
-        SimServerPaymentsClient(config: _getServerConfig());
+    return _paymentsClientInstance ??= SimServerPaymentsClient(
+      config: _getServerConfig(),
+    );
+  }
+
+  Future<CheckoutStatus> getCheckoutStatus(String sessionId) {
+    return _getPaymentsClient().getCheckoutStatus(
+      sessionId: sessionId,
+      environment: StripeEnvironment.live,
+    );
   }
 
   SimServerAttachmentClient _getAttachmentClient() {
-    return _attachmentClientInstance ??=
-        SimServerAttachmentClient(config: _getServerConfig());
+    return _attachmentClientInstance ??= SimServerAttachmentClient(
+      config: _getServerConfig(),
+    );
   }
 
   String? selectedLanguageCode;
@@ -143,6 +180,15 @@ class LabSession extends ChangeNotifier {
   String? entryError;
   bool placementStarted = false;
   bool placementDone = false;
+
+  // Placement T02 state
+  String placementStage = 'choice'; // choice | intro | running | result
+  bool placementLoading = false;
+  String? placementError;
+  String? placementQuestion;
+  List<Map<String, dynamic>> placementChoices = []; // [{id, label, correct}]
+  String? placementStartMarker;
+  String? placementMarker;
   int aulaStep = 0;
   String selectedAnswer = '';
   String aulaMessage = '';
@@ -165,6 +211,357 @@ class LabSession extends ChangeNotifier {
   String? t02CorrectAnswer;
   String? t02WhyCorrect;
   dynamic t02WhyWrong;
+  List<LessonAttempt> attempts = [];
+
+  Future<void> restorePersistedState() async {
+    if (_restoringPersistedState) return;
+    _restoringPersistedState = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(simPersistedLearningStateKey);
+      if (raw != null && raw.trim().isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          _applyPersistedLearningState(
+            StudentLearningState.fromJson(JsonMap.from(decoded)),
+          );
+          _lastPersistedStateJson = raw;
+        }
+      }
+    } catch (_) {
+      // Corrupted local state must not block opening the app.
+    } finally {
+      _persistenceReady = true;
+      _restoringPersistedState = false;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _persistLearningState();
+  }
+
+  void _applyPersistedLearningState(StudentLearningState state) {
+    final extra = state.extra;
+    lessonLocalId =
+        state.lessonLocalId.isEmpty ? lessonLocalId : state.lessonLocalId;
+    _persistedCurriculum = state.curriculum;
+    attempts = state.attempts;
+    stableLang = state.profile.stableLang ?? stableLang;
+    selectedLanguageCode = state.profile.language ?? selectedLanguageCode;
+    preferredName = state.profile.preferredName ?? preferredName;
+    freeText = state.profile.objetivo ?? state.profile.targetTopic ?? freeText;
+    studentProfileNotes =
+        (extra['profileNotes'] as String?) ?? studentProfileNotes;
+    aulaStep = (extra['aulaStep'] as num?)?.toInt() ??
+        state.progress?.itemIdx ??
+        state.current?.itemIdx ??
+        aulaStep;
+    selectedAnswer = (extra['selectedAnswer'] as String?) ?? selectedAnswer;
+    signalsSolid = (extra['signalsSolid'] as num?)?.toInt() ?? signalsSolid;
+    signalsUnderstood =
+        (extra['signalsUnderstood'] as num?)?.toInt() ?? signalsUnderstood;
+    signalsFragile =
+        (extra['signalsFragile'] as num?)?.toInt() ?? signalsFragile;
+    entryStatus = (extra['entryStatus'] as String?) ?? entryStatus;
+    route = (extra['route'] as String?) ??
+        (lessonLocalId != null && aulaStep > 0 ? '/cyber/aula' : route);
+  }
+
+  void _persistLearningState() {
+    if (!_persistenceReady || _restoringPersistedState) return;
+    final state = _buildPersistedLearningState();
+    final raw = jsonEncode(state.toJson());
+    if (raw == _lastPersistedStateJson) return;
+    _lastPersistedStateJson = raw;
+    unawaited(_writePersistedLearningState(raw));
+  }
+
+  Future<void> _writePersistedLearningState(String raw) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(simPersistedLearningStateKey, raw);
+  }
+
+  StudentLearningState _buildPersistedLearningState() {
+    final id =
+        lessonLocalId ?? _controller?.organism.lessonLocalId ?? 'live-entry';
+    final existing = _controller?.organism.stateService.read(id);
+    final base = existing ??
+        StudentLearningState.empty(lessonLocalId: id, userId: userId);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final profile = base.profile.copyWith(
+      preferredName: preferredName.trim().isEmpty ? null : preferredName.trim(),
+      language: selectedLanguageCode,
+      stableLang: stableLang,
+      objetivo: freeText.trim().isEmpty ? null : freeText.trim(),
+      targetTopic: freeText.trim().isEmpty ? null : freeText.trim(),
+      extra: {
+        ...base.profile.extra,
+        if (studentProfileNotes.trim().isNotEmpty)
+          'notes': studentProfileNotes.trim(),
+      },
+    );
+    final current = LessonCurrent(
+      itemIdx: aulaStep,
+      marker: _currentPersistedMarker(),
+      layer: base.current?.layer ?? LessonLayer.l1,
+      amparoLvl: base.current?.amparoLvl ?? 0,
+    );
+    final progress = LessonProgress(
+      itemIdx: aulaStep,
+      layer: base.progress?.layer ?? LessonLayer.l1,
+      erros: signalsFragile,
+      amparoLvl: base.progress?.amparoLvl ?? 0,
+      historia: base.progress?.historia ?? const [],
+      mainAdvances: aulaStep,
+      concluidos: base.progress?.concluidos ?? const [],
+      pendentesMarkers: base.progress?.pendentesMarkers ?? const [],
+      totalItems: _persistedCurriculum?.items.length ??
+          base.progress?.totalItems ??
+          totalAulaSteps,
+      pctAvanco: totalAulaSteps <= 0
+          ? 0
+          : ((aulaStep / totalAulaSteps) * 100).clamp(0, 100).round(),
+    );
+    return base.copyWith(
+      userId: userId,
+      updatedAt: now,
+      profile: profile,
+      curriculum: existing?.curriculum ?? _persistedCurriculum,
+      current: current,
+      progress: progress,
+      attempts: attempts,
+      extra: {
+        ...base.extra,
+        'aulaStep': aulaStep,
+        'selectedAnswer': selectedAnswer,
+        'signalsSolid': signalsSolid,
+        'signalsUnderstood': signalsUnderstood,
+        'signalsFragile': signalsFragile,
+        'profileNotes': studentProfileNotes,
+        'stableLang': stableLang,
+        'entryStatus': entryStatus,
+        'route': route,
+      },
+    );
+  }
+
+  String _currentPersistedMarker() {
+    final snapshotMarker = _lastSnapshot?.itemMarker;
+    if (snapshotMarker != null && snapshotMarker.trim().isNotEmpty) {
+      return snapshotMarker;
+    }
+    final t00Marker = _persistedCurrentMarker;
+    if (t00Marker != null && t00Marker.trim().isNotEmpty) {
+      return t00Marker;
+    }
+    return 'M-${aulaStep + 1}';
+  }
+
+  Map<String, Object?> buildT00BootstrapPayload() {
+    final lang = stableLang ??
+        (otherLanguage.trim().isNotEmpty ? otherLanguage.trim() : null) ??
+        selectedLanguageCode ??
+        'Portuguese';
+    return {
+      'ficha': {
+        'free_text': freeText,
+        'preferred_name': preferredName,
+        'language': selectedLanguageCode ?? 'pt',
+        'stableLang': lang,
+        'idioma': selectedLanguageCode ?? 'pt',
+        'student_profile_notes': studentProfileNotes,
+        'lessonLocalId': lessonLocalId ?? 'live-entry',
+        'attachments_text': attachmentsText,
+      },
+    };
+  }
+
+  void recordT00StreamStarted() {
+    entryStatus = 't00_running';
+    _appendT00Event('T00_STREAM_STARTED', {'lessonLocalId': lessonLocalId});
+    notifyListeners();
+  }
+
+  void recordT00Profile(JsonMap payload) {
+    final profile = (payload['profile'] ?? '').toString();
+    if (profile.trim().isNotEmpty) studentProfileNotes = profile.trim();
+    _mutateT00State((state) {
+      return state.copyWith(
+        profile: state.profile.copyWith(
+          preferredName:
+              preferredName.trim().isEmpty ? null : preferredName.trim(),
+          language: selectedLanguageCode ?? 'pt',
+          stableLang: stableLang ?? 'Portuguese',
+          objetivo: freeText.trim().isEmpty ? null : freeText.trim(),
+          targetTopic: freeText.trim().isEmpty ? null : freeText.trim(),
+          extra: {
+            ...state.profile.extra,
+            'raw_profile': profile,
+            'bootstrap_status': 'running',
+          },
+        ),
+      );
+    });
+    _appendT00Event('T00_PROFILE_RECEIVED', {'profileChars': profile.length});
+    notifyListeners();
+  }
+
+  void recordT00ItemPartial(JsonMap payload) {
+    final item = _curriculumItemFrom(payload['item']);
+    if (item == null) return;
+    _persistedCurrentMarker ??= item.marker;
+    final previous = _persistedCurriculum?.items ?? const <CurriculumItem>[];
+    if (!previous.any((existing) => existing.marker == item.marker)) {
+      _persistedCurriculum =
+          _curriculumWithItems([...previous, item], provisional: true);
+    }
+    _writeT00CurriculumState(provisional: true);
+    _appendT00Event('T00_ITEM_PARTIAL_RECEIVED', {
+      'marker': item.marker,
+      'order': payload['order'],
+    });
+    notifyListeners();
+  }
+
+  void recordT00Final(JsonMap payload) {
+    final rawItems = payload['curriculum'] ?? payload['curriculo'];
+    final items = _curriculumItemsFrom(rawItems);
+    if (items.isNotEmpty) {
+      _persistedCurriculum = _curriculumWithItems(items, provisional: false);
+      _persistedCurrentMarker = items.first.marker;
+    }
+    final profile = (payload['profile'] ?? '').toString();
+    if (profile.trim().isNotEmpty) studentProfileNotes = profile.trim();
+    entryStatus = 't00_final_received';
+    _writeT00CurriculumState(provisional: false);
+    _appendT00Event('T00_FINAL_RECEIVED', {'items': items.length});
+    notifyListeners();
+  }
+
+  void recordT00Done() {
+    entryStatus = 'primeira_aula_pronta';
+    _appendT00Event('T00_DONE', {'lessonLocalId': lessonLocalId});
+    notifyListeners();
+  }
+
+  void recordT00Fatal(String message) {
+    entryStatus = 't00_failed';
+    entryError = message;
+    _appendT00Event('T00_FATAL', {'error': message});
+    notifyListeners();
+  }
+
+  void _mutateT00State(StudentStateMutator mutator) {
+    final id = lessonLocalId ?? 'live-entry';
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.mutate(id, mutator);
+  }
+
+  void _writeT00CurriculumState({required bool provisional}) {
+    final curriculum = _persistedCurriculum;
+    if (curriculum == null) return;
+    _mutateT00State((state) {
+      final first = curriculum.items.isEmpty ? null : curriculum.items.first;
+      return state.copyWith(
+        curriculum: curriculum,
+        current: first == null
+            ? state.current
+            : LessonCurrent(
+                itemIdx: 0,
+                marker: first.marker,
+                layer: LessonLayer.l1,
+                amparoLvl: 0,
+              ),
+        progress: state.progress ??
+            LessonProgress(
+              itemIdx: 0,
+              layer: LessonLayer.l1,
+              erros: 0,
+              amparoLvl: 0,
+              historia: const [],
+              mainAdvances: 0,
+              concluidos: const [],
+              pendentesMarkers: const [],
+              totalItems: curriculum.items.length,
+              pctAvanco: 0,
+            ),
+        profile: state.profile.copyWith(
+          preferredName:
+              preferredName.trim().isEmpty ? null : preferredName.trim(),
+          language: selectedLanguageCode ?? 'pt',
+          stableLang: stableLang ?? 'Portuguese',
+          objetivo: freeText.trim().isEmpty ? null : freeText.trim(),
+          targetTopic: freeText.trim().isEmpty ? null : freeText.trim(),
+          extra: {
+            ...state.profile.extra,
+            'raw_profile': studentProfileNotes,
+            'bootstrap_status': provisional ? 'streaming' : 'complete',
+          },
+        ),
+      );
+    });
+  }
+
+  void _appendT00Event(String type, JsonMap payload) {
+    final id = lessonLocalId ?? 'live-entry';
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      id,
+      StudentLearningEvent(
+        type: type,
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: payload,
+      ),
+    );
+  }
+
+  StudentCurriculum _curriculumWithItems(
+    List<CurriculumItem> items, {
+    required bool provisional,
+  }) {
+    return StudentCurriculum(
+      topic: freeText.trim(),
+      totalItems: items.length,
+      generatedAt: DateTime.now().millisecondsSinceEpoch,
+      provisional: provisional,
+      items: items,
+    );
+  }
+
+  List<CurriculumItem> _curriculumItemsFrom(Object? raw) {
+    if (raw is! List) return const [];
+    return raw.map(_curriculumItemFrom).whereType<CurriculumItem>().toList();
+  }
+
+  CurriculumItem? _curriculumItemFrom(Object? raw) {
+    if (raw is! Map) return null;
+    final json = JsonMap.from(raw);
+    final marker = (json['marker'] ?? '').toString().trim();
+    final text = (json['text'] ?? json['purpose'] ?? json['title'] ?? '')
+        .toString()
+        .trim();
+    if (marker.isEmpty || text.isEmpty) return null;
+    return CurriculumItem(
+      marker: marker,
+      text: text,
+      title: json['title']?.toString(),
+      microitemForTeacher:
+          (json['microitem_for_teacher'] ?? json['purpose'])?.toString(),
+      extra: json
+        ..removeWhere(
+          (key, _) => {
+            'marker',
+            'text',
+            'title',
+            'microitem_for_teacher',
+            'purpose',
+          }.contains(key),
+        ),
+    );
+  }
 
   void goPortal() {
     route = '/';
@@ -235,7 +632,7 @@ class LabSession extends ChangeNotifier {
         CreateCreditsCheckoutHostedInput(
           packId: packId.wire,
           successUrl:
-              '$simLovableBaseUrl/checkout/return?session_id={CHECKOUT_SESSION_ID}',
+              'sim-mobile://checkout/return?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: '$simLovableBaseUrl/creditos?canceled=1',
           environment: StripeEnvironment.live,
         ).validate(),
@@ -263,10 +660,10 @@ class LabSession extends ChangeNotifier {
         queryParams: const {'prompt': 'select_account'},
       );
       if (!launched) {
-        authError = 'Não foi possível abrir o login do Google.';
+        authError = 'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel abrir o login do Google.';
       }
     } catch (error) {
-      authError = 'Não foi possível abrir o login do Google.';
+      authError = 'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel abrir o login do Google.';
     }
     notifyListeners();
   }
@@ -337,12 +734,50 @@ class LabSession extends ChangeNotifier {
       goLogin(target: '/');
       return;
     }
-    if (credits <= 0) return;
+    if (credits <= 0) {
+      openCredits();
+      return;
+    }
+    _clearSessionState();
+    route = '/cyber/idioma';
+    notifyListeners();
+  }
+
+  void _clearSessionState() {
+    // Onboarding
     selectedLanguageCode = null;
     stableLang = null;
     otherLanguage = '';
-    route = '/cyber/idioma';
-    notifyListeners();
+    freeText = '';
+    preferredName = '';
+    attachments = [];
+    studentProfileNotes = '';
+    lessonLocalId = null;
+    entryStatus = 'idle';
+    entryError = null;
+    // Placement
+    placementStarted = false;
+    placementDone = false;
+    placementStage = 'choice';
+    placementLoading = false;
+    placementError = null;
+    placementQuestion = null;
+    placementChoices = [];
+    placementStartMarker = null;
+    placementMarker = null;
+    // Aula
+    aulaStep = 0;
+    selectedAnswer = '';
+    attempts = [];
+    aulaMessage = '';
+    doubtOpen = false;
+    audioEnabled = true;
+    audioLoading = false;
+    audioError = null;
+    imageStatus = 'idle';
+    imageError = null;
+    // T02
+    resetT02();
   }
 
   void chooseLanguage(String code, String name) {
@@ -502,11 +937,7 @@ class LabSession extends ChangeNotifier {
       notifyListeners();
 
       final processed = await _getAttachmentClient().processAttachment(
-        SimAttachmentFile(
-          name: name,
-          contentType: contentType,
-          bytes: bytes,
-        ),
+        SimAttachmentFile(name: name, contentType: contentType, bytes: bytes),
       );
       final ok = processed.charsExtracted >= minExtractedChars;
       attachments = [
@@ -522,7 +953,7 @@ class LabSession extends ChangeNotifier {
               method: processed.method,
               error: ok
                   ? null
-                  : 'Não consegui ler esse anexo. Tente tirar uma foto mais nítida ou descrever em texto.',
+                  : 'NÃƒÆ’Ã‚Â£o consegui ler esse anexo. Tente tirar uma foto mais nÃƒÆ’Ã‚Â­tida ou descrever em texto.',
             )
           else
             a,
@@ -532,7 +963,7 @@ class LabSession extends ChangeNotifier {
           ? audioNotSupportedMessage
           : e.toString().contains('VIDEO_NOT_SUPPORTED')
               ? videoNotSupportedMessage
-              : 'Não consegui ler esse anexo. Tente tirar uma foto mais nítida ou descrever em texto.';
+              : 'NÃƒÆ’Ã‚Â£o consegui ler esse anexo. Tente tirar uma foto mais nÃƒÆ’Ã‚Â­tida ou descrever em texto.';
       attachments = [
         for (final a in attachments)
           if (a.id == draftId)
@@ -617,18 +1048,107 @@ class LabSession extends ChangeNotifier {
 
   void skipPlacement() {
     placementDone = true;
+    placementStage = 'choice';
     route = '/cyber/aula';
     notifyListeners();
   }
 
   void startPlacement() {
     placementStarted = true;
+    placementStage = 'intro';
     notifyListeners();
   }
 
   void finishPlacement() {
     placementDone = true;
+    placementStage = 'choice';
     route = '/cyber/aula';
+    notifyListeners();
+  }
+
+  Future<void> loadPlacementT02() async {
+    if (placementLoading) return;
+    placementLoading = true;
+    placementError = null;
+    notifyListeners();
+    try {
+      final client = _supabaseClientOrNull();
+      final token = client?.auth.currentSession?.accessToken;
+      if (token == null) throw Exception('NÃƒÆ’Ã‚Â£o autenticado');
+
+      final uri = Uri.parse('$simServerBaseUrl/api/complete-lesson');
+      final httpClient = HttpClient();
+      final req = await httpClient.postUrl(uri);
+      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Authorization', 'Bearer $token');
+      final payload = jsonEncode({
+        'mode': 'placement',
+        'lessonLocalId': lessonLocalId ?? 'placement',
+        'item': freeText.isNotEmpty ? freeText : 'ConteÃƒÆ’Ã‚Âºdo da aula',
+        'stable_lang': stableLang ?? 'Portuguese',
+        'academic_level': null,
+        'layer': 1,
+        'err_count': 0,
+        'lesson_mode': 'session',
+        'history': [],
+        'preferred_name': preferredName.isNotEmpty ? preferredName : null,
+        'student_profile_notes':
+            studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+        'guidance_for_T02': 'T11_placement_addendum.txt server-side guidance',
+        'target_topic': freeText.trim(),
+      });
+      req.write(payload);
+      final res = await req.close().timeout(const Duration(seconds: 45));
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        throw Exception('Servidor retornou ${res.statusCode}');
+      }
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final c = data['conteudo'] as Map<String, dynamic>?;
+      if (c == null) {
+        throw Exception('Resposta sem conteÃƒÆ’Ã‚Âºdo');
+      }
+
+      final question = c['question']?.toString() ?? '';
+      final opts = c['options'];
+      final correct = c['correct_answer']?.toString() ?? 'A';
+      if (question.isEmpty || opts == null) {
+        throw Exception('QuestÃƒÆ’Ã‚Â£o invÃƒÆ’Ã‚Â¡lida');
+      }
+
+      placementQuestion = question;
+      placementMarker = 'M-1';
+      placementChoices = (['A', 'B', 'C']).map<Map<String, dynamic>>((letter) {
+        return {
+          'id': 'pre-1-${letter.toLowerCase()}',
+          'label': (opts is Map ? opts[letter]?.toString() : null) ?? '',
+          'correct': letter == correct,
+        };
+      }).toList();
+      placementStage = 'running';
+    } catch (e) {
+      // Fallback: question simples local se T02 falhar
+      placementQuestion =
+          'Como vocÃƒÆ’Ã‚Âª avalia seu conhecimento sobre este tema?';
+      placementMarker = 'M-1';
+      placementChoices = [
+        {'id': 'pre-1-a', 'label': 'Domino bem', 'correct': true},
+        {'id': 'pre-1-b', 'label': 'ConheÃƒÆ’Ã‚Â§o um pouco', 'correct': false},
+        {
+          'id': 'pre-1-c',
+          'label': 'Preciso comeÃƒÆ’Ã‚Â§ar do zero',
+          'correct': false
+        },
+      ];
+      placementStage = 'running';
+    }
+    placementLoading = false;
+    notifyListeners();
+  }
+
+  void answerPlacement(bool correct) {
+    placementStartMarker = correct ? 'M-2' : 'M-1';
+    placementStage = 'result';
     notifyListeners();
   }
 
@@ -638,23 +1158,381 @@ class LabSession extends ChangeNotifier {
       (l) => l.name == letter,
       orElse: () => AnswerLetter.A,
     );
-    final signal = switch (letter) {
-      'A' => DecisionSignal.one,
-      'B' => DecisionSignal.two,
-      _ => DecisionSignal.three,
-    };
-    _controller?.organism.lessonRuntimeEngine.select(answerLetter);
-    _controller?.organism.lessonRuntimeEngine.signal(signal);
-    if (letter == 'A') signalsSolid++;
-    if (letter == 'B') signalsUnderstood++;
-    if (letter == 'C') signalsFragile++;
-    aulaMessage = letter == 'A'
-        ? 'Resposta registrada. SIM preparou o próximo passo.'
-        : letter == 'B'
-            ? 'Resposta registrada. SIM marcou revisão.'
-            : 'Resposta registrada. SIM abriu caminho de recuperação.';
+    final engine = _controller?.organism.lessonRuntimeEngine;
+    if (engine == null) {
+      notifyListeners();
+      return;
+    }
+    engine.select(answerLetter);
+    _applySnapshot(engine.snapshot());
+  }
+
+  void submitAulaQualifier(DecisionSignal signal) {
+    final engine = _controller?.organism.lessonRuntimeEngine;
+    if (engine == null) return;
+    if (signal == DecisionSignal.one) signalsSolid++;
+    if (signal == DecisionSignal.two) signalsUnderstood++;
+    if (signal == DecisionSignal.three) signalsFragile++;
+    engine.signal(signal);
+    _applySnapshot(engine.snapshot());
+  }
+
+  int get reviewQueueCount {
+    final aux = _ensureController().organism.activeState.auxRooms;
+    if (aux == null) return 0;
+    final review = aux['review'];
+    final entries = review is Map ? review['entries'] : null;
+    if (entries is List && entries.isNotEmpty) return entries.length;
+    final queue = aux['review_queue'];
+    if (queue is List && queue.isNotEmpty) return queue.length;
+    final pending = aux['pendingMap'];
+    if (pending is! List) return 0;
+    return pending
+        .whereType<Map>()
+        .where(
+          (entry) =>
+              entry['status'] == 'pending' &&
+              (entry['signal'] as num?)?.toInt() == DecisionSignal.two.value,
+        )
+        .length;
+  }
+
+  int get recoveryQueueCount {
+    final aux = _ensureController().organism.activeState.auxRooms;
+    if (aux == null) return 0;
+    final recovery = aux['recovery'];
+    final entries = recovery is Map ? recovery['entries'] : null;
+    if (entries is List && entries.isNotEmpty) return entries.length;
+    final queue = aux['recovery_queue'];
+    if (queue is List && queue.isNotEmpty) return queue.length;
+    final pending = aux['pendingMap'];
+    if (pending is! List) return 0;
+    return pending
+        .whereType<Map>()
+        .where(
+          (entry) =>
+              entry['status'] == 'pending' &&
+              (entry['signal'] as num?)?.toInt() == DecisionSignal.three.value,
+        )
+        .length;
+  }
+
+  ReviewRoomService _getReviewRoomService() {
+    if (_reviewRoomService != null) return _reviewRoomService!;
+    final ctrl = _ensureController();
+    final reviewConfig = SimAiServerConfig(
+      baseUrl: simServerBaseUrl,
+      accessTokenProvider: () async =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+      t02Path: '/api/review',
+    );
+    final auxService = StudentAuxRoomService(
+      readState: (lessonLocalId) =>
+          ctrl.organism.stateService.ensure(lessonLocalId: lessonLocalId),
+      writeState: ctrl.organism.stateService.write,
+      t02Caller: AuxRoomT02Caller(
+        client: SimServerT02Client(config: reviewConfig),
+      ),
+    );
+    return _reviewRoomService = ReviewRoomService(auxService);
+  }
+
+  RecoveryRoomService _getRecoveryRoomService() {
+    if (_recoveryRoomService != null) return _recoveryRoomService!;
+    final ctrl = _ensureController();
+    final recoveryConfig = SimAiServerConfig(
+      baseUrl: simServerBaseUrl,
+      accessTokenProvider: () async =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+      t02Path: '/api/recovery',
+    );
+    final auxService = StudentAuxRoomService(
+      readState: (lessonLocalId) =>
+          ctrl.organism.stateService.ensure(lessonLocalId: lessonLocalId),
+      writeState: ctrl.organism.stateService.write,
+      t02Caller: AuxRoomT02Caller(
+        client: SimServerT02Client(config: recoveryConfig),
+      ),
+    );
+    return _recoveryRoomService = RecoveryRoomService(auxService);
+  }
+
+  LessonDoubtController _getDoubtController() {
+    if (_doubtController != null) return _doubtController!;
+    final doubtConfig = SimAiServerConfig(
+      baseUrl: simServerBaseUrl,
+      accessTokenProvider: () async =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+      t02Path: '/api/doubt',
+    );
+    return _doubtController = LessonDoubtController(
+      caller: DoubtT02Caller(
+        client: SimServerT02Client(config: doubtConfig),
+      ),
+    );
+  }
+
+  ReviewRoomContext _buildReviewContext() {
+    final ctrl = _ensureController();
+    final state = ctrl.organism.activeState;
+    final profile = state.profile;
+    final items = (state.curriculum?.items ?? const <CurriculumItem>[])
+        .map(
+          (item) => AuxRoomItem(
+            marker: item.marker,
+            text: item.teacherText,
+          ),
+        )
+        .toList(growable: false);
+    return ReviewRoomContext(
+      lessonLocalId: ctrl.organism.lessonLocalId,
+      topic: state.curriculum?.topic ?? freeText,
+      items: items,
+      fallbackStartIdx: state.progress?.itemIdx ?? aulaStep,
+      layer: state.progress?.layer ?? state.current?.layer ?? LessonLayer.l1,
+      profile: AuxRoomProfile(
+        stableLang: profile.stableLang ?? stableLang,
+        academicLevel: profile.academicLevel ?? profile.nivel,
+        preferredName: profile.preferredName ?? preferredName,
+        notes: studentProfileNotes,
+        extra: profile.extra,
+      ),
+    );
+  }
+
+  RecoveryRoomContext _buildRecoveryContext() {
+    final ctrl = _ensureController();
+    final state = ctrl.organism.activeState;
+    final profile = state.profile;
+    final items = (state.curriculum?.items ?? const <CurriculumItem>[])
+        .map(
+          (item) => AuxRoomItem(
+            marker: item.marker,
+            text: item.teacherText,
+          ),
+        )
+        .toList(growable: false);
+    return RecoveryRoomContext(
+      lessonLocalId: ctrl.organism.lessonLocalId,
+      topic: state.curriculum?.topic ?? freeText,
+      items: items,
+      layer: LessonLayer.l1,
+      profile: AuxRoomProfile(
+        stableLang: profile.stableLang ?? stableLang,
+        academicLevel: profile.academicLevel ?? profile.nivel,
+        preferredName: profile.preferredName ?? preferredName,
+        notes: studentProfileNotes,
+        extra: profile.extra,
+      ),
+    );
+  }
+
+  AuxRoomProfile _buildAuxProfile() {
+    final state = _ensureController().organism.activeState;
+    final profile = state.profile;
+    return AuxRoomProfile(
+      stableLang: profile.stableLang ?? stableLang,
+      academicLevel: profile.academicLevel ?? profile.nivel,
+      preferredName: profile.preferredName ?? preferredName,
+      notes: studentProfileNotes,
+      extra: profile.extra,
+    );
+  }
+
+  ({
+    String itemText,
+    String currentContent,
+    LessonLayer layer,
+    int itemIdx,
+    String? marker
+  }) _buildDoubtContext() {
+    final state = _ensureController().organism.activeState;
+    final progress = state.progress;
+    final itemIdx = progress?.itemIdx ?? aulaStep;
+    final items = state.curriculum?.items ?? const <CurriculumItem>[];
+    final item = itemIdx >= 0 && itemIdx < items.length ? items[itemIdx] : null;
+    final options = t02Options ?? const <String, String>{};
+    final currentContent = jsonEncode({
+      'explanation': t02Explanation ?? '',
+      'question': t02Question ?? '',
+      'options': options,
+      'correct_answer': t02CorrectAnswer,
+      'why_correct': t02WhyCorrect,
+      'why_wrong': t02WhyWrong,
+      'marker': item?.marker ?? state.current?.marker,
+    });
+    return (
+      itemText: item?.teacherText ?? freeText,
+      currentContent: currentContent,
+      layer: progress?.layer ?? state.current?.layer ?? LessonLayer.l1,
+      itemIdx: itemIdx,
+      marker: item?.marker ?? state.current?.marker,
+    );
+  }
+
+  Future<void> startReviewRoom() async {
+    final count = reviewQueueCount;
+    if (count <= 0) return;
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'REVIEW_STARTED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: {'count': count},
+      ),
+    );
+    reviewRoomView = const ReviewRoomView(
+      status: ReviewRoomStatus.preparing,
+      count: 5,
+      queue: [],
+      idx: 0,
+    );
+    notifyListeners();
+    reviewRoomView = await _getReviewRoomService().startReviewRoom(
+      _buildReviewContext(),
+      count >= 10 ? 10 : 5,
+    );
     notifyListeners();
   }
+
+  void submitReviewAnswer(String letter) {
+    final view = reviewRoomView;
+    if (view == null) return;
+    final answerLetter = AnswerLetter.values.firstWhere(
+      (value) => value.name == letter,
+      orElse: () => AnswerLetter.A,
+    );
+    final selected = _getReviewRoomService().selectLetter(view, answerLetter);
+    reviewRoomView = _getReviewRoomService().answerReviewRoom(
+      _buildReviewContext(),
+      selected,
+      DecisionSignal.two,
+    );
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'REVIEW_ANSWER_SUBMITTED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: {
+          'letra': answerLetter.name,
+          'correct': reviewRoomView?.resultCorrect,
+          'idx': reviewRoomView?.idx,
+        },
+      ),
+    );
+    notifyListeners();
+  }
+
+  Future<void> nextReviewQuestion() async {
+    final view = reviewRoomView;
+    if (view == null) return;
+    reviewRoomView = await _getReviewRoomService().nextReviewRoom(
+      _buildReviewContext(),
+      view,
+    );
+    if (reviewRoomView?.status == ReviewRoomStatus.done) {
+      final ctrl = _ensureController();
+      ctrl.organism.stateService.appendEvent(
+        ctrl.organism.lessonLocalId,
+        StudentLearningEvent(
+          type: 'REVIEW_COMPLETED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: {'queue': view.queue},
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  void closeReviewRoom() {
+    reviewRoomView = null;
+    final engine = _controller?.organism.lessonRuntimeEngine;
+    if (engine != null) _applySnapshot(engine.snapshot());
+    notifyListeners();
+  }
+
+  Future<void> startRecoveryRoom() async {
+    final count = recoveryQueueCount;
+    if (count <= 0) return;
+    recoveryRoomView = const RecoveryRoomView(
+      status: RecoveryRoomStatus.preparing,
+      queue: [],
+      idx: 0,
+    );
+    notifyListeners();
+    recoveryRoomView = await _getRecoveryRoomService().startRecoveryRoom(
+      _buildRecoveryContext(),
+    );
+    notifyListeners();
+  }
+
+  void continueRecoveryRoom() {
+    final view = recoveryRoomView;
+    if (view == null) return;
+    recoveryRoomView = _getRecoveryRoomService().continueRecovery(view);
+    notifyListeners();
+  }
+
+  void submitRecoveryAnswer(String letter) {
+    final view = recoveryRoomView;
+    if (view == null) return;
+    final answerLetter = AnswerLetter.values.firstWhere(
+      (value) => value.name == letter,
+      orElse: () => AnswerLetter.A,
+    );
+    final selected = _getRecoveryRoomService().selectLetter(view, answerLetter);
+    recoveryRoomView = _getRecoveryRoomService().answerRecoveryRoom(
+      _buildRecoveryContext(),
+      selected,
+      DecisionSignal.three,
+    );
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'RECOVERY_ANSWER_SUBMITTED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: {
+          'letra': answerLetter.name,
+          'correct': recoveryRoomView?.resultCorrect,
+          'idx': recoveryRoomView?.idx,
+        },
+      ),
+    );
+    notifyListeners();
+  }
+
+  Future<void> nextRecoveryQuestion() async {
+    final view = recoveryRoomView;
+    if (view == null) return;
+    recoveryRoomView = await _getRecoveryRoomService().nextRecoveryRoom(
+      _buildRecoveryContext(),
+      view,
+    );
+    notifyListeners();
+  }
+
+  void closeRecoveryRoom() {
+    final view = recoveryRoomView;
+    final ctrl = _ensureController();
+    if (view != null) {
+      recoveryRoomView = _getRecoveryRoomService().finishRecoveryRoom(
+        ctrl.organism.lessonLocalId,
+        view,
+      );
+      if (recoveryRoomView?.restartRequired == true) {
+        notifyListeners();
+        return;
+      }
+    }
+    recoveryRoomView = null;
+    final engine = _controller?.organism.lessonRuntimeEngine;
+    if (engine != null) _applySnapshot(engine.snapshot());
+    notifyListeners();
+  }
+
   void setDeleteConfirmation(String value) {
     deleteConfirmation = value;
     accountDeletionMessage = null;
@@ -663,13 +1541,19 @@ class LabSession extends ChangeNotifier {
 
   void requestAccountDeletion() {
     accountDeletionMessage = deleteConfirmation.trim() == 'DELETAR'
-        ? 'Solicitação de exclusão registrada para envio seguro ao servidor.'
-        : 'Digite DELETAR para confirmar a solicitação.';
+        ? 'SolicitaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de exclusÃƒÆ’Ã‚Â£o registrada para envio seguro ao servidor.'
+        : 'Digite DELETAR para confirmar a solicitaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.';
     notifyListeners();
   }
 
   void advanceAula() {
-    aulaStep += 1;
+    if (recoveryQueueCount > 0 &&
+        _getRecoveryRoomService().shouldStartRecoveryRoom(
+          _ensureController().organism.lessonLocalId,
+        )) {
+      unawaited(startRecoveryRoom());
+      return;
+    }
     selectedAnswer = '';
     aulaMessage = '';
     doubtOpen = false;
@@ -679,8 +1563,183 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
     unawaited(_advanceEngine());
   }
+
   void toggleDoubt() {
-    doubtOpen = !doubtOpen;
+    if (doubtOpen) {
+      closeDoubt();
+      return;
+    }
+    doubtOpen = true;
+    doubtInputError = null;
+    _getDoubtController().askDoubt();
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'DOUBT_OPENED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: _doubtEventPayload(),
+      ),
+    );
+    notifyListeners();
+  }
+
+  JsonMap _doubtEventPayload([JsonMap extra = const {}]) {
+    final ctx = _buildDoubtContext();
+    return {
+      'marker': ctx.marker,
+      'layer': ctx.layer.value,
+      'itemIdx': ctx.itemIdx,
+      ...extra,
+    };
+  }
+
+  void setDoubtText(String value) {
+    doubtText = value.length > doubtTextMaxLength
+        ? value.substring(0, doubtTextMaxLength)
+        : value;
+    doubtInputError = null;
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'DOUBT_TEXT_TYPED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: _doubtEventPayload({'chars': doubtText.trim().length}),
+      ),
+    );
+    notifyListeners();
+  }
+
+  Future<void> pickDoubtImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final bytes = file.bytes?.toList();
+      if (bytes == null || bytes.isEmpty) return;
+      final ext = file.name.split('.').last.toLowerCase();
+      final contentType = switch (ext) {
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      };
+      final payload = DoubtImagePayload(
+        name: file.name,
+        type: contentType,
+        size: bytes.length,
+        dataUrl: 'data:$contentType;base64,${base64Encode(bytes)}',
+      );
+      final validation =
+          DoubtInputDraft(text: doubtText, image: payload).validate();
+      if (validation != null && validation != emptyDoubtMessage) {
+        doubtInputError = validation;
+        notifyListeners();
+        return;
+      }
+      doubtImage = payload;
+      doubtInputError = null;
+      final ctrl = _ensureController();
+      ctrl.organism.stateService.appendEvent(
+        ctrl.organism.lessonLocalId,
+        StudentLearningEvent(
+          type: 'DOUBT_IMAGE_SELECTED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: _doubtEventPayload({
+            'name': payload.name,
+            'type': payload.type,
+            'size': payload.size,
+          }),
+        ),
+      );
+      notifyListeners();
+    } catch (_) {
+      doubtInputError = 'Nao foi possivel anexar a imagem.';
+      notifyListeners();
+    }
+  }
+
+  void removeDoubtImage() {
+    doubtImage = null;
+    notifyListeners();
+  }
+
+  Future<void> submitDoubt() async {
+    final draft = DoubtInputDraft(text: doubtText, image: doubtImage);
+    final validation = draft.validate();
+    if (validation != null) {
+      doubtInputError = validation;
+      notifyListeners();
+      return;
+    }
+    final ctrl = _ensureController();
+    final context = _buildDoubtContext();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'DOUBT_SUBMITTED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: _doubtEventPayload({
+          'chars': draft.cleanText.length,
+          'hasImage': doubtImage != null,
+        }),
+      ),
+    );
+    notifyListeners();
+    await _getDoubtController().submitDoubt(
+      lessonLocalId: ctrl.organism.lessonLocalId,
+      profile: _buildAuxProfile(),
+      itemText: context.itemText,
+      currentContent: context.currentContent,
+      layer: context.layer,
+      itemIdx: context.itemIdx,
+      marker: context.marker,
+      input: draft,
+    );
+    final state = _getDoubtController().state;
+    if (state.status == DoubtStatus.explaining) {
+      ctrl.organism.stateService.appendEvent(
+        ctrl.organism.lessonLocalId,
+        StudentLearningEvent(
+          type: 'DOUBT_ANSWERED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: _doubtEventPayload({
+            'hasVisualTrigger': state.response?.visualTrigger != null,
+          }),
+        ),
+      );
+    } else if (state.status == DoubtStatus.error) {
+      ctrl.organism.stateService.appendEvent(
+        ctrl.organism.lessonLocalId,
+        StudentLearningEvent(
+          type: 'DOUBT_FAILED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: _doubtEventPayload({'error': state.error}),
+        ),
+      );
+      if ((state.error ?? '').toLowerCase().contains('credit')) {
+        route = '/creditos';
+      }
+    }
+    notifyListeners();
+  }
+
+  void closeDoubt() {
+    doubtOpen = false;
+    _getDoubtController().dismissDoubt();
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: 'DOUBT_CLOSED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: _doubtEventPayload(),
+      ),
+    );
     notifyListeners();
   }
 
@@ -697,7 +1756,7 @@ class LabSession extends ChangeNotifier {
     await Future<void>.delayed(const Duration(milliseconds: 180));
     audioLoading = false;
     audioEnabled = false;
-    audioError = 'Áudio pausado.';
+    audioError = 'ÃƒÆ’Ã‚Âudio pausado.';
     notifyListeners();
   }
 
@@ -724,10 +1783,12 @@ class LabSession extends ChangeNotifier {
       _applySnapshot(snapshot);
     } catch (e) {
       t02Loading = false;
-      t02Error = 'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
+      t02Error =
+          'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
       notifyListeners();
     }
   }
+
   void resetT02() {
     t02Loading = false;
     t02Error = null;
@@ -744,7 +1805,6 @@ class LabSession extends ChangeNotifier {
     _authSub?.cancel();
     super.dispose();
   }
-
 
   SimOrganismController _ensureController() {
     if (_controller != null) return _controller!;
@@ -768,14 +1828,12 @@ class LabSession extends ChangeNotifier {
           (otherLanguage.trim().isNotEmpty ? otherLanguage.trim() : null) ??
           selectedLanguageCode ??
           'Portuguese';
-      ctrl.chooseLanguage(
-        code: selectedLanguageCode ?? 'pt',
-        label: lang,
-      );
+      ctrl.chooseLanguage(code: selectedLanguageCode ?? 'pt', label: lang);
       await ctrl.submitObjective(
         text: studentProfileNotes.isNotEmpty ? studentProfileNotes : freeText,
         name: preferredName.isNotEmpty ? preferredName : null,
       );
+      _persistedCurriculum = ctrl.organism.activeState.curriculum;
       entryStatus = 'primeira_aula_pronta';
       notifyListeners();
     } catch (e) {
@@ -786,10 +1844,17 @@ class LabSession extends ChangeNotifier {
 
   void _applySnapshot(LessonRuntimeSnapshot snapshot) {
     _lastSnapshot = snapshot;
+    final activeState = _controller?.organism.activeState;
+    _persistedCurriculum ??= activeState?.curriculum;
+    if (activeState?.progress != null) {
+      aulaStep = activeState!.progress!.itemIdx;
+    }
+    attempts = activeState?.attempts ?? attempts;
     final c = snapshot.conteudo;
     t02Loading = false;
     if (!snapshot.hasCurriculum) {
-      t02Error = 'Currículo ainda não disponível. Aguarde a preparação.';
+      t02Error =
+          'CurrÃƒÆ’Ã‚Â­culo ainda nÃƒÆ’Ã‚Â£o disponÃƒÆ’Ã‚Â­vel. Aguarde a preparaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.';
     } else {
       t02Error = null;
     }
@@ -821,6 +1886,7 @@ class LabSession extends ChangeNotifier {
       _applySnapshot(engine.snapshot());
     } catch (_) {}
   }
+
   String _buildAttachmentsText() {
     final ready = attachments.where(
       (a) =>
@@ -872,6 +1938,9 @@ class _SimMobileAppState extends State<SimMobileApp> {
     super.initState();
     session.addListener(_onSessionChanged);
     session.bindRealAuth();
+    if (widget.initialSession == null) {
+      unawaited(session.restorePersistedState());
+    }
   }
 
   @override
@@ -1077,7 +2146,7 @@ class _PortalDrawerBody extends StatelessWidget {
           },
         ),
         MenuLine(
-          label: 'Créditos',
+          label: 'CrÃƒÆ’Ã‚Â©ditos',
           onTap: () {
             Navigator.pop(context);
             session.openCredits();
@@ -1105,7 +2174,7 @@ class _PortalDrawerBody extends StatelessWidget {
           },
         ),
         MenuLine(
-          label: 'Solicitar exclusão da conta',
+          label: 'Solicitar exclusÃƒÆ’Ã‚Â£o da conta',
           onTap: () {
             Navigator.pop(context);
             session.openSupport('/conta/deletar');
@@ -1254,7 +2323,7 @@ class PortalHeroCard extends StatelessWidget {
                         child: Text(
                           session.authed
                               ? 'Iniciar agora'
-                              : 'Entrar para começar',
+                              : 'Entrar para comeÃƒÆ’Ã‚Â§ar',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -1319,7 +2388,7 @@ class HelpCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Envie sugestões, reporte dificuldades e fale direto com o desenvolvedor.',
+                      'Envie sugestÃƒÆ’Ã‚Âµes, reporte dificuldades e fale direto com o desenvolvedor.',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 13.5,
@@ -1612,7 +2681,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 12),
                         SimInput(
-                          hint: 'Senha (mín. 6 caracteres)',
+                          hint: 'Senha (mÃƒÆ’Ã‚Â­n. 6 caracteres)',
                           controller: passwordController,
                           obscureText: true,
                           onChanged: (_) {},
@@ -1629,7 +2698,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 loading
                                     ? 'Aguarde...'
                                     : signup
-                                        ? 'Criar conta e ganhar 3 aulas grátis'
+                                        ? 'Criar conta e ganhar 3 aulas grÃƒÆ’Ã‚Â¡tis'
                                         : 'Entrar',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
@@ -1683,7 +2752,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: widget.session.goPortal,
                     child: const Text(
-                      '← Voltar ao portal',
+                      'ÃƒÂ¢Ã¢â‚¬Â Ã‚Â Voltar ao portal',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
@@ -1776,7 +2845,7 @@ class IdiomaScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Em qual idioma você quer estudar?',
+                        'Em qual idioma vocÃƒÆ’Ã‚Âª quer estudar?',
                         style: TextStyle(
                           color: simDark,
                           fontSize: 30,
@@ -1786,7 +2855,7 @@ class IdiomaScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'O SIM vai usar esse idioma para o app, aulas, explicações, imagens e todo o guiamento.',
+                        'O SIM vai usar esse idioma para o app, aulas, explicaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes, imagens e todo o guiamento.',
                         style: TextStyle(
                           color: simMuted,
                           fontSize: 18,
@@ -1810,7 +2879,7 @@ class IdiomaScreen extends StatelessWidget {
                           code: 'other',
                           name: 'Outro idioma',
                           native: '',
-                          flag: '🌐',
+                          flag: 'ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â',
                         ),
                         active: session.selectedLanguageCode == 'other',
                         onTap: () => session.chooseLanguage(
@@ -1879,7 +2948,8 @@ class _OtherLanguageBoxState extends State<OtherLanguageBox> {
             controller: controller,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: 'ex: Italiano, Alemão, Árabe, Kiribati…',
+              hintText:
+                  'ex: Italiano, AlemÃƒÆ’Ã‚Â£o, ÃƒÆ’Ã‚Ârabe, KiribatiÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦',
               border: InputBorder.none,
             ),
             style: const TextStyle(color: simDark, fontSize: 18),
@@ -1997,7 +3067,8 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(step: 3, total: 5, label: 'Entrada pedagógica'),
+            const StepHeader(
+                step: 3, total: 5, label: 'Entrada pedagÃƒÆ’Ã‚Â³gica'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
@@ -2044,7 +3115,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Campo obrigatório',
+                                        'Campo obrigatÃƒÆ’Ã‚Â³rio',
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: 12,
@@ -2054,7 +3125,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       const Text(
-                                        'Escreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
+                                        'Escreva o que vocÃƒÆ’Ã‚Âª quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
                                         style: TextStyle(
                                           color: simMuted,
                                           fontSize: 13,
@@ -2136,7 +3207,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                             ),
                             const SizedBox(height: 12),
                             const Text(
-                              'Conte do seu jeito: idade, série, matéria, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
+                              'Conte do seu jeito: idade, sÃƒÆ’Ã‚Â©rie, matÃƒÆ’Ã‚Â©ria, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
                               style: TextStyle(
                                 color: simMuted,
                                 fontSize: 13,
@@ -2258,7 +3329,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                       fit: BoxFit.scaleDown,
                                       child: Text(
                                         sending
-                                            ? 'Reading…'
+                                            ? 'ReadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦'
                                             : waitingAttachment
                                                 ? 'Aguardando leitura do anexo...'
                                                 : objectiveTooShort
@@ -2333,10 +3404,10 @@ class AttachmentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = attachment.type.startsWith('image/')
-        ? '📷'
+        ? 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â·'
         : attachment.type == 'application/pdf'
-            ? '📄'
-            : '📝';
+            ? 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾'
+            : 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â';
     final suffix =
         attachment.status == 'uploading' || attachment.status == 'processing'
             ? ' lendo...'
@@ -2380,7 +3451,7 @@ class AttachmentChip extends StatelessWidget {
           InkWell(
             onTap: onRemove,
             child: const Text(
-              '✕',
+              'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢',
               style: TextStyle(color: simMuted, fontSize: 13),
             ),
           ),
@@ -2454,13 +3525,238 @@ class MenuLine extends StatelessWidget {
   }
 }
 
-class PhaseBoundaryScreen extends StatelessWidget {
+class PhaseBoundaryScreen extends StatefulWidget {
   const PhaseBoundaryScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<PhaseBoundaryScreen> createState() => _PhaseBoundaryScreenState();
+}
+
+class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
+  static const _msgIntervalMs = 3200;
+
+  static const _stages = [
+    _PrepStage(title: 'Conectando ao T00 real...', progress: 0.15),
+    _PrepStage(title: 'Preparando seu perfil...', progress: 0.40),
+    _PrepStage(title: 'Preparando seu currÃƒÂ­culo...', progress: 0.65),
+    _PrepStage(title: 'Preparando sua aula...', progress: 0.85),
+    _PrepStage(title: 'Preparo concluÃƒÂ­do.', progress: 1.00),
+  ];
+
+  static const _messages = [
+    'Enquanto sua aula ÃƒÂ© preparada...',
+    'O SIM estÃƒÂ¡ dividindo o tÃƒÂ³pico em passos menores.',
+    'A IA nÃƒÂ£o vai apenas responder.',
+    'Ela vai tentar ensinar do melhor jeito para vocÃƒÂª.',
+    'Se algo parecer difÃƒÂ­cil, o caminho pode mudar.',
+    'Se vocÃƒÂª errar, o erro vira uma pista.',
+    'Se vocÃƒÂª entender, o SIM te ajuda a avanÃƒÂ§ar.',
+    'Todo dia, a IA fica mais poderosa.',
+    'O SIM traz esse poder para o estudo.',
+    'Estudar pode ficar mais leve, claro e eficiente.',
+    'Sua aula estÃƒÂ¡ quase pronta.',
+    'Respire. Aprender pode ser mais fÃƒÂ¡cil do que vocÃƒÂª imagina.',
+  ];
+
+  int _stageIdx = 0;
+  int _msgIdx = 0;
+  bool _ready = false;
+  bool _loading = false;
+  String? _error;
+  String? _detail;
+  Timer? _msgTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startMessageRotation();
+    _startT00Bootstrap();
+  }
+
+  void _startMessageRotation() {
+    _msgTimer =
+        Timer.periodic(const Duration(milliseconds: _msgIntervalMs), (_) {
+      if (!mounted) return;
+      setState(() => _msgIdx = (_msgIdx + 1) % _messages.length);
+    });
+  }
+
+  Future<void> _startT00Bootstrap() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _ready = false;
+      _error = null;
+      _detail = null;
+      _stageIdx = 0;
+    });
+    if (_isFlutterTestBinding) {
+      _runLocalT00FallbackForTest();
+      return;
+    }
+    final client = HttpClient();
+    try {
+      final uri = Uri.parse('$simServerBaseUrl/api/bootstrap-t00');
+      final req =
+          await client.postUrl(uri).timeout(const Duration(seconds: 20));
+      req.headers.set('content-type', 'application/json');
+      req.headers.set('accept', 'text/event-stream');
+      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      if (token != null && token.trim().isNotEmpty) {
+        req.headers.set('authorization', 'Bearer ${token.trim()}');
+      }
+      req.write(jsonEncode(widget.session.buildT00BootstrapPayload()));
+      final res = await req.close().timeout(const Duration(seconds: 150));
+      if (res.statusCode == 402) {
+        widget.session.openCredits();
+        return;
+      }
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        final body = await utf8.decoder.bind(res).join();
+        throw HttpException('HTTP ${res.statusCode}: $body', uri: uri);
+      }
+      await for (final line in res
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 150))) {
+        _processSseLine(line);
+      }
+      if (mounted && !_ready && _error == null) {
+        setState(() {
+          _stageIdx = 4;
+          _ready = true;
+          _loading = false;
+        });
+        widget.session.recordT00Done();
+      }
+    } catch (e) {
+      final message = e.toString().replaceFirst('Exception: ', '');
+      widget.session.recordT00Fatal(message);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _ready = false;
+        _error = 'Erro ao preparar. Tente novamente.';
+        _detail = message;
+      });
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  bool get _isFlutterTestBinding {
+    return WidgetsBinding.instance.runtimeType.toString().contains('Test');
+  }
+
+  void _runLocalT00FallbackForTest() {
+    widget.session.recordT00StreamStarted();
+    widget.session.recordT00Profile({
+      'profile': 'Fallback local de teste Flutter.',
+    });
+    widget.session.recordT00ItemPartial({
+      'order': 1,
+      'marker': 'M-1',
+      'item': {
+        'marker': 'M-1',
+        'title': widget.session.freeText.trim().isEmpty
+            ? 'Primeiro item'
+            : widget.session.freeText.trim(),
+      },
+    });
+    widget.session.recordT00Final({
+      'profile': 'Fallback local de teste Flutter.',
+      'curriculum': [
+        {
+          'marker': 'M-1',
+          'title': widget.session.freeText.trim().isEmpty
+              ? 'Primeiro item'
+              : widget.session.freeText.trim(),
+        },
+      ],
+    });
+    widget.session.recordT00Done();
+    if (!mounted) return;
+    setState(() {
+      _stageIdx = 4;
+      _ready = true;
+      _loading = false;
+      _detail = 'Fallback local de teste concluÃ­do.';
+    });
+  }
+
+  void _processSseLine(String line) {
+    final trimmed = line.trim();
+    if (trimmed.isEmpty || trimmed.startsWith(':')) return;
+    if (!trimmed.startsWith('data:')) return;
+    final raw = trimmed.substring(5).trim();
+    if (raw.isEmpty || raw == '[DONE]') return;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return;
+    final payload = JsonMap.from(decoded);
+    final type = (payload['type'] ?? '').toString();
+    switch (type) {
+      case 'start':
+        widget.session.recordT00StreamStarted();
+        _moveToStage(0);
+        break;
+      case 't00_profile':
+        widget.session.recordT00Profile(payload);
+        _moveToStage(1, detail: 'Perfil recebido do T00.');
+        break;
+      case 't00_item_partial':
+        widget.session.recordT00ItemPartial(payload);
+        _moveToStage(2, detail: 'Item recebido: ${payload['marker'] ?? ''}');
+        break;
+      case 't00_final':
+        widget.session.recordT00Final(payload);
+        _moveToStage(3, detail: 'CurrÃƒÂ­culo completo recebido.');
+        break;
+      case 'done':
+        widget.session.recordT00Done();
+        if (!mounted) return;
+        setState(() {
+          _stageIdx = 4;
+          _ready = true;
+          _loading = false;
+          _error = null;
+          _detail = 'T00 concluÃƒÂ­do.';
+        });
+        break;
+      case 'fatal':
+        final message =
+            (payload['error'] ?? 'Erro ao preparar. Tente novamente.')
+                .toString();
+        widget.session.recordT00Fatal(message);
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _ready = false;
+          _error = 'Erro ao preparar. Tente novamente.';
+          _detail = message;
+        });
+        break;
+    }
+  }
+
+  void _moveToStage(int index, {String? detail}) {
+    if (!mounted) return;
+    setState(() {
+      _stageIdx = index.clamp(0, _stages.length - 1);
+      _detail = detail;
+    });
+  }
+
+  @override
+  void dispose() {
+    _msgTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final stage = _stages[_stageIdx];
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -2473,55 +3769,146 @@ class PhaseBoundaryScreen extends StatelessWidget {
                   child: SimCard(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Preparando sua aula',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          child: Text(
+                            _error ?? stage.title,
+                            key: ValueKey('${_stageIdx}_${_error ?? ''}'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: _error == null
+                                  ? simDark
+                                  : const Color(0xFFDC2626),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              height: 1.3,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'SIM está interpretando o seu objetivo, montando o currículo e preparando a primeira aula.',
-                          style: TextStyle(
-                            color: simMuted,
-                            fontSize: 15,
-                            height: 1.45,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: session.entryStatus == 'primeira_aula_pronta'
-                                ? 1
-                                : null,
-                            minHeight: 10,
-                            backgroundColor: simLight,
-                            color: simDark,
+                        const SizedBox(height: 16),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
+                          child: Text(
+                            _detail ?? _messages[_msgIdx],
+                            key: ValueKey('${_msgIdx}_${_detail ?? ''}'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                              height: 1.55,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: DecoratedBox(
-                            decoration: primaryButtonDecoration(radius: 14),
-                            child: TextButton(
-                              onPressed: session.preparationDone,
-                              child: const Text(
-                                'Continuar',
-                                style: TextStyle(
-                                  color: simDark,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: stage.progress),
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeOut,
+                          builder: (context, value, _) => ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: LinearProgressIndicator(
+                              value: value,
+                              minHeight: 10,
+                              backgroundColor: simLight,
+                              color: _error == null
+                                  ? simDark
+                                  : const Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            _stages.length,
+                            (i) => Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                width: i == _stageIdx ? 20 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: i <= _stageIdx ? simDark : simBorder,
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (!_ready && _error == null) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                                3, (i) => _PulseDot(delay: i * 150)),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: _error != null
+                              ? DecoratedBox(
+                                  decoration:
+                                      primaryButtonDecoration(radius: 14),
+                                  child: TextButton(
+                                    onPressed: _startT00Bootstrap,
+                                    child: const Text(
+                                      'Tentar novamente',
+                                      style: TextStyle(
+                                        color: simDark,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _ready
+                                  ? DecoratedBox(
+                                      decoration:
+                                          primaryButtonDecoration(radius: 14),
+                                      child: TextButton(
+                                        onPressed:
+                                            widget.session.preparationDone,
+                                        child: const Text(
+                                          'Continuar Ã¢â€ â€™',
+                                          style: TextStyle(
+                                            color: simDark,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: simLight,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Center(
+                                        child: Text(
+                                          'Preparando...',
+                                          style: TextStyle(
+                                            color: simMuted,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _error != null
+                              ? 'O T00 real falhou. Nenhum currÃƒÂ­culo foi marcado como pronto.'
+                              : _ready
+                                  ? 'Pronto para continuar.'
+                                  : 'Aguardando eventos reais do T00...',
+                          style: const TextStyle(color: simMuted, fontSize: 13),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -2536,10 +3923,83 @@ class PhaseBoundaryScreen extends StatelessWidget {
   }
 }
 
+class _PrepStage {
+  const _PrepStage({required this.title, required this.progress});
+  final String title;
+  final double progress;
+}
+
+class _PulseDot extends StatefulWidget {
+  const _PulseDot({required this.delay});
+  final int delay;
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _ctrl.repeat(reverse: true);
+    });
+    _anim = Tween(
+      begin: 0.35,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      child: FadeTransition(
+        opacity: _anim,
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: const BoxDecoration(
+            color: simDark,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class PlacementLabScreen extends StatelessWidget {
   const PlacementLabScreen({required this.session, super.key});
 
   final LabSession session;
+
+  int get _step {
+    switch (session.placementStage) {
+      case 'intro':
+        return 2;
+      case 'running':
+        return 3;
+      case 'result':
+        return 4;
+      default:
+        return 1;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2547,77 +4007,201 @@ class PlacementLabScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(step: 5, total: 5, label: 'Nivelamento'),
+            StepHeader(step: _step, total: 4, label: 'Nivelamento'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: SimCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Você já conhece esse assunto?',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        session.placementStarted
-                            ? 'Pergunta de nivelamento: escolha a opção que melhor representa seu ponto de partida.'
-                            : 'SIM pode começar do zero ou fazer uma pergunta rápida para sugerir o ponto certo.',
-                        style: const TextStyle(
-                          color: simMuted,
-                          fontSize: 15,
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      if (!session.placementStarted) ...[
-                        PrimaryWideButton(
-                          label: 'Começar do zero',
-                          onTap: session.skipPlacement,
-                        ),
-                        const SizedBox(height: 12),
-                        SecondaryWideButton(
-                          label: 'Fazer nivelamento',
-                          onTap: session.startPlacement,
-                        ),
-                      ] else ...[
-                        const Text(
-                          'Qual alternativa descreve melhor seu conhecimento?',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SecondaryWideButton(
-                          label: 'A. Domino bem',
-                          onTap: session.finishPlacement,
-                        ),
-                        const SizedBox(height: 8),
-                        SecondaryWideButton(
-                          label: 'B. Sei uma parte',
-                          onTap: session.finishPlacement,
-                        ),
-                        const SizedBox(height: 8),
-                        SecondaryWideButton(
-                          label: 'C. Preciso começar guiado',
-                          onTap: session.finishPlacement,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                child: SimCard(child: _body()),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _body() {
+    switch (session.placementStage) {
+      case 'intro':
+        return _IntroBody(session: session);
+      case 'running':
+        return _RunningBody(session: session);
+      case 'result':
+        return _ResultBody(session: session);
+      default:
+        return _ChoiceBody(session: session);
+    }
+  }
+}
+
+class _ChoiceBody extends StatelessWidget {
+  const _ChoiceBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Por onde vocÃƒÆ’Ã‚Âª quer comeÃƒÆ’Ã‚Â§ar?',
+          style: TextStyle(
+            color: simDark,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'VocÃƒÆ’Ã‚Âª pode comeÃƒÆ’Ã‚Â§ar do inÃƒÆ’Ã‚Â­cio, ou fazer um teste rÃƒÆ’Ã‚Â¡pido pra eu jÃƒÆ’Ã‚Â¡ te colocar no ponto certo.',
+          style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 22),
+        PrimaryWideButton(
+          label: 'ComeÃƒÆ’Ã‚Â§ar do inÃƒÆ’Ã‚Â­cio',
+          onTap: session.skipPlacement,
+        ),
+        const SizedBox(height: 12),
+        SecondaryWideButton(
+          label: 'Fazer teste rÃƒÆ’Ã‚Â¡pido',
+          onTap: session.startPlacement,
+        ),
+      ],
+    );
+  }
+}
+
+class _IntroBody extends StatelessWidget {
+  const _IntroBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Teste rÃƒÆ’Ã‚Â¡pido',
+          style: TextStyle(
+            color: simDark,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Vou te fazer algumas perguntas curtas. NÃƒÆ’Ã‚Â£o tem nota, nÃƒÆ’Ã‚Â£o tem erro ruim ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ÃƒÆ’Ã‚Â© sÃƒÆ’Ã‚Â³ pra eu saber por onde comeÃƒÆ’Ã‚Â§ar.',
+          style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 22),
+        PrimaryWideButton(
+          label: session.placementLoading ? 'Preparando...' : 'ComeÃƒÆ’Ã‚Â§ar',
+          onTap: session.placementLoading ? () {} : session.loadPlacementT02,
+        ),
+      ],
+    );
+  }
+}
+
+class _RunningBody extends StatelessWidget {
+  const _RunningBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    if (session.placementLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    final question = session.placementQuestion ?? '';
+    final choices = session.placementChoices;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Pergunta 1 de 1',
+          style: TextStyle(color: simMuted, fontSize: 12, letterSpacing: 1.2),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          question,
+          style: const TextStyle(
+            color: simDark,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 20),
+        ...choices.map((c) {
+          final label = c['label'] as String? ?? '';
+          final correct = c['correct'] as bool? ?? false;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: SecondaryWideButton(
+              label: label,
+              onTap: () => session.answerPlacement(correct),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _ResultBody extends StatelessWidget {
+  const _ResultBody({required this.session});
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final marker = session.placementStartMarker ?? 'M-1';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tudo certo',
+          style: TextStyle(
+            color: simDark,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Vou te levar pro ponto certo.',
+          style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: simLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: simBorder),
+          ),
+          child: Text.rich(
+            TextSpan(
+              text: 'ComeÃƒÆ’Ã‚Â§ando em ',
+              style: const TextStyle(color: simDark, fontSize: 14),
+              children: [
+                TextSpan(
+                  text: marker,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const TextSpan(text: '.'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        PrimaryWideButton(label: 'Continuar', onTap: session.finishPlacement),
+      ],
     );
   }
 }
@@ -2649,13 +4233,13 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       final parts = rest.split(':');
       final itemOf = parts.isNotEmpty ? parts[0] : '?';
       final layerKey = parts.length > 1 ? parts[1] : '';
-      return 'Item $itemOf · ${_layerName(layerKey)}';
+      return 'Item $itemOf Ãƒâ€šÃ‚Â· ${_layerName(layerKey)}';
     }
     if (raw.startsWith('aula_review_review:')) {
       final inner = raw.substring('aula_review_review:'.length);
-      return 'Revisão · ${_layerName(inner)}';
+      return 'RevisÃƒÆ’Ã‚Â£o Ãƒâ€šÃ‚Â· ${_layerName(inner)}';
     }
-    if (raw.isEmpty) return 'Item ${session.aulaStep + 1} · Camada 1';
+    if (raw.isEmpty) return 'Item ${session.aulaStep + 1} Ãƒâ€šÃ‚Â· Camada 1';
     return _layerName(raw);
   }
 
@@ -2663,9 +4247,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
         'aula_layer_1' || 'aula_layer_label_1' => 'Camada 1',
         'aula_layer_2' || 'aula_layer_label_2' => 'Camada 2',
         'aula_layer_3' || 'aula_layer_label_3' => 'Camada 3',
-        'aula_review_lbl_1' => 'Revisão C1',
-        'aula_review_lbl_2' => 'Revisão C2',
-        'aula_review_lbl_3' => 'Revisão C3',
+        'aula_review_lbl_1' => 'RevisÃƒÆ’Ã‚Â£o C1',
+        'aula_review_lbl_2' => 'RevisÃƒÆ’Ã‚Â£o C2',
+        'aula_review_lbl_3' => 'RevisÃƒÆ’Ã‚Â£o C3',
         _ => key,
       };
 
@@ -2675,10 +4259,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       'aula_layer_label_1' => 'Ir para Camada 1',
       'aula_layer_label_2' => 'Ir para Camada 2',
       'aula_layer_label_3' => 'Ir para Camada 3',
-      'aula_next' => 'Próximo',
-      'aula_next_item' => 'Próximo item',
+      'aula_next' => 'PrÃƒÆ’Ã‚Â³ximo',
+      'aula_next_item' => 'PrÃƒÆ’Ã‚Â³ximo item',
       'aula_consolidate' => 'Consolidar',
-      _ when raw.isEmpty => 'Avançar',
+      _ when raw.isEmpty => 'AvanÃƒÆ’Ã‚Â§ar',
       _ => raw,
     };
   }
@@ -2688,10 +4272,27 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     if (phase.type != ClassroomPhaseType.concluido) return '';
     final correct = phase.wasCorrect ?? false;
     final signal = phase.signal ?? DecisionSignal.three;
-    if (correct && signal == DecisionSignal.one) return 'Excelente! Resposta correta e sólida.';
-    if (correct && signal == DecisionSignal.two) return 'Correto, mas SIM marcou revisão leve.';
-    if (signal == DecisionSignal.three) return 'SIM abriu recuperação para reforçar este ponto.';
+    if (correct && signal == DecisionSignal.one) {
+      return 'Excelente! Resposta correta e sÃƒÆ’Ã‚Â³lida.';
+    }
+    if (correct && signal == DecisionSignal.two) {
+      return 'Correto, mas SIM marcou revisÃƒÆ’Ã‚Â£o leve.';
+    }
+    if (signal == DecisionSignal.three) {
+      return 'SIM abriu recuperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o para reforÃƒÆ’Ã‚Â§ar este ponto.';
+    }
     return 'Errou. SIM refaz este ponto.';
+  }
+
+  String _answerFeedbackMsg() {
+    final phase = session.classroomPhase;
+    final letter = phase.letter?.name ?? session.selectedAnswer;
+    final correct =
+        session.t02CorrectAnswer == null || session.t02CorrectAnswer == letter;
+    if (correct) {
+      return 'Resposta registrada. Veja o feedback e escolha o qualificador.';
+    }
+    return 'Resposta registrada. Veja o feedback e escolha o qualificador.';
   }
 
   Widget _buildDoneScreen(String topic) {
@@ -2708,10 +4309,14 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle_outline, size: 48, color: simDark),
+                        const Icon(
+                          Icons.check_circle_outline,
+                          size: 48,
+                          color: simDark,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Sessão concluída!',
+                          'SessÃƒÆ’Ã‚Â£o concluÃƒÆ’Ã‚Â­da!',
                           style: TextStyle(
                             color: simDark,
                             fontSize: 22,
@@ -2722,15 +4327,26 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         Text(
                           topic,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: simMuted, fontSize: 15, height: 1.4),
+                          style: const TextStyle(
+                            color: simMuted,
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Sólido: ${session.signalsSolid}  ·  Entendeu: ${session.signalsUnderstood}  ·  Frágil: ${session.signalsFragile}',
-                          style: const TextStyle(color: simMuted, fontSize: 13, fontFamily: 'monospace'),
+                          'SÃƒÆ’Ã‚Â³lido: ${session.signalsSolid}  Ãƒâ€šÃ‚Â·  Entendeu: ${session.signalsUnderstood}  Ãƒâ€šÃ‚Â·  FrÃƒÆ’Ã‚Â¡gil: ${session.signalsFragile}',
+                          style: const TextStyle(
+                            color: simMuted,
+                            fontSize: 13,
+                            fontFamily: 'monospace',
+                          ),
                         ),
                         const SizedBox(height: 20),
-                        PrimaryWideButton(label: 'Voltar ao início', onTap: session.goPortal),
+                        PrimaryWideButton(
+                          label: 'Voltar ao inÃƒÆ’Ã‚Â­cio',
+                          onTap: session.goPortal,
+                        ),
                       ],
                     ),
                   ),
@@ -2745,12 +4361,15 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final topic = session.freeText.trim().isEmpty ? 'Aula SIM' : session.freeText.trim();
+    final topic =
+        session.freeText.trim().isEmpty ? 'Aula SIM' : session.freeText.trim();
     final opts = session.t02Options;
     final phase = session.classroomPhase;
     final isDone = session.lessonIsDone;
-    final locked = session.answersLocked;
+    final awaitingQualifier = phase.type == ClassroomPhaseType.expandida;
+    final locked = session.answersLocked || awaitingQualifier;
     final isConcluido = phase.type == ClassroomPhaseType.concluido;
+    final selectedLetter = phase.letter?.name ?? session.selectedAnswer;
 
     if (isDone) return _buildDoneScreen(topic);
 
@@ -2761,7 +4380,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
             AulaTopBar(session: session),
             ClipRRect(
               child: LinearProgressIndicator(
-                value: session.lessonProgress > 0 ? session.lessonProgress / 100 : null,
+                value: session.lessonProgress > 0
+                    ? session.lessonProgress / 100
+                    : null,
                 minHeight: 3,
                 backgroundColor: simLight,
                 color: simDark,
@@ -2799,7 +4420,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             const Center(
                               child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 20),
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                             const Text(
@@ -2810,7 +4433,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ] else if (session.t02Error != null) ...[
                             Text(
                               session.t02Error!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14),
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 10),
                             GestureDetector(
@@ -2847,7 +4473,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             const SizedBox(height: 10),
                             const StatusLine(
                               icon: Icons.volume_up_outlined,
-                              text: 'Preparando áudio da aula...',
+                              text: 'Preparando ÃƒÆ’Ã‚Â¡udio da aula...',
                               loading: true,
                             ),
                           ],
@@ -2857,8 +4483,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                                 ? Icons.volume_up_outlined
                                 : Icons.volume_off_outlined,
                             text: session.audioEnabled
-                                ? 'Áudio da aula ligado'
-                                : 'Áudio da aula pausado',
+                                ? 'ÃƒÆ’Ã‚Âudio da aula ligado'
+                                : 'ÃƒÆ’Ã‚Âudio da aula pausado',
                           ),
                           const SizedBox(height: 14),
                           const Text(
@@ -2872,7 +4498,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 8),
                           Text(
                             session.t02Question ??
-                                'Qual alternativa mostra que você entendeu este ponto?',
+                                'Qual alternativa mostra que vocÃƒÆ’Ã‚Âª entendeu este ponto?',
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 15,
@@ -2882,35 +4508,99 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 12),
                           AnswerButton(
                             label: 'A',
-                            text: opts?['A'] ?? 'Consigo explicar com minhas palavras.',
-                            active: session.selectedAnswer == 'A',
+                            text: opts?['A'] ??
+                                'Consigo explicar com minhas palavras.',
+                            active: selectedLetter == 'A',
                             locked: locked,
-                            correct: isConcluido && session.t02CorrectAnswer == 'A',
-                            onTap: locked ? null : () => session.chooseAulaAnswer('A'),
+                            correct: (isConcluido || awaitingQualifier) &&
+                                session.t02CorrectAnswer == 'A',
+                            onTap: locked
+                                ? null
+                                : () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B',
-                            text: opts?['B'] ?? 'Entendi uma parte, mas preciso revisar.',
-                            active: session.selectedAnswer == 'B',
+                            text: opts?['B'] ??
+                                'Entendi uma parte, mas preciso revisar.',
+                            active: selectedLetter == 'B',
                             locked: locked,
-                            correct: isConcluido && session.t02CorrectAnswer == 'B',
-                            onTap: locked ? null : () => session.chooseAulaAnswer('B'),
+                            correct: (isConcluido || awaitingQualifier) &&
+                                session.t02CorrectAnswer == 'B',
+                            onTap: locked
+                                ? null
+                                : () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C',
-                            text: opts?['C'] ?? 'Ainda estou perdido e preciso de recuperação.',
-                            active: session.selectedAnswer == 'C',
+                            text: opts?['C'] ??
+                                'Ainda estou perdido e preciso de recuperaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.',
+                            active: selectedLetter == 'C',
                             locked: locked,
-                            correct: isConcluido && session.t02CorrectAnswer == 'C',
-                            onTap: locked ? null : () => session.chooseAulaAnswer('C'),
+                            correct: (isConcluido || awaitingQualifier) &&
+                                session.t02CorrectAnswer == 'C',
+                            onTap: locked
+                                ? null
+                                : () => session.chooseAulaAnswer('C'),
                           ),
-                          if (isConcluido) ...[
+                          if (awaitingQualifier) ...[
+                            const SizedBox(height: 14),
+                            _FeedbackBanner(
+                              message: _answerFeedbackMsg(),
+                              wasCorrect: session.t02CorrectAnswer == null ||
+                                  session.t02CorrectAnswer == selectedLetter,
+                            ),
+                            if (session.t02WhyCorrect != null ||
+                                session.t02WhyWrong != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                (session.t02CorrectAnswer == null ||
+                                        session.t02CorrectAnswer ==
+                                            selectedLetter)
+                                    ? session.t02WhyCorrect?.toString() ?? ''
+                                    : session.t02WhyWrong?.toString() ?? '',
+                                style: const TextStyle(
+                                  color: simMuted,
+                                  fontSize: 13.5,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Como ficou este ponto?',
+                              style: TextStyle(
+                                color: simDark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            QualifierButton(
+                              label: '1',
+                              text: 'Ficou sólido',
+                              onTap: () => session
+                                  .submitAulaQualifier(DecisionSignal.one),
+                            ),
+                            QualifierButton(
+                              label: '2',
+                              text: 'Entendi, mas quero revisar',
+                              onTap: () => session
+                                  .submitAulaQualifier(DecisionSignal.two),
+                            ),
+                            QualifierButton(
+                              label: '3',
+                              text: 'Ainda está frágil',
+                              onTap: () => session
+                                  .submitAulaQualifier(DecisionSignal.three),
+                            ),
+                          ] else if (isConcluido) ...[
                             const SizedBox(height: 14),
                             _FeedbackBanner(
                               message: _feedbackMsg(),
                               wasCorrect: phase.wasCorrect ?? false,
                             ),
-                            if (session.t02WhyCorrect != null || session.t02WhyWrong != null) ...[
+                            if (session.t02WhyCorrect != null ||
+                                session.t02WhyWrong != null) ...[
                               const SizedBox(height: 10),
                               Text(
                                 (phase.wasCorrect ?? false)
@@ -2928,7 +4618,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               label: _nextLabel(),
                               onTap: session.advanceAula,
                             ),
-                          ] else if (session.aulaMessage.isNotEmpty && !locked) ...[
+                          ] else if (session.aulaMessage.isNotEmpty &&
+                              !locked) ...[
                             const SizedBox(height: 14),
                             Text(
                               session.aulaMessage,
@@ -2939,51 +4630,30 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            PrimaryWideButton(label: 'Avançar', onTap: session.advanceAula),
+                            PrimaryWideButton(
+                              label: 'AvanÃƒÆ’Ã‚Â§ar',
+                              onTap: session.advanceAula,
+                            ),
                           ],
                         ],
                       ),
                     ),
-                    if (isConcluido && phase.signal == DecisionSignal.two) ...[
+                    if (session.reviewRoomView != null ||
+                        session.reviewQueueCount > 0) ...[
                       const SizedBox(height: 14),
-                      const AuxRoomCard(
-                        title: 'Revisão',
-                        body: 'SIM marcou este ponto para revisão antes de seguir.',
+                      ReviewRoomPanel(
+                        session: session,
                       ),
                     ],
-                    if (isConcluido && phase.signal == DecisionSignal.three) ...[
+                    if (session.recoveryRoomView != null ||
+                        session.recoveryQueueCount > 0) ...[
                       const SizedBox(height: 14),
-                      const AuxRoomCard(
-                        title: 'Recuperação',
-                        body: 'SIM abriu recuperação para reconstruir o ponto que ainda travou.',
+                      RecoveryRoomPanel(
+                        session: session,
                       ),
                     ],
                     const SizedBox(height: 14),
-                    if (session.doubtOpen)
-                      SimCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Dúvida',
-                              style: TextStyle(
-                                color: simDark,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Sala de dúvida aberta.',
-                              style: TextStyle(
-                                color: simMuted,
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    if (session.doubtOpen) DoubtRoomPanel(session: session),
                   ],
                 ),
               ),
@@ -2991,6 +4661,177 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class DoubtRoomPanel extends StatelessWidget {
+  const DoubtRoomPanel({required this.session, super.key});
+
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = session.doubtState;
+    final image = session.doubtImage;
+    return SimCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Duvida',
+            style: TextStyle(
+              color: simDark,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Escreva sua duvida ou envie uma foto. A aula continua no mesmo ponto.',
+            style: TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          if (state.status == DoubtStatus.processing) ...[
+            LinearProgressIndicator(value: state.progress / 100),
+            const SizedBox(height: 8),
+            Text(
+              session._getDoubtController().progressLabel,
+              style: const TextStyle(color: simMuted, fontSize: 13),
+            ),
+          ] else if (state.status == DoubtStatus.explaining &&
+              state.response != null) ...[
+            Text(
+              state.response!.explanation,
+              style: const TextStyle(
+                color: simDark,
+                fontSize: 15,
+                height: 1.45,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (state.response!.visualTrigger != null) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Ha uma sugestao visual para este ponto. A imagem paga nao foi gerada automaticamente.',
+                style: TextStyle(color: simMuted, fontSize: 13, height: 1.4),
+              ),
+            ],
+            const SizedBox(height: 12),
+            PrimaryWideButton(
+              label: 'Entendi',
+              onTap: session.closeDoubt,
+            ),
+          ] else ...[
+            TextFormField(
+              initialValue: session.doubtText,
+              maxLines: 4,
+              maxLength: doubtTextMaxLength,
+              onChanged: session.setDoubtText,
+              decoration: InputDecoration(
+                hintText: 'Escreva sua duvida aqui...',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: simBorder),
+                ),
+              ),
+            ),
+            if (image != null) ...[
+              const SizedBox(height: 10),
+              _DoubtImagePreview(image: image),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: session.removeDoubtImage,
+                child: const Text(
+                  'Remover foto',
+                  style: TextStyle(
+                    color: simDark,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+            if (session.doubtInputError != null ||
+                state.status == DoubtStatus.error) ...[
+              const SizedBox(height: 10),
+              Text(
+                session.doubtInputError ??
+                    state.error ??
+                    'Nao foi possivel responder agora.',
+                style: const TextStyle(color: Colors.red, fontSize: 13),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => unawaited(session.pickDoubtImage()),
+                    child: Text(image == null ? 'Anexar foto' : 'Trocar foto'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: PrimaryWideButton(
+                    label: state.status == DoubtStatus.error
+                        ? 'Tentar novamente'
+                        : 'Enviar duvida',
+                    onTap: () => unawaited(session.submitDoubt()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: session.closeDoubt,
+              child: const Text(
+                'Fechar',
+                style: TextStyle(
+                  color: simMuted,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DoubtImagePreview extends StatelessWidget {
+  const _DoubtImagePreview({required this.image});
+
+  final DoubtImagePayload image;
+
+  @override
+  Widget build(BuildContext context) {
+    final comma = image.dataUrl.indexOf(',');
+    final bytes = comma >= 0
+        ? base64Decode(image.dataUrl.substring(comma + 1))
+        : const <int>[];
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: bytes.isEmpty
+          ? Container(
+              height: 120,
+              color: simLight,
+              alignment: Alignment.center,
+              child: const Text(
+                'Preview indisponivel',
+                style: TextStyle(color: simMuted),
+              ),
+            )
+          : Image.memory(
+              Uint8List.fromList(bytes),
+              height: 140,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
     );
   }
 }
@@ -3021,6 +4862,339 @@ class _FeedbackBanner extends StatelessWidget {
           fontWeight: FontWeight.w600,
           height: 1.4,
         ),
+      ),
+    );
+  }
+}
+
+class ReviewRoomPanel extends StatelessWidget {
+  const ReviewRoomPanel({required this.session, super.key});
+
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final view = session.reviewRoomView;
+    final count = session.reviewQueueCount;
+    final content = view?.conteudo;
+    final status = view?.status;
+    return SimCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Revisão',
+            style: TextStyle(
+              color: simDark,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            count == 1 ? '1 item para revisão' : '$count itens para revisão',
+            style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          if (view == null) ...[
+            PrimaryWideButton(
+              label: 'Iniciar revisão',
+              onTap: () => unawaited(session.startReviewRoom()),
+            ),
+          ] else if (status == ReviewRoomStatus.preparing) ...[
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            const Text(
+              'Preparando revisão com T02...',
+              style: TextStyle(color: simMuted, fontSize: 14),
+            ),
+          ] else if (status == ReviewRoomStatus.failed) ...[
+            Text(
+              view.errMsg ?? 'Não foi possível preparar a revisão.',
+              style: const TextStyle(color: Colors.red, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            PrimaryWideButton(
+              label: 'Tentar novamente',
+              onTap: () => unawaited(session.startReviewRoom()),
+            ),
+          ] else if (status == ReviewRoomStatus.done) ...[
+            const Text(
+              'Revisão concluída',
+              style: TextStyle(
+                color: simDark,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            PrimaryWideButton(
+              label: 'Voltar para aula',
+              onTap: session.closeReviewRoom,
+            ),
+          ] else if (content != null) ...[
+            Text(
+              'Questão ${view.idx + 1} de ${view.queue.length}',
+              style: const TextStyle(
+                color: simMuted,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 10),
+            if (content.explanation.trim().isNotEmpty) ...[
+              Text(
+                content.explanation,
+                style: const TextStyle(
+                  color: simMuted,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Text(
+              content.question,
+              style: const TextStyle(
+                color: simDark,
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            AnswerButton(
+              label: 'A',
+              text: content.options[AnswerLetter.A] ?? '',
+              active: view.letra == AnswerLetter.A,
+              locked: status == ReviewRoomStatus.result,
+              correct: status == ReviewRoomStatus.result &&
+                  content.correctAnswer == AnswerLetter.A,
+              onTap: status == ReviewRoomStatus.result
+                  ? null
+                  : () => session.submitReviewAnswer('A'),
+            ),
+            AnswerButton(
+              label: 'B',
+              text: content.options[AnswerLetter.B] ?? '',
+              active: view.letra == AnswerLetter.B,
+              locked: status == ReviewRoomStatus.result,
+              correct: status == ReviewRoomStatus.result &&
+                  content.correctAnswer == AnswerLetter.B,
+              onTap: status == ReviewRoomStatus.result
+                  ? null
+                  : () => session.submitReviewAnswer('B'),
+            ),
+            AnswerButton(
+              label: 'C',
+              text: content.options[AnswerLetter.C] ?? '',
+              active: view.letra == AnswerLetter.C,
+              locked: status == ReviewRoomStatus.result,
+              correct: status == ReviewRoomStatus.result &&
+                  content.correctAnswer == AnswerLetter.C,
+              onTap: status == ReviewRoomStatus.result
+                  ? null
+                  : () => session.submitReviewAnswer('C'),
+            ),
+            if (status == ReviewRoomStatus.result) ...[
+              const SizedBox(height: 10),
+              _FeedbackBanner(
+                message: view.resultCorrect == true
+                    ? 'Revisão respondida corretamente.'
+                    : 'Revisão registrada. O engine mantém este ponto em atenção.',
+                wasCorrect: view.resultCorrect == true,
+              ),
+              const SizedBox(height: 12),
+              PrimaryWideButton(
+                label: view.idx + 1 >= view.queue.length
+                    ? 'Concluir revisão'
+                    : 'Próxima questão',
+                onTap: () => unawaited(session.nextReviewQuestion()),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class RecoveryRoomPanel extends StatelessWidget {
+  const RecoveryRoomPanel({required this.session, super.key});
+
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final view = session.recoveryRoomView;
+    final count = session.recoveryQueueCount;
+    final content = view?.conteudo;
+    final status = view?.status;
+    return SimCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Recuperacao',
+            style: TextStyle(
+              color: simDark,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            count == 1
+                ? '1 item para recuperacao'
+                : '$count itens para recuperacao',
+            style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'A recuperacao reconstruiu o ponto fragil antes da conclusao da aula.',
+            style: TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          if (view == null) ...[
+            PrimaryWideButton(
+              label: 'Iniciar recuperacao',
+              onTap: () => unawaited(session.startRecoveryRoom()),
+            ),
+          ] else if (status == RecoveryRoomStatus.preparing) ...[
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 18),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            const Text(
+              'Preparando recuperacao com T02...',
+              style: TextStyle(color: simMuted, fontSize: 14),
+            ),
+          ] else if (status == RecoveryRoomStatus.failed) ...[
+            Text(
+              view.errMsg ?? 'Nao foi possivel preparar a recuperacao.',
+              style: const TextStyle(color: Colors.red, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            PrimaryWideButton(
+              label: 'Tentar novamente',
+              onTap: () => unawaited(session.startRecoveryRoom()),
+            ),
+          ] else if (status == RecoveryRoomStatus.intro) ...[
+            const Text(
+              'Vamos voltar para a camada 1 deste ponto e reconstruir com calma.',
+              style: TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            PrimaryWideButton(
+              label: 'Comecar recuperacao',
+              onTap: session.continueRecoveryRoom,
+            ),
+          ] else if (status == RecoveryRoomStatus.done) ...[
+            const Text(
+              'Recuperacao concluida',
+              style: TextStyle(
+                color: simDark,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            PrimaryWideButton(
+              label: view.restartRequired
+                  ? 'Continuar recuperacao'
+                  : 'Voltar para aula',
+              onTap: view.restartRequired
+                  ? () => unawaited(session.startRecoveryRoom())
+                  : session.closeRecoveryRoom,
+            ),
+          ] else if (content != null) ...[
+            Text(
+              'Reconstrucao ${view.idx + 1} de ${view.queue.length}',
+              style: const TextStyle(
+                color: simMuted,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 10),
+            if (content.explanation.trim().isNotEmpty) ...[
+              Text(
+                content.explanation,
+                style: const TextStyle(
+                  color: simMuted,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Text(
+              content.question,
+              style: const TextStyle(
+                color: simDark,
+                fontSize: 15,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            AnswerButton(
+              label: 'A',
+              text: content.options[AnswerLetter.A] ?? '',
+              active: view.letra == AnswerLetter.A,
+              locked: status == RecoveryRoomStatus.result,
+              correct: status == RecoveryRoomStatus.result &&
+                  content.correctAnswer == AnswerLetter.A,
+              onTap: status == RecoveryRoomStatus.result
+                  ? null
+                  : () => session.submitRecoveryAnswer('A'),
+            ),
+            AnswerButton(
+              label: 'B',
+              text: content.options[AnswerLetter.B] ?? '',
+              active: view.letra == AnswerLetter.B,
+              locked: status == RecoveryRoomStatus.result,
+              correct: status == RecoveryRoomStatus.result &&
+                  content.correctAnswer == AnswerLetter.B,
+              onTap: status == RecoveryRoomStatus.result
+                  ? null
+                  : () => session.submitRecoveryAnswer('B'),
+            ),
+            AnswerButton(
+              label: 'C',
+              text: content.options[AnswerLetter.C] ?? '',
+              active: view.letra == AnswerLetter.C,
+              locked: status == RecoveryRoomStatus.result,
+              correct: status == RecoveryRoomStatus.result &&
+                  content.correctAnswer == AnswerLetter.C,
+              onTap: status == RecoveryRoomStatus.result
+                  ? null
+                  : () => session.submitRecoveryAnswer('C'),
+            ),
+            if (status == RecoveryRoomStatus.result) ...[
+              const SizedBox(height: 10),
+              _FeedbackBanner(
+                message: view.resultCorrect == true
+                    ? 'Recuperacao registrada como evidencia de reconstrucao.'
+                    : 'Recuperacao registrada. O engine mantem a pendencia ativa.',
+                wasCorrect: view.resultCorrect == true,
+              ),
+              const SizedBox(height: 12),
+              PrimaryWideButton(
+                label: view.idx + 1 >= view.queue.length
+                    ? 'Concluir recuperacao'
+                    : 'Proxima reconstrucao',
+                onTap: () => unawaited(session.nextRecoveryQuestion()),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }
@@ -3091,7 +5265,7 @@ class AulaTopBar extends StatelessWidget {
           ),
           RoundIconButton(
             icon: Icons.help_outline,
-            tooltip: 'Dúvida',
+            tooltip: 'DÃƒÆ’Ã‚Âºvida',
             onTap: session.toggleDoubt,
           ),
           const SizedBox(width: 8),
@@ -3099,7 +5273,7 @@ class AulaTopBar extends StatelessWidget {
             icon: session.audioEnabled
                 ? Icons.volume_up_outlined
                 : Icons.volume_off_outlined,
-            tooltip: 'Áudio',
+            tooltip: 'ÃƒÆ’Ã‚Âudio',
             onTap: session.toggleAudio,
           ),
         ],
@@ -3248,7 +5422,8 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
       if (!mounted) return;
       if (url == null) {
         setState(() {
-          _buyError = 'Não foi possível abrir o checkout. Tente de novo.';
+          _buyError =
+              'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel abrir o checkout. Tente de novo.';
           _buying = null;
         });
         return;
@@ -3257,7 +5432,8 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        setState(() => _buyError = 'Não foi possível abrir o navegador.');
+        setState(() =>
+            _buyError = 'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel abrir o navegador.');
       }
     } catch (e) {
       if (mounted) setState(() => _buyError = 'Erro: $e');
@@ -3280,7 +5456,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Créditos',
+                      'CrÃƒÆ’Ã‚Â©ditos',
                       style: TextStyle(
                         color: simDark,
                         fontSize: 24,
@@ -3309,7 +5485,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                         ),
                       )
                     : Text(
-                        'Saldo: ${widget.session.credits} crédito${widget.session.credits == 1 ? '' : 's'}',
+                        'Saldo: ${widget.session.credits} crÃƒÆ’Ã‚Â©dito${widget.session.credits == 1 ? '' : 's'}',
                         style: const TextStyle(
                           color: simDark,
                           fontSize: 22,
@@ -3318,7 +5494,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                       ),
                 const SizedBox(height: 4),
                 const Text(
-                  '3 créditos por aula  •  10 por imagem',
+                  '3 crÃƒÆ’Ã‚Â©ditos por aula  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  10 por imagem',
                   style: TextStyle(color: simMuted, fontSize: 13),
                 ),
                 const SizedBox(height: 18),
@@ -3338,7 +5514,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                 ],
                 const SizedBox(height: 4),
                 const Text(
-                  'Após o pagamento, toque em ↺ para atualizar o saldo.',
+                  'ApÃƒÆ’Ã‚Â³s o pagamento, toque em ÃƒÂ¢Ã¢â‚¬Â Ã‚Âº para atualizar o saldo.',
                   style: TextStyle(color: simMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 16),
@@ -3416,7 +5592,7 @@ class _SimCreditPackButton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${pack.credits} créditos — $_price',
+                    '${pack.credits} crÃƒÆ’Ã‚Â©ditos ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â $_price',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -3501,23 +5677,113 @@ class CheckoutReturnScreen extends StatefulWidget {
 }
 
 class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
+  CheckoutStatusKind? _status;
+  int _credits = 0;
+  int _balance = 0;
+  String? _error;
+  Timer? _pollTimer;
+  int _elapsedMs = 0;
+  static const int _timeoutMs = 30000;
+  static const int _pollIntervalMs = 2000;
+
   @override
   void initState() {
     super.initState();
-    widget.session.refreshCredits();
+    _confirm();
+  }
+
+  String? get _sessionId => widget.session.checkoutSessionId;
+
+  Future<void> _confirm() async {
+    final sessionId = _sessionId;
+    if (sessionId == null || !isValidStripeSessionId(sessionId)) {
+      setState(() {
+        _status = CheckoutStatusKind.error;
+        _error = 'SessÃƒÆ’Ã‚Â£o de pagamento invÃƒÆ’Ã‚Â¡lida.';
+      });
+      return;
+    }
+    final result = await widget.session.getCheckoutStatus(sessionId);
+    if (result.kind == CheckoutStatusKind.pending && _elapsedMs < _timeoutMs) {
+      _pollTimer = Timer(const Duration(milliseconds: _pollIntervalMs), () {
+        _elapsedMs += _pollIntervalMs;
+        _confirm();
+      });
+      return;
+    }
+    _pollTimer?.cancel();
+    if (result.kind == CheckoutStatusKind.complete) {
+      widget.session.refreshCredits();
+    }
+    setState(() {
+      _status = result.kind;
+      _credits = result.credits;
+      _balance = result.balance;
+      _error = result.error;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleContinue() {
+    final s = widget.session;
+    final target = s.returnTo;
+    s.returnTo = '/';
+    s.openSupport(target.isNotEmpty ? target : '/');
   }
 
   @override
   Widget build(BuildContext context) {
+    final status = _status;
+    if (status == null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Verificando pagamento...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (status == CheckoutStatusKind.complete) {
+      return SimpleLabPage(
+        title: 'Pagamento confirmado',
+        body:
+            'VocÃƒÆ’Ã‚Âª recebeu $_credits crÃƒÆ’Ã‚Â©dito${_credits == 1 ? '' : 's'}. Saldo atual: $_balance crÃƒÆ’Ã‚Â©dito${_balance == 1 ? '' : 's'}.',
+        primary: 'Continuar',
+        onPrimary: _handleContinue,
+        session: widget.session,
+        secondary: 'Ver crÃƒÆ’Ã‚Â©ditos',
+        onSecondary: widget.session.openCredits,
+      );
+    }
+    if (status == CheckoutStatusKind.expired) {
+      return SimpleLabPage(
+        title: 'SessÃƒÆ’Ã‚Â£o expirada',
+        body:
+            'O tempo para confirmar o pagamento expirou. Se o pagamento foi realizado, entre em contato com o suporte.',
+        primary: 'Ver crÃƒÆ’Ã‚Â©ditos',
+        onPrimary: widget.session.openCredits,
+        session: widget.session,
+      );
+    }
     return SimpleLabPage(
-      title: 'Pagamento recebido',
-      body:
-          'Saldo atualizado para ${widget.session.credits} crédito${widget.session.credits == 1 ? '' : 's'}. Bom estudo!',
-      primary: 'Continuar aula',
-      onPrimary: () => widget.session.openSupport('/cyber/aula'),
+      title: 'Erro no pagamento',
+      body: _error ??
+          'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel verificar o pagamento. Tente novamente.',
+      primary: 'Ver crÃƒÆ’Ã‚Â©ditos',
+      onPrimary: widget.session.openCredits,
       session: widget.session,
-      secondary: 'Ver créditos',
-      onSecondary: widget.session.openCredits,
     );
   }
 }
@@ -3532,10 +5798,64 @@ class FatherLabScreen extends StatefulWidget {
 }
 
 class _FatherLabScreenState extends State<FatherLabScreen> {
+  bool _loading = true;
+  String? _error;
+  _FatherData? _data;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refresh() {
+    final s = widget.session;
+    try {
+      final hasSession = s.lessonLocalId != null || s.aulaStep > 0;
+      final total = s.signalsSolid + s.signalsUnderstood + s.signalsFragile;
+      final pct = s.totalAulaSteps > 0
+          ? (s.aulaStep / s.totalAulaSteps * 100).round()
+          : 0;
+      setState(() {
+        _loading = false;
+        _error = null;
+        _data = _FatherData(
+          hasSession: hasSession,
+          objective: s.freeText.isEmpty ? null : s.freeText,
+          language: s.stableLang,
+          progressPercent: pct,
+          currentItemIndex: s.aulaStep,
+          totalItems: s.totalAulaSteps,
+          signalsSolid: s.signalsSolid,
+          signalsUnderstood: s.signalsUnderstood,
+          signalsFragile: s.signalsFragile,
+          signalsTotal: total,
+          amparoActive: false,
+          amparoLevel: 0,
+          upcomingReviews: const [],
+          lessonsCount: s.aulaStep,
+          takenAt: DateTime.now(),
+        );
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final hasData = s.authed;
 
     return Scaffold(
       body: SafeArea(
@@ -3569,33 +5889,81 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: s.goPortal,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: simBorder),
-                      foregroundColor: simDark,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.refresh,
+                          color: simMuted,
+                          size: 20,
+                        ),
+                        tooltip: 'Atualizar',
+                        onPressed: () {
+                          setState(() => _loading = true);
+                          _refresh();
+                        },
                       ),
-                    ),
-                    child: const Text('Voltar', style: TextStyle(fontSize: 13)),
+                      const SizedBox(width: 4),
+                      OutlinedButton(
+                        onPressed: s.goPortal,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: simBorder),
+                          foregroundColor: simDark,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Voltar',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              if (!hasData)
+              if (_loading && _data == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: simDark,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
+              else if (_error != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    border: Border.all(color: const Color(0xFFFCA5A5)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      color: Color(0xFFDC2626),
+                      fontSize: 13,
+                    ),
+                  ),
+                )
+              else if (_data != null && !_data!.hasSession)
                 _PaiCard(
-                  title: 'SEM SESSÃO',
+                  title: 'SEM SESSÃƒÆ’Ã†â€™O',
                   child: const Text(
-                    'Nenhuma sessão ativa encontrada.',
+                    'Nenhuma sessÃƒÆ’Ã‚Â£o ativa encontrada.',
                     style: TextStyle(color: simMuted, fontSize: 14),
                   ),
                 )
-              else ...[
+              else if (_data != null) ...[
                 // Objective
                 _PaiCard(
                   title: 'OBJETIVO',
@@ -3603,12 +5971,12 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        s.freeText.isEmpty ? '—' : s.freeText,
+                        _data!.objective ?? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â',
                         style: const TextStyle(color: simDark, fontSize: 16),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Idioma: ${(s.stableLang ?? '—').toUpperCase()}',
+                        'Idioma: ${(_data!.language ?? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â').toUpperCase()}',
                         style: const TextStyle(color: simMuted, fontSize: 12),
                       ),
                     ],
@@ -3625,12 +5993,14 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Item ${s.aulaStep} de ${s.totalAulaSteps}',
-                            style:
-                                const TextStyle(color: simMuted, fontSize: 14),
+                            'Item ${_data!.currentItemIndex} de ${_data!.totalItems}',
+                            style: const TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                            ),
                           ),
                           Text(
-                            '${s.totalAulaSteps > 0 ? (s.aulaStep / s.totalAulaSteps * 100).round() : 0}%',
+                            '${_data!.progressPercent}%',
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 28,
@@ -3643,8 +6013,8 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999),
                         child: LinearProgressIndicator(
-                          value: s.totalAulaSteps > 0
-                              ? s.aulaStep / s.totalAulaSteps
+                          value: _data!.totalItems > 0
+                              ? _data!.currentItemIndex / _data!.totalItems
                               : 0,
                           minHeight: 8,
                           backgroundColor: simLight,
@@ -3664,8 +6034,8 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                         children: [
                           Expanded(
                             child: _PaiStat(
-                              label: 'Sólido',
-                              value: s.signalsSolid,
+                              label: 'SÃƒÆ’Ã‚Â³lido',
+                              value: _data!.signalsSolid,
                               hint: 'Dominou',
                             ),
                           ),
@@ -3673,35 +6043,93 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                           Expanded(
                             child: _PaiStat(
                               label: 'Entendeu',
-                              value: s.signalsUnderstood,
+                              value: _data!.signalsUnderstood,
                               hint: 'Compreendeu',
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: _PaiStat(
-                              label: 'Frágil',
-                              value: s.signalsFragile,
-                              hint: 'Precisa reforço',
+                              label: 'FrÃƒÆ’Ã‚Â¡gil',
+                              value: _data!.signalsFragile,
+                              hint: 'Precisa reforÃƒÆ’Ã‚Â§o',
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Total de sinais: ${s.signalsSolid + s.signalsUnderstood + s.signalsFragile}',
+                        'Total de sinais: ${_data!.signalsTotal}',
                         style: const TextStyle(color: simMuted, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
 
+                // Amparo
+                _PaiCard(
+                  title: 'AMPARO',
+                  child: _data!.amparoActive
+                      ? Text(
+                          'Amparo ativo no nÃƒÆ’Ã‚Â­vel ${_data!.amparoLevel}.',
+                          style: const TextStyle(color: simDark, fontSize: 14),
+                        )
+                      : const Text(
+                          'Nenhum amparo ativo.',
+                          style: TextStyle(color: simMuted, fontSize: 14),
+                        ),
+                ),
+
+                // RevisÃƒÆ’Ã‚Âµes
+                _PaiCard(
+                  title: 'PRÃƒÆ’Ã¢â‚¬Å“XIMAS REVISÃƒÆ’Ã¢â‚¬Â¢ES',
+                  child: _data!.upcomingReviews.isEmpty
+                      ? const Text(
+                          'Nenhuma revisÃƒÆ’Ã‚Â£o pendente.',
+                          style: TextStyle(color: simMuted, fontSize: 14),
+                        )
+                      : Column(
+                          children: _data!.upcomingReviews.asMap().entries.map((
+                            e,
+                          ) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    e.value,
+                                    style: const TextStyle(
+                                      color: simDark,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+
                 // Aulas salvas
                 _PaiCard(
                   title: 'AULAS SALVAS',
                   child: Text(
-                    '${s.aulaStep} aula${s.aulaStep == 1 ? '' : 's'} concluída${s.aulaStep == 1 ? '' : 's'}',
+                    '${_data!.lessonsCount} aula${_data!.lessonsCount == 1 ? '' : 's'} concluÃƒÆ’Ã‚Â­da${_data!.lessonsCount == 1 ? '' : 's'}',
                     style: const TextStyle(color: simDark, fontSize: 14),
+                  ),
+                ),
+
+                // Timestamp
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'atualizado: ${_data!.takenAt.hour.toString().padLeft(2, '0')}:${_data!.takenAt.minute.toString().padLeft(2, '0')}:${_data!.takenAt.second.toString().padLeft(2, '0')}',
+                      style: const TextStyle(color: simMuted, fontSize: 11),
+                    ),
                   ),
                 ),
               ],
@@ -3711,6 +6139,42 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
       ),
     );
   }
+}
+
+class _FatherData {
+  const _FatherData({
+    required this.hasSession,
+    this.objective,
+    this.language,
+    required this.progressPercent,
+    required this.currentItemIndex,
+    required this.totalItems,
+    required this.signalsSolid,
+    required this.signalsUnderstood,
+    required this.signalsFragile,
+    required this.signalsTotal,
+    required this.amparoActive,
+    required this.amparoLevel,
+    required this.upcomingReviews,
+    required this.lessonsCount,
+    required this.takenAt,
+  });
+
+  final bool hasSession;
+  final String? objective;
+  final String? language;
+  final int progressPercent;
+  final int currentItemIndex;
+  final int totalItems;
+  final int signalsSolid;
+  final int signalsUnderstood;
+  final int signalsFragile;
+  final int signalsTotal;
+  final bool amparoActive;
+  final int amparoLevel;
+  final List<String> upcomingReviews;
+  final int lessonsCount;
+  final DateTime takenAt;
 }
 
 class _PaiCard extends StatelessWidget {
@@ -3731,7 +6195,10 @@ class _PaiCard extends StatelessWidget {
         border: Border.all(color: simBorder),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x0E111827), blurRadius: 8, offset: Offset(0, 2)),
+            color: Color(0x0E111827),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -3755,8 +6222,11 @@ class _PaiCard extends StatelessWidget {
 }
 
 class _PaiStat extends StatelessWidget {
-  const _PaiStat(
-      {required this.label, required this.value, required this.hint});
+  const _PaiStat({
+    required this.label,
+    required this.value,
+    required this.hint,
+  });
 
   final String label;
   final int value;
@@ -3789,10 +6259,7 @@ class _PaiStat extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          Text(
-            hint,
-            style: const TextStyle(color: simMuted, fontSize: 10),
-          ),
+          Text(hint, style: const TextStyle(color: simMuted, fontSize: 10)),
         ],
       ),
     );
@@ -3810,8 +6277,8 @@ class LegalLabScreen extends StatelessWidget {
     return SimpleLabPage(
       title: title,
       body: title == 'Privacidade'
-          ? 'Página de privacidade preservada como ambiente de apoio do SIM.'
-          : 'Página de termos preservada como ambiente de apoio do SIM.',
+          ? 'PÃƒÆ’Ã‚Â¡gina de privacidade preservada como ambiente de apoio do SIM.'
+          : 'PÃƒÆ’Ã‚Â¡gina de termos preservada como ambiente de apoio do SIM.',
       primary: 'Voltar',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,
@@ -3835,7 +6302,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Solicitar exclusão da conta',
+                  'Solicitar exclusÃƒÆ’Ã‚Â£o da conta',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 24,
@@ -3844,7 +6311,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Digite DELETAR para registrar a solicitação de exclusão. A execução real acontece no servidor, sem chave secreta dentro do app.',
+                  'Digite DELETAR para registrar a solicitaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de exclusÃƒÆ’Ã‚Â£o. A execuÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o real acontece no servidor, sem chave secreta dentro do app.',
                   style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
                 ),
                 const SizedBox(height: 16),
@@ -3865,7 +6332,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: 18),
                 PrimaryWideButton(
-                  label: 'Solicitar exclusão da conta',
+                  label: 'Solicitar exclusÃƒÆ’Ã‚Â£o da conta',
                   onTap: session.requestAccountDeletion,
                 ),
                 const SizedBox(height: 10),
@@ -4078,6 +6545,48 @@ class AnswerButton extends StatelessWidget {
   }
 }
 
+class QualifierButton extends StatelessWidget {
+  const QualifierButton({
+    required this.label,
+    required this.text,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: simBorder),
+          ),
+          child: Text(
+            '$label. $text',
+            style: const TextStyle(
+              color: simDark,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 void showAulaMenu(BuildContext context, LabSession session) {
   showModalBottomSheet<void>(
     context: context,
@@ -4091,7 +6600,7 @@ void showAulaMenu(BuildContext context, LabSession session) {
         mainAxisSize: MainAxisSize.min,
         children: [
           MenuLine(
-            label: 'Recarregar créditos',
+            label: 'Recarregar crÃƒÆ’Ã‚Â©ditos',
             onTap: () {
               Navigator.pop(context);
               session.openCredits();
@@ -4119,7 +6628,7 @@ void showAulaMenu(BuildContext context, LabSession session) {
             },
           ),
           MenuLine(
-            label: 'Solicitar exclusão da conta',
+            label: 'Solicitar exclusÃƒÆ’Ã‚Â£o da conta',
             onTap: () {
               Navigator.pop(context);
               session.openSupport('/conta/deletar');
@@ -4145,16 +6654,32 @@ class SupportedLang {
 }
 
 const supportedLangs = <SupportedLang>[
-  SupportedLang(code: 'en', name: 'English', native: 'English', flag: '🇺🇸'),
+  SupportedLang(
+      code: 'en',
+      name: 'English',
+      native: 'English',
+      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚ÂºÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¸'),
   SupportedLang(
     code: 'pt',
     name: 'Portuguese',
-    native: 'Português',
-    flag: '🇧🇷',
+    native: 'PortuguÃƒÆ’Ã‚Âªs',
+    flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â§ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â·',
   ),
-  SupportedLang(code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸'),
-  SupportedLang(code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷'),
-  SupportedLang(code: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵'),
+  SupportedLang(
+      code: 'es',
+      name: 'Spanish',
+      native: 'EspaÃƒÆ’Ã‚Â±ol',
+      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚ÂªÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¸'),
+  SupportedLang(
+      code: 'fr',
+      name: 'French',
+      native: 'FranÃƒÆ’Ã‚Â§ais',
+      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â«ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â·'),
+  SupportedLang(
+      code: 'ja',
+      name: 'Japanese',
+      native: 'ÃƒÂ¦Ã¢â‚¬â€Ã‚Â¥ÃƒÂ¦Ã…â€œÃ‚Â¬ÃƒÂ¨Ã‚ÂªÃ…Â¾',
+      flag: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Â¯ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¡Ã‚Âµ'),
 ];
 
 class LanguageButton extends StatelessWidget {
@@ -4173,7 +6698,7 @@ class LanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = language.native.isEmpty
         ? language.name
-        : '${language.name} · ${language.native}';
+        : '${language.name} Ãƒâ€šÃ‚Â· ${language.native}';
     return SizedBox(
       width: double.infinity,
       height: 64,

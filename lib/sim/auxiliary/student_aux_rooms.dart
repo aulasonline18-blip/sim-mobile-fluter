@@ -94,9 +94,8 @@ StudentLearningState registerPendingFromAttempt(
     'layer': layerValue,
     'signal': signal.value,
     'reason': reason,
-    'firstRegisteredAt': existingIndex >= 0
-        ? pending[existingIndex]['firstRegisteredAt']
-        : now,
+    'firstRegisteredAt':
+        existingIndex >= 0 ? pending[existingIndex]['firstRegisteredAt'] : now,
     'lastUpdatedAt': now,
     'clearedAt': null,
     'status': 'pending',
@@ -168,7 +167,11 @@ List<String> buildReviewQueue(StudentLearningState state, int requestedCount) {
   final count = requestedCount.clamp(0, 10);
   if (count == 0) return const [];
   final pendingMarkers = pendingMapOf(aux)
-      .where((entry) => entry['status'] == 'pending')
+      .where(
+        (entry) =>
+            entry['status'] == 'pending' &&
+            (entry['signal'] as num?)?.toInt() == DecisionSignal.two.value,
+      )
       .toList()
     ..sort(
       (a, b) => ((a['firstRegisteredAt'] as num?)?.toInt() ?? 0)
@@ -203,13 +206,24 @@ List<String> buildReviewQueue(StudentLearningState state, int requestedCount) {
 
 List<String> buildRecoveryQueue(StudentLearningState state) {
   final aux = ensureAuxRooms(state);
-  final queue = pendingMapOf(aux)
-      .where((entry) => entry['status'] == 'pending')
+  final pending = pendingMapOf(aux)
+      .where(
+        (entry) =>
+            entry['status'] == 'pending' &&
+            (entry['signal'] as num?)?.toInt() == DecisionSignal.three.value,
+      )
+      .toList()
+    ..sort(
+      (a, b) => ((a['firstRegisteredAt'] as num?)?.toInt() ?? 0)
+          .compareTo((b['firstRegisteredAt'] as num?)?.toInt() ?? 0),
+    );
+  final queue = pending
       .map((entry) => (entry['marker'] ?? '').toString())
       .where((marker) => marker.isNotEmpty)
       .toList();
   final recovery = JsonMap.of(aux['recovery'] as JsonMap)
     ..['currentQueue'] = queue
+    ..['entries'] = pending
     ..['currentIndex'] = 0
     ..['sourceLessonLocalId'] = state.lessonLocalId
     ..['updatedAt'] = DateTime.now().millisecondsSinceEpoch;
@@ -222,10 +236,66 @@ bool shouldBlockFinalCompletionForRecovery(
   bool auxRoomsEnabled = true,
   bool recoveryRoomEnabled = true,
 }) {
-  final hasPending =
-      pendingMapOf(ensureAuxRooms(state)).any((entry) => entry['status'] == 'pending');
+  final hasPending = pendingMapOf(ensureAuxRooms(state)).any(
+    (entry) =>
+        entry['status'] == 'pending' &&
+        (entry['signal'] as num?)?.toInt() == DecisionSignal.three.value,
+  );
   if (!auxRoomsEnabled && !recoveryRoomEnabled) return false;
   return hasPending;
+}
+
+StudentLearningState clearRecoveryPending(
+  StudentLearningState state,
+  String marker,
+) {
+  final aux = ensureAuxRooms(state);
+  final pending = pendingMapOf(aux);
+  final now = DateTime.now().millisecondsSinceEpoch;
+  var cleared = false;
+  final updated = pending.map((entry) {
+    final isRecovery =
+        (entry['signal'] as num?)?.toInt() == DecisionSignal.three.value;
+    if (entry['marker'] == marker &&
+        entry['status'] == 'pending' &&
+        isRecovery) {
+      cleared = true;
+      return {
+        ...entry,
+        'status': 'cleared',
+        'clearedAt': now,
+        'lastUpdatedAt': now,
+      };
+    }
+    return entry;
+  }).toList();
+  if (!cleared) return state;
+  aux['pendingMap'] = updated;
+  final recovery = JsonMap.of(aux['recovery'] as JsonMap);
+  final queue = (recovery['currentQueue'] as List? ?? const [])
+      .where((item) => item != marker)
+      .toList();
+  final entries = (recovery['entries'] as List? ?? const [])
+      .whereType<Map>()
+      .where((entry) => entry['marker'] != marker)
+      .map((entry) => JsonMap.from(entry))
+      .toList();
+  recovery
+    ..['currentQueue'] = queue
+    ..['entries'] = entries
+    ..['updatedAt'] = now;
+  aux['recovery'] = recovery;
+  return state.copyWith(
+    auxRooms: aux,
+    events: [
+      ...state.events,
+      StudentLearningEvent(
+        type: 'RECOVERY_PENDING_CLEARED',
+        ts: now,
+        payload: {'marker': marker},
+      ),
+    ],
+  );
 }
 
 StudentLearningState advanceReviewCursor(StudentLearningState state) {
