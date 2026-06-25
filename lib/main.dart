@@ -22,6 +22,8 @@ import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
+import 'sim/media/lesson_visual_pipeline.dart';
+import 'sim/media/student_lesson_media_service.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_controller.dart';
 import 'sim/state/student_learning_state.dart';
@@ -117,6 +119,7 @@ class LabSession extends ChangeNotifier {
   ReviewRoomService? _reviewRoomService;
   RecoveryRoomService? _recoveryRoomService;
   LessonDoubtController? _doubtController;
+  SharedPreferences? _imagePrefs;
   LessonRuntimeSnapshot? _lastSnapshot;
 
   ClassroomPhase get classroomPhase =>
@@ -198,6 +201,9 @@ class LabSession extends ChangeNotifier {
   String? audioError;
   String imageStatus = 'idle';
   String? imageError;
+  String? lessonImageDataUrl;
+  JsonMap? lessonVisualTrigger;
+  bool imageOfferAccepted = false;
   String? externalDoorOpened;
   String deleteConfirmation = '';
   String? accountDeletionMessage;
@@ -1762,12 +1768,175 @@ class LabSession extends ChangeNotifier {
 
   Future<void> requestLessonImage() async {
     if (imageStatus == 'loading') return;
+    final triggerJson = lessonVisualTrigger;
+    if (triggerJson == null) {
+      imageError = 'Este ponto ainda nao trouxe visual_trigger.';
+      imageStatus = 'unavailable';
+      notifyListeners();
+      return;
+    }
+    final cacheKey = _lessonImageCacheKey(triggerJson);
     imageError = null;
+    imageOfferAccepted = true;
+    _appendVisualEvent('VISUAL_AI_ACCEPTED', {
+      'cacheKey': cacheKey,
+      'cost': 10,
+    });
+    final prefs = _imagePrefs ??= await SharedPreferences.getInstance();
+    final cached = prefs.getString(cacheKey);
+    if (cached != null && cached.isNotEmpty) {
+      lessonImageDataUrl = cached;
+      imageStatus = 'ready';
+      _markVisualState(cacheKey: cacheKey, status: 'cache_hit');
+      _appendVisualEvent('VISUAL_AI_RENDERED', {
+        'cacheKey': cacheKey,
+        'cacheHit': true,
+      });
+      notifyListeners();
+      return;
+    }
+    if (credits < 10) {
+      imageStatus = 'idle';
+      imageError = 'Creditos insuficientes para gerar imagem.';
+      _appendVisualEvent('VISUAL_AI_FAILED', {
+        'cacheKey': cacheKey,
+        'reason': 'insufficient_credits',
+      });
+      route = '/creditos';
+      notifyListeners();
+      return;
+    }
     imageStatus = 'loading';
+    _appendVisualEvent('VISUAL_AI_REQUESTED', {
+      'cacheKey': cacheKey,
+      'cost': 10,
+    });
     notifyListeners();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
-    imageStatus = 'ready';
-    notifyListeners();
+    try {
+      final ctrl = _ensureController();
+      final state = ctrl.organism.activeState;
+      final trigger = LessonVisualTrigger.fromJson(triggerJson);
+      final pipeline = LessonVisualPipeline(
+        imageClient: SimServerLessonImageClient(
+          config: SimAiServerConfig(
+            baseUrl: simServerBaseUrl,
+            accessTokenProvider: () async =>
+                Supabase.instance.client.auth.currentSession?.accessToken,
+          ),
+        ),
+      );
+      final softwareImage =
+          await pipeline.renderMathTemplateVisual(triggerJson);
+      final dataUrl = softwareImage ??
+          await pipeline.fetchPaidLessonImage(
+            pipeline.buildPromptForTrigger(
+              topic: state.curriculum?.topic ?? freeText,
+              trigger: trigger,
+              lang: stableLang,
+            ),
+            cacheKey,
+          );
+      if (dataUrl == null || dataUrl.isEmpty) {
+        throw Exception('Servidor nao retornou imagem utilizavel.');
+      }
+      lessonImageDataUrl = dataUrl;
+      imageStatus = 'ready';
+      await prefs.setString(cacheKey, dataUrl);
+      _markVisualState(
+        cacheKey: cacheKey,
+        status: 'ready',
+        imageUrl: dataUrl.startsWith('http') ? dataUrl : null,
+        provider: softwareImage == null ? 'server-ai' : 'software-template',
+        cost: softwareImage == null ? 10 : 0,
+      );
+      _appendVisualEvent('VISUAL_AI_RENDERED', {
+        'cacheKey': cacheKey,
+        'cacheHit': false,
+        'provider': softwareImage == null ? 'server-ai' : 'software-template',
+      });
+    } catch (e) {
+      imageStatus = 'error';
+      imageError = e.toString().replaceFirst('Exception: ', '');
+      _markVisualState(cacheKey: cacheKey, status: 'failed');
+      _appendVisualEvent('VISUAL_AI_FAILED', {
+        'cacheKey': cacheKey,
+        'reason': imageError,
+      });
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  String _lessonImageCacheKey(JsonMap trigger) {
+    final ctrl = _ensureController();
+    final state = ctrl.organism.activeState;
+    final marker = state.current?.marker ?? 'no-marker';
+    final layer =
+        state.current?.layer.value ?? state.progress?.layer.value ?? 1;
+    final lang = state.profile.stableLang ?? stableLang;
+    final triggerKey =
+        base64Url.encode(utf8.encode(jsonEncode(trigger))).replaceAll('=', '');
+    final shortTrigger =
+        triggerKey.length > 48 ? triggerKey.substring(0, 48) : triggerKey;
+    return 'lesson:${ctrl.organism.lessonLocalId}:marker:$marker:layer:$layer:lang:$lang:visual:$shortTrigger';
+  }
+
+  void _appendVisualEvent(String type, JsonMap payload) {
+    final ctrl = _ensureController();
+    ctrl.organism.stateService.appendEvent(
+      ctrl.organism.lessonLocalId,
+      StudentLearningEvent(
+        type: type,
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: payload,
+      ),
+    );
+  }
+
+  void _markVisualState({
+    required String cacheKey,
+    required String status,
+    String? imageUrl,
+    String? provider,
+    int? cost,
+  }) {
+    final ctrl = _ensureController();
+    final position = LessonMediaPosition(
+      lessonLocalId: ctrl.organism.lessonLocalId,
+      itemMarker: ctrl.organism.activeState.current?.marker,
+      layer: ctrl.organism.activeState.current?.layer,
+    );
+    final media = StudentLessonMediaService(
+      audioCore: ctrl.organism.mediaService.audioCore,
+      readState: (lessonLocalId) =>
+          ctrl.organism.stateService.ensure(lessonLocalId: lessonLocalId),
+      writeState: ctrl.organism.stateService.write,
+    );
+    if (status == 'ready' || status == 'cache_hit') {
+      media.markLessonImageReady(
+        position,
+        cacheKey: cacheKey,
+        imageUrl: imageUrl ?? lessonImageDataUrl,
+      );
+    } else if (status == 'failed') {
+      media.markLessonImageFailed(position, error: imageError);
+    } else {
+      media.markLessonImageStarted(position, cacheKey: cacheKey);
+    }
+    ctrl.organism.stateService.mutate(ctrl.organism.lessonLocalId, (state) {
+      final visual = JsonMap.from(
+        state.extra['visual'] is Map ? state.extra['visual'] as Map : const {},
+      );
+      visual[cacheKey] = {
+        'cacheKey': cacheKey,
+        'status': status,
+        if (imageUrl != null) 'image_url': imageUrl,
+        if (provider != null) 'provider': provider,
+        if (cost != null) 'cost': cost,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      };
+      return state.copyWith(extra: {...state.extra, 'visual': visual});
+    });
   }
 
   Future<void> loadT02Content() async {
@@ -1861,6 +2030,27 @@ class LabSession extends ChangeNotifier {
     t02Explanation = c?.explanation;
     t02Question = c?.question;
     if (c != null) {
+      final nextTrigger = c.visualTrigger;
+      final triggerChanged =
+          jsonEncode(lessonVisualTrigger) != jsonEncode(nextTrigger);
+      if (triggerChanged) {
+        lessonImageDataUrl = null;
+        imageStatus = 'idle';
+        imageError = null;
+        imageOfferAccepted = false;
+      }
+      lessonVisualTrigger = nextTrigger;
+      if (nextTrigger != null && triggerChanged) {
+        _appendVisualEvent('VISUAL_TRIGGER_RECEIVED', {
+          'marker': activeState?.current?.marker,
+          'layer': activeState?.current?.layer.value,
+        });
+        _appendVisualEvent('VISUAL_AI_OFFERED', {
+          'marker': activeState?.current?.marker,
+          'layer': activeState?.current?.layer.value,
+          'cost': 10,
+        });
+      }
       t02Options = {
         'A': c.options[AnswerLetter.A] ?? '',
         'B': c.options[AnswerLetter.B] ?? '',
@@ -1874,6 +2064,10 @@ class LabSession extends ChangeNotifier {
       t02CorrectAnswer = null;
       t02WhyCorrect = null;
       t02WhyWrong = null;
+      lessonVisualTrigger = null;
+      lessonImageDataUrl = null;
+      imageStatus = 'idle';
+      imageError = null;
     }
     notifyListeners();
   }
@@ -5291,8 +5485,12 @@ class LessonImagePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final loading = session.imageStatus == 'loading';
     final ready = session.imageStatus == 'ready';
+    final hasTrigger = session.lessonVisualTrigger != null;
+    final dataUrl = session.lessonImageDataUrl;
+    if (!hasTrigger) {
+      return const SizedBox.shrink();
+    }
     return Container(
-      height: 168,
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -5302,24 +5500,26 @@ class LessonImagePanel extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (loading)
+          if (loading) ...[
             const SizedBox(
               width: 34,
               height: 34,
               child: CircularProgressIndicator(strokeWidth: 2, color: simDark),
-            )
-          else if (ready)
-            const Icon(Icons.image, size: 46, color: simDark)
-          else
+            ),
+          ] else if (ready && dataUrl != null && dataUrl.isNotEmpty) ...[
+            _LessonGeneratedImage(dataUrl: dataUrl),
+          ] else ...[
             const Icon(Icons.image_outlined, size: 46, color: simMuted),
+          ],
           const SizedBox(height: 10),
           Text(
             loading
                 ? 'Gerando imagem da aula...'
                 : ready
                     ? 'Imagem da aula pronta'
-                    : 'Imagem da aula',
+                    : 'Imagem disponivel para este ponto',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: simDark,
@@ -5327,13 +5527,31 @@ class LessonImagePanel extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+          if (!ready && !loading) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Gerar imagem por IA pode consumir 10 creditos. O servidor valida credito antes de gerar.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: simMuted, fontSize: 12, height: 1.3),
+            ),
+          ],
+          if (session.imageError != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              session.imageError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 8),
           SizedBox(
             height: 32,
             child: OutlinedButton.icon(
               onPressed: loading ? null : session.requestLessonImage,
               icon: const Icon(Icons.auto_awesome, size: 16),
-              label: Text(ready ? 'Gerar novamente' : 'Gerar imagem'),
+              label: Text(
+                ready ? 'Gerar novamente (10 creditos)' : 'Gerar imagem',
+              ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: simDark,
                 side: const BorderSide(color: simBorder),
@@ -5345,6 +5563,41 @@ class LessonImagePanel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LessonGeneratedImage extends StatelessWidget {
+  const _LessonGeneratedImage({required this.dataUrl});
+
+  final String dataUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (dataUrl.startsWith('http')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          dataUrl,
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    final comma = dataUrl.indexOf(',');
+    if (comma < 0) {
+      return const Icon(Icons.broken_image_outlined, size: 46, color: simMuted);
+    }
+    final bytes = base64Decode(dataUrl.substring(comma + 1));
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.memory(
+        Uint8List.fromList(bytes),
+        height: 180,
+        width: double.infinity,
+        fit: BoxFit.cover,
       ),
     );
   }

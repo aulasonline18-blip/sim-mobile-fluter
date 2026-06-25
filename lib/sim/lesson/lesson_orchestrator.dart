@@ -68,6 +68,7 @@ class LessonOrchestrator {
       correctAnswer: material.correctAnswer,
       whyCorrect: material.whyCorrect,
       whyWrong: material.whyWrong,
+      visualTrigger: material.visualTrigger,
     );
     return CompleteLesson(
       conteudo: conteudo,

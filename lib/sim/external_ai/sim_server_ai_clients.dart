@@ -96,7 +96,16 @@ class SimServerLessonImageClient implements LessonImageClient {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) return null;
-    return decoded['dataUrl']?.toString();
+    final dataUrl = decoded['dataUrl']?.toString();
+    if (dataUrl != null && dataUrl.isNotEmpty) return dataUrl;
+    final imageUrl = decoded['image_url']?.toString();
+    if (imageUrl != null && imageUrl.isNotEmpty) return imageUrl;
+    final imageBase64 = decoded['image_base64']?.toString();
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      final mime = decoded['mime_type']?.toString() ?? 'image/png';
+      return 'data:$mime;base64,$imageBase64';
+    }
+    return null;
   }
 }
 
@@ -224,12 +233,11 @@ class SimServerT02Client implements T02LessonClient {
   }
 
   T02LessonMaterial _parseT02Material(JsonMap json) {
-    final source = json['conteudo'] is Map
-        ? JsonMap.from(json['conteudo'])
-        : json;
+    final source =
+        json['conteudo'] is Map ? JsonMap.from(json['conteudo']) : json;
     final options = source['options'];
-    final correct = (source['correct_answer'] ?? source['correctAnswer'] ?? 'A')
-        .toString();
+    final correct =
+        (source['correct_answer'] ?? source['correctAnswer'] ?? 'A').toString();
     return T02LessonMaterial(
       explanation: (source['explanation'] ?? '').toString(),
       question: (source['question'] ?? '').toString(),
@@ -242,9 +250,14 @@ class SimServerT02Client implements T02LessonClient {
         (letter) => letter.name == correct,
         orElse: () => AnswerLetter.A,
       ),
-      whyCorrect: (source['why_correct'] ?? source['whyCorrect'] ?? '')
-          .toString(),
+      whyCorrect:
+          (source['why_correct'] ?? source['whyCorrect'] ?? '').toString(),
       whyWrong: source['why_wrong'] ?? source['whyWrong'],
+      visualTrigger: source['visual_trigger'] is Map
+          ? JsonMap.from(source['visual_trigger'] as Map)
+          : source['visualTrigger'] is Map
+              ? JsonMap.from(source['visualTrigger'] as Map)
+              : null,
       generatedAt: DateTime.now(),
       source: (source['source'] ?? 'sim-server-t02').toString(),
     );

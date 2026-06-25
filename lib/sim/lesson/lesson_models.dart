@@ -21,8 +21,9 @@ class LessonContent {
   final Object? whyWrong;
   final JsonMap? visualTrigger;
 
-  String get audioText =>
-      [explanation, question].where((text) => text.trim().isNotEmpty).join('. ');
+  String get audioText => [explanation, question]
+      .where((text) => text.trim().isNotEmpty)
+      .join('. ');
 
   JsonMap toJson() => {
         'explanation': explanation,
@@ -110,5 +111,6 @@ LessonContent lessonContentFromT02Material(dynamic material) {
     correctAnswer: material.correctAnswer as AnswerLetter,
     whyCorrect: material.whyCorrect as String?,
     whyWrong: material.whyWrong,
+    visualTrigger: material.visualTrigger as JsonMap?,
   );
 }
