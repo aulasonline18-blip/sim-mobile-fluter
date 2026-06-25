@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'sim/billing/credits_functions.dart';
 import 'sim/billing/payments_functions.dart';
 import 'sim/billing/sim_pricing.dart';
 import 'sim/billing/sim_server_billing_clients.dart';
@@ -26,7 +25,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: simSupabaseUrl,
-    anonKey: simSupabaseAnonKey,
+    publishableKey: simSupabaseAnonKey,
   );
   runApp(const SimMobileApp());
 }
@@ -87,13 +86,23 @@ class LabSession extends ChangeNotifier {
   String? userName;
   String? authError;
   StreamSubscription<AuthState>? _authSub;
-  SimAiServerConfig? _serverConfig;
+  SimAiServerConfig? _aiServerConfig;
+  SimAiServerConfig? _lovableServerConfig;
   SimServerCreditsClient? _creditsClientInstance;
   SimServerPaymentsClient? _paymentsClientInstance;
   SimServerAttachmentClient? _attachmentClientInstance;
 
-  SimAiServerConfig _getServerConfig() {
-    return _serverConfig ??= SimAiServerConfig(
+  SimAiServerConfig _getAiServerConfig() {
+    return _aiServerConfig ??= SimAiServerConfig(
+      baseUrl: simServerBaseUrl,
+      t02Path: '/api/complete-lesson',
+      accessTokenProvider: () async =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+    );
+  }
+
+  SimAiServerConfig _getLovableServerConfig() {
+    return _lovableServerConfig ??= SimAiServerConfig(
       baseUrl: simLovableBaseUrl,
       accessTokenProvider: () async =>
           Supabase.instance.client.auth.currentSession?.accessToken,
@@ -102,12 +111,12 @@ class LabSession extends ChangeNotifier {
 
   SimServerCreditsClient _getCreditsClient() {
     return _creditsClientInstance ??=
-        SimServerCreditsClient(config: _getServerConfig());
+        SimServerCreditsClient(config: _getLovableServerConfig());
   }
 
   SimServerPaymentsClient _getPaymentsClient() {
     return _paymentsClientInstance ??=
-        SimServerPaymentsClient(config: _getServerConfig());
+        SimServerPaymentsClient(config: _getLovableServerConfig());
   }
 
   Future<CheckoutStatus> getCheckoutStatus(String sessionId) {
@@ -119,8 +128,9 @@ class LabSession extends ChangeNotifier {
 
   SimServerAttachmentClient _getAttachmentClient() {
     return _attachmentClientInstance ??=
-        SimServerAttachmentClient(config: _getServerConfig());
+        SimServerAttachmentClient(config: _getAiServerConfig());
   }
+
   String? selectedLanguageCode;
   String? stableLang;
   String otherLanguage = '';
@@ -133,6 +143,9 @@ class LabSession extends ChangeNotifier {
   String? lessonLocalId;
   String entryStatus = 'idle';
   String? entryError;
+  bool bootstrapLoading = false;
+  String? bootstrapStatus;
+  List<Map<String, dynamic>> curriculumDraft = [];
   bool placementStarted = false;
   bool placementDone = false;
 
@@ -166,12 +179,6 @@ class LabSession extends ChangeNotifier {
   String? t02CorrectAnswer;
   String? t02WhyCorrect;
   dynamic t02WhyWrong;
-
-  // Parent panel signals
-  int signalsSolid = 0;
-  int signalsUnderstood = 0;
-  int signalsFragile = 0;
-  int totalAulaSteps = 10;
 
   void goPortal() {
     route = '/';
@@ -213,8 +220,7 @@ class LabSession extends ChangeNotifier {
     authed = user != null;
     userId = user?.id;
     userEmail = user?.email;
-    userName =
-        user?.userMetadata?['full_name']?.toString() ??
+    userName = user?.userMetadata?['full_name']?.toString() ??
         user?.userMetadata?['name']?.toString();
     if (authed) {
       if (route == '/login') route = safeReturnTo(returnTo);
@@ -320,9 +326,8 @@ class LabSession extends ChangeNotifier {
         password: password,
         emailRedirectTo: simAuthRedirectUrl,
         data: {
-          'full_name': name.trim().isEmpty
-              ? email.split('@').first
-              : name.trim(),
+          'full_name':
+              name.trim().isEmpty ? email.split('@').first : name.trim(),
         },
       );
     } on AuthException catch (error) {
@@ -367,6 +372,9 @@ class LabSession extends ChangeNotifier {
     lessonLocalId = null;
     entryStatus = 'idle';
     entryError = null;
+    bootstrapLoading = false;
+    bootstrapStatus = null;
+    curriculumDraft = [];
     // Placement
     placementStarted = false;
     placementDone = false;
@@ -407,9 +415,8 @@ class LabSession extends ChangeNotifier {
   }
 
   void setFreeText(String value) {
-    freeText = value.length > maxFreeText
-        ? value.substring(0, maxFreeText)
-        : value;
+    freeText =
+        value.length > maxFreeText ? value.substring(0, maxFreeText) : value;
     notifyListeners();
   }
 
@@ -438,7 +445,7 @@ class LabSession extends ChangeNotifier {
         final file = result.files.first;
         bytes = file.bytes?.toList();
         name = file.name;
-        final ext = name!.split('.').last.toLowerCase();
+        final ext = name.split('.').last.toLowerCase();
         contentType = switch (ext) {
           'png' => 'image/png',
           'gif' => 'image/gif',
@@ -455,7 +462,7 @@ class LabSession extends ChangeNotifier {
         final file = result.files.first;
         bytes = file.bytes?.toList();
         name = file.name;
-        final ext = name!.split('.').last.toLowerCase();
+        final ext = name.split('.').last.toLowerCase();
         contentType = switch (ext) {
           'txt' => 'text/plain',
           'csv' => 'text/csv',
@@ -473,7 +480,7 @@ class LabSession extends ChangeNotifier {
         ...attachments,
         AttachmentDraft(
           id: draftId,
-          name: name!,
+          name: name,
           type: contentType,
           size: bytes.length,
           status: 'error',
@@ -488,7 +495,7 @@ class LabSession extends ChangeNotifier {
       ...attachments,
       AttachmentDraft(
         id: draftId,
-        name: name!,
+        name: name,
         type: contentType,
         size: bytes.length,
         status: 'uploading',
@@ -499,7 +506,7 @@ class LabSession extends ChangeNotifier {
     try {
       final processed = await _getAttachmentClient().processAttachment(
         SimAttachmentFile(
-          name: name!,
+          name: name,
           contentType: contentType,
           bytes: bytes,
         ),
@@ -525,8 +532,8 @@ class LabSession extends ChangeNotifier {
       final msg = e.toString().contains('AUDIO_NOT_SUPPORTED')
           ? audioNotSupportedMessage
           : e.toString().contains('VIDEO_NOT_SUPPORTED')
-          ? videoNotSupportedMessage
-          : 'Erro ao processar anexo. Tente novamente.';
+              ? videoNotSupportedMessage
+              : 'Erro ao processar anexo. Tente novamente.';
       attachments = [
         for (final a in attachments)
           if (a.id == draftId)
@@ -565,15 +572,133 @@ class LabSession extends ChangeNotifier {
       clipped,
       selectedLanguageCode ?? language,
     );
-    studentProfileNotes = attachmentsText.isEmpty
-        ? clipped
-        : '$clipped\n\n$attachmentsText';
+    studentProfileNotes =
+        attachmentsText.isEmpty ? clipped : '$clipped\n\n$attachmentsText';
     freeText = clipped;
     entryStatus = 'pedido_recebido';
     entryError = null;
     route = '/cyber/curriculo';
     notifyListeners();
     return true;
+  }
+
+  Future<void> runBootstrapT00() async {
+    if (bootstrapLoading || entryStatus == 'primeira_aula_pronta') return;
+    if (freeText.trim().length < 10) {
+      entryError = objectiveRequiredMessage;
+      notifyListeners();
+      return;
+    }
+    bootstrapLoading = true;
+    entryStatus = 't00_running';
+    entryError = null;
+    bootstrapStatus = 'Preparando seu perfil...';
+    notifyListeners();
+
+    try {
+      final client = _supabaseClientOrNull();
+      final token = client?.auth.currentSession?.accessToken;
+      final request = await HttpClient()
+          .postUrl(Uri.parse('$simServerBaseUrl/api/bootstrap-t00'))
+          .timeout(const Duration(seconds: 20));
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Accept', 'text/event-stream');
+      if (token != null && token.isNotEmpty) {
+        request.headers.set('Authorization', 'Bearer $token');
+      }
+      request.write(jsonEncode({
+        'timeoutMs': 120000,
+        'ficha': {
+          'free_text': freeText.trim(),
+          'objetivo': freeText.trim(),
+          'attachments_text': attachmentsText,
+          'preferred_name': preferredName.trim(),
+          'language': stableLang ?? 'Portuguese',
+          'stableLang': stableLang ?? 'Portuguese',
+          'idioma': stableLang ?? 'Portuguese',
+          'student_profile_notes': studentProfileNotes,
+          'lessonLocalId': lessonLocalId,
+        },
+      }));
+
+      final response = await request.close().timeout(
+            const Duration(seconds: 140),
+          );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final body = await response.transform(utf8.decoder).join();
+        throw Exception('Servidor retornou ${response.statusCode}: $body');
+      }
+
+      await for (final line in response
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .timeout(const Duration(seconds: 140))) {
+        final trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        final payloadText = trimmed.substring(5).trim();
+        if (payloadText.isEmpty || payloadText == '[DONE]') continue;
+        final decoded = jsonDecode(payloadText);
+        if (decoded is! Map<String, dynamic>) continue;
+        final type = decoded['type']?.toString() ?? '';
+        if (type == 'start') {
+          bootstrapStatus = 'Preparando seu perfil...';
+        } else if (type == 't00_profile') {
+          final profile = decoded['profile']?.toString().trim();
+          if (profile != null && profile.isNotEmpty) {
+            studentProfileNotes = profile;
+          }
+          bootstrapStatus = 'Preparando seu currículo...';
+        } else if (type == 't00_item_partial') {
+          final item = decoded['item'];
+          if (item is Map) {
+            curriculumDraft = [
+              ...curriculumDraft,
+              Map<String, dynamic>.from(item),
+            ];
+          }
+          bootstrapStatus = 'Preparando sua aula...';
+        } else if (type == 't00_final') {
+          final raw = decoded['curriculo'] ?? decoded['curriculum'];
+          if (raw is List) {
+            curriculumDraft = raw
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          }
+          bootstrapStatus = 'Sua aula está quase pronta.';
+        } else if (type == 'fatal') {
+          throw Exception(decoded['error'] ?? 'Erro fatal no T00');
+        } else if (type == 'done') {
+          break;
+        }
+        notifyListeners();
+      }
+
+      if (curriculumDraft.isEmpty) {
+        curriculumDraft = [
+          {
+            'order': 1,
+            'marker': 'M-1',
+            'title': freeText.trim(),
+            'text': freeText.trim(),
+            'microitem_for_teacher': freeText.trim(),
+          },
+        ];
+      }
+      entryStatus = 'primeira_aula_pronta';
+      bootstrapStatus = 'Aula pronta.';
+      bootstrapLoading = false;
+      notifyListeners();
+      if (route == '/cyber/curriculo') {
+        preparationDone();
+      }
+    } catch (e) {
+      bootstrapLoading = false;
+      entryStatus = 't00_failed';
+      entryError =
+          'Erro ao preparar aula: ${e.toString().replaceFirst("Exception: ", "")}';
+      notifyListeners();
+    }
   }
 
   void openCredits() {
@@ -601,7 +726,11 @@ class LabSession extends ChangeNotifier {
   }
 
   void preparationDone() {
-    entryStatus = 'primeira_aula_pronta';
+    if (entryStatus != 'primeira_aula_pronta') {
+      entryError ??= 'Sua aula ainda está sendo preparada.';
+      notifyListeners();
+      return;
+    }
     route = '/cyber/placement';
     notifyListeners();
   }
@@ -652,7 +781,8 @@ class LabSession extends ChangeNotifier {
         'lesson_mode': 'session',
         'history': [],
         'preferred_name': preferredName.isNotEmpty ? preferredName : null,
-        'student_profile_notes': studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+        'student_profile_notes':
+            studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
         'guidance_for_T02': 'T11_placement_addendum.txt server-side guidance',
         'target_topic': freeText.trim(),
       });
@@ -710,8 +840,8 @@ class LabSession extends ChangeNotifier {
     aulaMessage = letter == 'A'
         ? 'Resposta registrada. SIM preparou o próximo passo.'
         : letter == 'B'
-        ? 'Resposta registrada. SIM marcou revisão.'
-        : 'Resposta registrada. SIM abriu caminho de recuperação.';
+            ? 'Resposta registrada. SIM marcou revisão.'
+            : 'Resposta registrada. SIM abriu caminho de recuperação.';
     notifyListeners();
   }
 
@@ -797,7 +927,8 @@ class LabSession extends ChangeNotifier {
         'lesson_mode': 'session',
         'history': [],
         'preferred_name': preferredName.isNotEmpty ? preferredName : null,
-        'student_profile_notes': studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+        'student_profile_notes':
+            studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
       });
       req.write(payload);
       final res = await req.close().timeout(const Duration(seconds: 45));
@@ -824,7 +955,8 @@ class LabSession extends ChangeNotifier {
       t02Loading = false;
     } catch (e) {
       t02Loading = false;
-      t02Error = 'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
+      t02Error =
+          'Erro ao carregar aula: ${e.toString().replaceFirst("Exception: ", "")}';
     }
     notifyListeners();
   }
@@ -852,15 +984,13 @@ class LabSession extends ChangeNotifier {
           a.status == 'ready' &&
           (a.extractedText?.trim().length ?? 0) >= minExtractedChars,
     );
-    return ready
-        .map((a) {
-          final text = a.extractedText!.trim();
-          final clipped = text.length > 8000
-              ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
-              : text;
-          return '--- Anexo: ${a.name} ---\n$clipped';
-        })
-        .join('\n\n');
+    return ready.map((a) {
+      final text = a.extractedText!.trim();
+      final clipped = text.length > 8000
+          ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
+          : text;
+      return '--- Anexo: ${a.name} ---\n$clipped';
+    }).join('\n\n');
   }
 }
 
@@ -1269,7 +1399,9 @@ class PortalHeroCard extends StatelessWidget {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          session.authed ? 'Iniciar agora' : 'Entrar para começar',
+                          session.authed
+                              ? 'Iniciar agora'
+                              : 'Entrar para começar',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -1367,7 +1499,6 @@ class HelpCard extends StatelessWidget {
               ),
             ],
           ),
-
         ],
       ),
     );
@@ -1645,8 +1776,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 loading
                                     ? 'Aguarde...'
                                     : signup
-                                    ? 'Criar conta e ganhar 3 aulas grátis'
-                                    : 'Entrar',
+                                        ? 'Criar conta e ganhar 3 aulas grátis'
+                                        : 'Entrar',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: simDark,
@@ -1736,7 +1867,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-
                 ],
               ),
             ),
@@ -1957,8 +2087,8 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
   );
 
   bool get waitingAttachment => widget.session.attachments.any(
-    (a) => a.status == 'uploading' || a.status == 'processing',
-  );
+        (a) => a.status == 'uploading' || a.status == 'processing',
+      );
   bool get objectiveTooShort => widget.session.freeText.trim().length < 10;
   bool get canContinue => !sending && !waitingAttachment && !objectiveTooShort;
 
@@ -2274,10 +2404,10 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                         sending
                                             ? 'Reading…'
                                             : waitingAttachment
-                                            ? 'Aguardando leitura do anexo...'
-                                            : objectiveTooShort
-                                            ? 'Escreva o objetivo primeiro'
-                                            : 'Save and continue',
+                                                ? 'Aguardando leitura do anexo...'
+                                                : objectiveTooShort
+                                                    ? 'Escreva o objetivo primeiro'
+                                                    : 'Save and continue',
                                         style: const TextStyle(
                                           color: simDark,
                                           fontSize: 18,
@@ -2292,7 +2422,6 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                           ),
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -2350,14 +2479,14 @@ class AttachmentChip extends StatelessWidget {
     final icon = attachment.type.startsWith('image/')
         ? '📷'
         : attachment.type == 'application/pdf'
-        ? '📄'
-        : '📝';
+            ? '📄'
+            : '📝';
     final suffix =
         attachment.status == 'uploading' || attachment.status == 'processing'
-        ? ' lendo...'
-        : attachment.status == 'error'
-        ? ' erro'
-        : '';
+            ? ' lendo...'
+            : attachment.status == 'error'
+                ? ' erro'
+                : '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
@@ -2495,6 +2624,9 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(widget.session.runBootstrapT00());
+    });
     _startStageProgression();
     _startMessageRotation();
   }
@@ -2518,7 +2650,8 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
   }
 
   void _startMessageRotation() {
-    _msgTimer = Timer.periodic(const Duration(milliseconds: _msgIntervalMs), (_) {
+    _msgTimer =
+        Timer.periodic(const Duration(milliseconds: _msgIntervalMs), (_) {
       if (!mounted) return;
       setState(() => _msgIdx = (_msgIdx + 1) % _messages.length);
     });
@@ -2599,25 +2732,32 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                         // Indicadores de passo (3 pontos)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(3, (i) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              width: i == _stageIdx ? 20 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: i <= _stageIdx ? simDark : simBorder,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          )),
+                          children: List.generate(
+                              3,
+                              (i) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      width: i == _stageIdx ? 20 : 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: i <= _stageIdx
+                                            ? simDark
+                                            : simBorder,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  )),
                         ),
                         const SizedBox(height: 20),
                         // Três pontos pulsantes enquanto não pronto
                         if (!_ready) ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(3, (i) => _PulseDot(delay: i * 150)),
+                            children: List.generate(
+                                3, (i) => _PulseDot(delay: i * 150)),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -2627,12 +2767,16 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                           height: 54,
                           child: _ready
                               ? DecoratedBox(
-                                  decoration: primaryButtonDecoration(radius: 14),
+                                  decoration:
+                                      primaryButtonDecoration(radius: 14),
                                   child: TextButton(
                                     onPressed: widget.session.preparationDone,
                                     child: const Text(
                                       'Continuar →',
-                                      style: TextStyle(color: simDark, fontSize: 17, fontWeight: FontWeight.w700),
+                                      style: TextStyle(
+                                          color: simDark,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700),
                                     ),
                                   ),
                                 )
@@ -2644,14 +2788,19 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                                   child: const Center(
                                     child: Text(
                                       'Preparando…',
-                                      style: TextStyle(color: simMuted, fontSize: 17, fontWeight: FontWeight.w600),
+                                      style: TextStyle(
+                                          color: simMuted,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ),
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _ready ? 'Pronto para continuar.' : 'Aguardando preparação…',
+                          _ready
+                              ? 'Pronto para continuar.'
+                              : 'Aguardando preparação…',
                           style: const TextStyle(color: simMuted, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
@@ -2682,7 +2831,8 @@ class _PulseDot extends StatefulWidget {
   State<_PulseDot> createState() => _PulseDotState();
 }
 
-class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
 
@@ -2714,8 +2864,10 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
       child: FadeTransition(
         opacity: _anim,
         child: Container(
-          width: 10, height: 10,
-          decoration: const BoxDecoration(color: simDark, shape: BoxShape.circle),
+          width: 10,
+          height: 10,
+          decoration:
+              const BoxDecoration(color: simDark, shape: BoxShape.circle),
         ),
       ),
     );
@@ -2729,10 +2881,14 @@ class PlacementLabScreen extends StatelessWidget {
 
   int get _step {
     switch (session.placementStage) {
-      case 'intro': return 2;
-      case 'running': return 3;
-      case 'result': return 4;
-      default: return 1;
+      case 'intro':
+        return 2;
+      case 'running':
+        return 3;
+      case 'result':
+        return 4;
+      default:
+        return 1;
     }
   }
 
@@ -2780,7 +2936,8 @@ class _ChoiceBody extends StatelessWidget {
       children: [
         const Text(
           'Por onde você quer começar?',
-          style: TextStyle(color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
+          style: TextStyle(
+              color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -2788,9 +2945,11 @@ class _ChoiceBody extends StatelessWidget {
           style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
         ),
         const SizedBox(height: 22),
-        PrimaryWideButton(label: 'Começar do início', onTap: session.skipPlacement),
+        PrimaryWideButton(
+            label: 'Começar do início', onTap: session.skipPlacement),
         const SizedBox(height: 12),
-        SecondaryWideButton(label: 'Fazer teste rápido', onTap: session.startPlacement),
+        SecondaryWideButton(
+            label: 'Fazer teste rápido', onTap: session.startPlacement),
       ],
     );
   }
@@ -2807,7 +2966,8 @@ class _IntroBody extends StatelessWidget {
       children: [
         const Text(
           'Teste rápido',
-          style: TextStyle(color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
+          style: TextStyle(
+              color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -2831,7 +2991,8 @@ class _RunningBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (session.placementLoading) {
-      return const Center(child: Padding(
+      return const Center(
+          child: Padding(
         padding: EdgeInsets.all(32),
         child: CircularProgressIndicator(),
       ));
@@ -2848,7 +3009,11 @@ class _RunningBody extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           question,
-          style: const TextStyle(color: simDark, fontSize: 17, fontWeight: FontWeight.w700, height: 1.45),
+          style: const TextStyle(
+              color: simDark,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              height: 1.45),
         ),
         const SizedBox(height: 20),
         ...choices.map((c) {
@@ -2879,7 +3044,8 @@ class _ResultBody extends StatelessWidget {
       children: [
         const Text(
           'Tudo certo',
-          style: TextStyle(color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
+          style: TextStyle(
+              color: simDark, fontSize: 24, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -2931,16 +3097,18 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   @override
   void initState() {
     super.initState();
-    if (session.t02Explanation == null && !session.t02Loading) {
-      session.loadT02Content();
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (session.t02Explanation == null && !session.t02Loading) {
+        unawaited(session.loadT02Content());
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final topic = session.freeText.trim().isEmpty
-        ? 'Aula SIM'
-        : session.freeText.trim();
+    final topic =
+        session.freeText.trim().isEmpty ? 'Aula SIM' : session.freeText.trim();
     final opts = session.t02Options;
 
     return Scaffold(
@@ -2980,7 +3148,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             const Center(
                               child: Padding(
                                 padding: EdgeInsets.symmetric(vertical: 20),
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                             const Text(
@@ -2991,7 +3160,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ] else if (session.t02Error != null) ...[
                             Text(
                               session.t02Error!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14),
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 14),
                             ),
                             const SizedBox(height: 10),
                             GestureDetector(
@@ -3052,7 +3222,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            session.t02Question ?? 'Qual alternativa mostra que você entendeu este primeiro ponto?',
+                            session.t02Question ??
+                                'Qual alternativa mostra que você entendeu este primeiro ponto?',
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 15,
@@ -3062,19 +3233,22 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 12),
                           AnswerButton(
                             label: 'A',
-                            text: opts?['A'] ?? 'Consigo explicar com minhas palavras.',
+                            text: opts?['A'] ??
+                                'Consigo explicar com minhas palavras.',
                             active: session.selectedAnswer == 'A',
                             onTap: () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B',
-                            text: opts?['B'] ?? 'Entendi uma parte, mas preciso revisar.',
+                            text: opts?['B'] ??
+                                'Entendi uma parte, mas preciso revisar.',
                             active: session.selectedAnswer == 'B',
                             onTap: () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C',
-                            text: opts?['C'] ?? 'Ainda estou perdido e preciso de recuperação.',
+                            text: opts?['C'] ??
+                                'Ainda estou perdido e preciso de recuperação.',
                             active: session.selectedAnswer == 'C',
                             onTap: () => session.chooseAulaAnswer('C'),
                           ),
@@ -3268,8 +3442,8 @@ class LessonImagePanel extends StatelessWidget {
             loading
                 ? 'Gerando imagem da aula...'
                 : ready
-                ? 'Imagem da aula pronta'
-                : 'Imagem da aula',
+                    ? 'Imagem da aula pronta'
+                    : 'Imagem da aula',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: simDark,
@@ -3629,7 +3803,6 @@ class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
   int _credits = 0;
   int _balance = 0;
   String? _error;
-  String? _returnTo;
   Timer? _pollTimer;
   int _elapsedMs = 0;
   static const int _timeoutMs = 30000;
@@ -3707,7 +3880,8 @@ class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
     if (status == CheckoutStatusKind.complete) {
       return SimpleLabPage(
         title: 'Pagamento confirmado',
-        body: 'Você recebeu $_credits crédito${_credits == 1 ? '' : 's'}. Saldo atual: $_balance crédito${_balance == 1 ? '' : 's'}.',
+        body:
+            'Você recebeu $_credits crédito${_credits == 1 ? '' : 's'}. Saldo atual: $_balance crédito${_balance == 1 ? '' : 's'}.',
         primary: 'Continuar',
         onPrimary: _handleContinue,
         session: widget.session,
@@ -3718,7 +3892,8 @@ class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
     if (status == CheckoutStatusKind.expired) {
       return SimpleLabPage(
         title: 'Sessão expirada',
-        body: 'O tempo para confirmar o pagamento expirou. Se o pagamento foi realizado, entre em contato com o suporte.',
+        body:
+            'O tempo para confirmar o pagamento expirou. Se o pagamento foi realizado, entre em contato com o suporte.',
         primary: 'Ver créditos',
         onPrimary: widget.session.openCredits,
         session: widget.session,
@@ -3726,7 +3901,8 @@ class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
     }
     return SimpleLabPage(
       title: 'Erro no pagamento',
-      body: _error ?? 'Não foi possível verificar o pagamento. Tente novamente.',
+      body:
+          _error ?? 'Não foi possível verificar o pagamento. Tente novamente.',
       primary: 'Ver créditos',
       onPrimary: widget.session.openCredits,
       session: widget.session,
@@ -3813,31 +3989,42 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Painel do Pai',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.3,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Painel do Pai',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: simDark,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.3,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Acompanhe o progresso sem interferir',
-                        style: TextStyle(color: simMuted, fontSize: 13),
-                      ),
-                    ],
+                        SizedBox(height: 2),
+                        Text(
+                          'Acompanhe o progresso sem interferir',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: simMuted, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.refresh, color: simMuted, size: 20),
+                        icon: const Icon(Icons.refresh,
+                            color: simMuted, size: 20),
                         tooltip: 'Atualizar',
-                        onPressed: () { setState(() => _loading = true); _refresh(); },
+                        onPressed: () {
+                          setState(() => _loading = true);
+                          _refresh();
+                        },
                       ),
                       const SizedBox(width: 4),
                       OutlinedButton(
@@ -3845,10 +4032,13 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: simBorder),
                           foregroundColor: simDark,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('Voltar', style: TextStyle(fontSize: 13)),
+                        child: const Text('Voltar',
+                            style: TextStyle(fontSize: 13)),
                       ),
                     ],
                   ),
@@ -3859,7 +4049,9 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
               if (_loading && _data == null)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: CircularProgressIndicator(color: simDark, strokeWidth: 2)),
+                  child: Center(
+                      child: CircularProgressIndicator(
+                          color: simDark, strokeWidth: 2)),
                 )
               else if (_error != null)
                 Container(
@@ -3870,7 +4062,9 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(_error!, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)),
+                  child: Text(_error!,
+                      style: const TextStyle(
+                          color: Color(0xFFDC2626), fontSize: 13)),
                 )
               else if (_data != null && !_data!.hasSession)
                 _PaiCard(
@@ -3911,7 +4105,8 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                         children: [
                           Text(
                             'Item ${_data!.currentItemIndex} de ${_data!.totalItems}',
-                            style: const TextStyle(color: simMuted, fontSize: 14),
+                            style:
+                                const TextStyle(color: simMuted, fontSize: 14),
                           ),
                           Text(
                             '${_data!.progressPercent}%',
@@ -3946,11 +4141,23 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: _PaiStat(label: 'Sólido', value: _data!.signalsSolid, hint: 'Dominou')),
+                          Expanded(
+                              child: _PaiStat(
+                                  label: 'Sólido',
+                                  value: _data!.signalsSolid,
+                                  hint: 'Dominou')),
                           const SizedBox(width: 8),
-                          Expanded(child: _PaiStat(label: 'Entendeu', value: _data!.signalsUnderstood, hint: 'Compreendeu')),
+                          Expanded(
+                              child: _PaiStat(
+                                  label: 'Entendeu',
+                                  value: _data!.signalsUnderstood,
+                                  hint: 'Compreendeu')),
                           const SizedBox(width: 8),
-                          Expanded(child: _PaiStat(label: 'Frágil', value: _data!.signalsFragile, hint: 'Precisa reforço')),
+                          Expanded(
+                              child: _PaiStat(
+                                  label: 'Frágil',
+                                  value: _data!.signalsFragile,
+                                  hint: 'Precisa reforço')),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -3985,13 +4192,17 @@ class _FatherLabScreenState extends State<FatherLabScreen> {
                           style: TextStyle(color: simMuted, fontSize: 14),
                         )
                       : Column(
-                          children: _data!.upcomingReviews.asMap().entries.map((e) {
+                          children:
+                              _data!.upcomingReviews.asMap().entries.map((e) {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(e.value, style: const TextStyle(color: simDark, fontSize: 13)),
+                                  Text(e.value,
+                                      style: const TextStyle(
+                                          color: simDark, fontSize: 13)),
                                 ],
                               ),
                             );
@@ -4081,7 +4292,8 @@ class _PaiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: simBorder),
         boxShadow: const [
-          BoxShadow(color: Color(0x0E111827), blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(
+              color: Color(0x0E111827), blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -4105,7 +4317,8 @@ class _PaiCard extends StatelessWidget {
 }
 
 class _PaiStat extends StatelessWidget {
-  const _PaiStat({required this.label, required this.value, required this.hint});
+  const _PaiStat(
+      {required this.label, required this.value, required this.hint});
 
   final String label;
   final int value;
