@@ -66,6 +66,7 @@ class T02LessonMaterial {
     required this.whyWrong,
     required this.generatedAt,
     required this.source,
+    this.visualTrigger,
   });
 
   final String explanation;
@@ -76,6 +77,7 @@ class T02LessonMaterial {
   final Object? whyWrong;
   final DateTime generatedAt;
   final String source;
+  final JsonMap? visualTrigger;
 }
 
 abstract interface class T02LessonClient {
