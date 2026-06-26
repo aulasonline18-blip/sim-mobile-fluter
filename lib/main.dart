@@ -1622,17 +1622,12 @@ class LabSession extends ChangeNotifier {
       placementStage = 'running';
     } catch (e) {
       // Fallback: question simples local se T02 falhar
-      placementQuestion =
-          'Como voce avalia seu conhecimento sobre este tema?';
+      placementQuestion = 'Como voce avalia seu conhecimento sobre este tema?';
       placementMarker = 'M-1';
       placementChoices = [
         {'id': 'pre-1-a', 'label': 'Domino bem', 'correct': true},
         {'id': 'pre-1-b', 'label': 'Conheco um pouco', 'correct': false},
-        {
-          'id': 'pre-1-c',
-          'label': 'Preciso comecar do zero',
-          'correct': false
-        },
+        {'id': 'pre-1-c', 'label': 'Preciso comecar do zero', 'correct': false},
       ];
       placementStage = 'running';
     }
@@ -2850,8 +2845,7 @@ class LabSession extends ChangeNotifier {
     final c = snapshot.conteudo;
     t02Loading = false;
     if (!snapshot.hasCurriculum) {
-      t02Error =
-          'Curriculo ainda nao disponivel. Aguarde a preparacao.';
+      t02Error = 'Curriculo ainda nao disponivel. Aguarde a preparacao.';
     } else {
       t02Error = null;
     }
@@ -4277,8 +4271,7 @@ class _OtherLanguageBoxState extends State<OtherLanguageBox> {
             controller: controller,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText:
-                  'e.g. Italian, German, Arabic, Kiribati...',
+              hintText: 'e.g. Italian, German, Arabic, Kiribati...',
               border: InputBorder.none,
             ),
             style: const TextStyle(color: simDark, fontSize: 18),
@@ -4396,8 +4389,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(
-                step: 3, total: 5, label: 'Entrada pedagogica'),
+            const StepHeader(step: 3, total: 5, label: 'Entrada pedagogica'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
@@ -5086,161 +5078,163 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
   @override
   Widget build(BuildContext context) {
     final stage = _stages[_stageIdx];
+    final statusColor = _error == null ? simDark : const Color(0xFFDC2626);
+    final titleText = _error ?? stage.title;
+    final messageText = _detail ?? _messages[_msgIdx];
     return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            const StepHeader(step: 4, total: 5, label: 'Preparando aula'),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: SimCard(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 400),
-                          child: Text(
-                            _error ?? stage.title,
-                            key: ValueKey('${_stageIdx}_${_error ?? ''}'),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: _error == null
-                                  ? simDark
-                                  : const Color(0xFFDC2626),
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              height: 1.3,
-                            ),
+            const _PrepFloatingIcon(
+              icon: Icons.menu_book_outlined,
+              alignment: Alignment(-0.92, -0.64),
+              size: 28,
+            ),
+            const _PrepFloatingIcon(
+              icon: Icons.view_agenda_outlined,
+              alignment: Alignment(0.94, -0.48),
+              size: 26,
+            ),
+            const _PrepFloatingIcon(
+              icon: Icons.timeline_outlined,
+              alignment: Alignment(-0.88, 0.58),
+              size: 30,
+            ),
+            Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const _SimPrepRobot(),
+                      const SizedBox(height: 28),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 360),
+                        child: Text(
+                          titleText,
+                          key: ValueKey('prep-title-${_stageIdx}_$_error'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 31,
+                            fontWeight: FontWeight.w900,
+                            height: 1.08,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 500),
-                          child: Text(
-                            _detail ?? _messages[_msgIdx],
-                            key: ValueKey('${_msgIdx}_${_detail ?? ''}'),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: simMuted,
-                              fontSize: 14,
-                              height: 1.55,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: stage.progress),
-                          duration: const Duration(milliseconds: 700),
-                          curve: Curves.easeOut,
-                          builder: (context, value, _) => ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: value,
-                              minHeight: 10,
-                              backgroundColor: simLight,
-                              color: _error == null
-                                  ? simDark
-                                  : const Color(0xFFDC2626),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            _stages.length,
-                            (i) => Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: i == _stageIdx ? 20 : 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: i <= _stageIdx ? simDark : simBorder,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
+                      ),
+                      const SizedBox(height: 26),
+                      SizedBox(
+                        height: 58,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 420),
+                          child: Align(
+                            key: ValueKey('prep-msg-${_msgIdx}_$_detail'),
+                            alignment: Alignment.center,
+                            child: Text(
+                              messageText,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 18,
+                                height: 1.45,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        if (!_ready && _error == null) ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                                3, (i) => _PulseDot(delay: i * 150)),
+                      ),
+                      const SizedBox(height: 12),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: stage.progress),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOut,
+                        builder: (context, value, _) => ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: value,
+                            minHeight: 8,
+                            backgroundColor: const Color(0xFFE5E7EB),
+                            color: _error == null
+                                ? const Color(0xFF9CA3AF)
+                                : const Color(0xFF374151),
                           ),
-                          const SizedBox(height: 16),
-                        ],
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: _error != null
-                              ? DecoratedBox(
-                                  decoration:
-                                      primaryButtonDecoration(radius: 14),
-                                  child: TextButton(
-                                    onPressed: _startT00Bootstrap,
-                                    child: const Text(
-                                      'Tentar novamente',
-                                      style: TextStyle(
-                                        color: simDark,
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (!_ready && _error == null) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                              3, (i) => _PulseDot(delay: i * 150)),
+                        ),
+                        const SizedBox(height: 18),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: _error != null
+                            ? DecoratedBox(
+                                decoration: primaryButtonDecoration(radius: 14),
+                                child: TextButton(
+                                  onPressed: _startT00Bootstrap,
+                                  child: const Text(
+                                    'Tentar novamente',
+                                    style: TextStyle(
+                                      color: simDark,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : _ready
+                                ? DecoratedBox(
+                                    decoration:
+                                        primaryButtonDecoration(radius: 14),
+                                    child: TextButton(
+                                      onPressed: widget.session.preparationDone,
+                                      child: const Text(
+                                        'Continuar ->',
+                                        style: TextStyle(
+                                          color: simDark,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE5E7EB),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'Preparando...',
+                                        style: TextStyle(
+                                          color: simMuted,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                )
-                              : _ready
-                                  ? DecoratedBox(
-                                      decoration:
-                                          primaryButtonDecoration(radius: 14),
-                                      child: TextButton(
-                                        onPressed:
-                                            widget.session.preparationDone,
-                                        child: const Text(
-                                          'Continuar ->',
-                                          style: TextStyle(
-                                            color: simDark,
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: simLight,
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: const Center(
-                                        child: Text(
-                                          'Preparando...',
-                                          style: TextStyle(
-                                            color: simMuted,
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _error != null
-                              ? 'O T00 real falhou. Nenhum curriculo foi marcado como pronto.'
-                              : _ready
-                                  ? 'Pronto para continuar.'
-                                  : 'Aguardando eventos reais do T00...',
-                          style: const TextStyle(color: simMuted, fontSize: 13),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _error != null
+                            ? 'O preparo real falhou. Tente novamente.'
+                            : _ready
+                                ? 'Pronto para continuar.'
+                                : 'Aguardando o preparo real da aula...',
+                        style: const TextStyle(color: simMuted, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -5250,6 +5244,131 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
       ),
     );
   }
+}
+
+class _PrepFloatingIcon extends StatelessWidget {
+  const _PrepFloatingIcon({
+    required this.icon,
+    required this.alignment,
+    required this.size,
+  });
+
+  final IconData icon;
+  final Alignment alignment;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: alignment,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: 0.55,
+          child: Icon(icon, size: size, color: simMuted),
+        ),
+      ),
+    );
+  }
+}
+
+class _SimPrepRobot extends StatelessWidget {
+  const _SimPrepRobot();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 250,
+      height: 280,
+      child: CustomPaint(
+        painter: _SimPrepRobotPainter(),
+      ),
+    );
+  }
+}
+
+class _SimPrepRobotPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 220;
+    final sy = size.height / 240;
+    canvas
+      ..save()
+      ..scale(sx, sy);
+
+    final stroke = Paint()
+      ..color = simDark
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fillWhite = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    final headFill = Paint()
+      ..color = const Color(0xFFF9FAFB)
+      ..style = PaintingStyle.fill;
+    final darkFill = Paint()
+      ..color = simDark
+      ..style = PaintingStyle.fill;
+    final shadow = Paint()
+      ..color = simDark.withAlpha(26)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(110, 226), width: 116, height: 14),
+      shadow,
+    );
+
+    final armLeft = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(40, 120, 16, 42),
+      const Radius.circular(8),
+    );
+    canvas
+      ..drawRRect(armLeft, fillWhite)
+      ..drawRRect(armLeft, stroke)
+      ..drawCircle(const Offset(48, 166), 10, fillWhite)
+      ..drawCircle(const Offset(48, 166), 10, stroke);
+
+    final body = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(58, 104, 104, 104),
+      const Radius.circular(30),
+    );
+    canvas
+      ..drawRRect(body, fillWhite)
+      ..drawRRect(body, stroke)
+      ..drawCircle(const Offset(110, 156), 11, fillWhite)
+      ..drawCircle(const Offset(110, 156), 5, stroke);
+
+    final armRight = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(164, 120, 16, 42),
+      const Radius.circular(8),
+    );
+    canvas
+      ..drawRRect(armRight, fillWhite)
+      ..drawRRect(armRight, stroke)
+      ..drawCircle(const Offset(172, 166), 10, fillWhite)
+      ..drawCircle(const Offset(172, 166), 10, stroke);
+
+    canvas
+      ..drawCircle(const Offset(110, 68), 42, headFill)
+      ..drawCircle(const Offset(110, 68), 42, stroke)
+      ..drawCircle(const Offset(96, 66), 4, darkFill)
+      ..drawCircle(const Offset(124, 66), 4, darkFill);
+
+    final smile = Path()
+      ..moveTo(94, 80)
+      ..quadraticBezierTo(110, 94, 126, 80);
+    canvas.drawPath(smile, stroke);
+    canvas
+      ..drawLine(const Offset(110, 26), const Offset(110, 16), stroke)
+      ..drawCircle(const Offset(110, 13), 4.5, fillWhite)
+      ..drawCircle(const Offset(110, 13), 4.5, stroke);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _PrepStage {
@@ -5699,12 +5818,13 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final locked = session.answersLocked || awaitingQualifier;
     final isConcluido = phase.type == ClassroomPhaseType.concluido;
     final selectedLetter = phase.letter?.name ?? session.selectedAnswer;
-    final hasLessonContent = session.t02Explanation?.trim().isNotEmpty == true &&
-        session.t02Question?.trim().isNotEmpty == true &&
-        opts != null &&
-        (opts['A']?.trim().isNotEmpty ?? false) &&
-        (opts['B']?.trim().isNotEmpty ?? false) &&
-        (opts['C']?.trim().isNotEmpty ?? false);
+    final hasLessonContent =
+        session.t02Explanation?.trim().isNotEmpty == true &&
+            session.t02Question?.trim().isNotEmpty == true &&
+            opts != null &&
+            (opts['A']?.trim().isNotEmpty ?? false) &&
+            (opts['B']?.trim().isNotEmpty ?? false) &&
+            (opts['C']?.trim().isNotEmpty ?? false);
 
     if (isDone) return _buildDoneScreen(topic);
 
@@ -5829,7 +5949,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             const SizedBox(height: 14),
                             LessonImagePanel(session: session),
                           ],
-                          if (hasLessonContent && session.audioError != null) ...[
+                          if (hasLessonContent &&
+                              session.audioError != null) ...[
                             const SizedBox(height: 10),
                             StatusLine(
                               icon: Icons.volume_off_outlined,
@@ -7092,8 +7213,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
       if (!mounted) return;
       if (url == null) {
         setState(() {
-          _buyError =
-              'Nao foi possivel abrir o checkout. Tente de novo.';
+          _buyError = 'Nao foi possivel abrir o checkout. Tente de novo.';
           _buying = null;
         });
         return;
@@ -7102,8 +7222,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        setState(() =>
-            _buyError = 'Nao foi possivel abrir o navegador.');
+        setState(() => _buyError = 'Nao foi possivel abrir o navegador.');
       }
     } catch (e) {
       if (mounted) setState(() => _buyError = 'Erro: $e');
@@ -7531,8 +7650,8 @@ class _CheckoutReturnScreenState extends State<CheckoutReturnScreen> {
     }
     return SimpleLabPage(
       title: 'Erro no pagamento',
-      body: _error ??
-          'Nao foi possivel verificar o pagamento. Tente novamente.',
+      body:
+          _error ?? 'Nao foi possivel verificar o pagamento. Tente novamente.',
       primary: 'Ver creditos',
       onPrimary: widget.session.openCredits,
       session: widget.session,
@@ -8368,32 +8487,16 @@ class SupportedLang {
 }
 
 const supportedLangs = <SupportedLang>[
-  SupportedLang(
-      code: 'en',
-      name: 'English',
-      native: 'English',
-      flag: 'US'),
+  SupportedLang(code: 'en', name: 'English', native: 'English', flag: 'US'),
   SupportedLang(
     code: 'pt',
     name: 'Portuguese',
     native: 'Portugues',
     flag: 'BR',
   ),
-  SupportedLang(
-      code: 'es',
-      name: 'Spanish',
-      native: 'Espanol',
-      flag: 'ES'),
-  SupportedLang(
-      code: 'fr',
-      name: 'French',
-      native: 'Francais',
-      flag: 'FR'),
-  SupportedLang(
-      code: 'ja',
-      name: 'Japanese',
-      native: 'Japanese',
-      flag: 'JP'),
+  SupportedLang(code: 'es', name: 'Spanish', native: 'Espanol', flag: 'ES'),
+  SupportedLang(code: 'fr', name: 'French', native: 'Francais', flag: 'FR'),
+  SupportedLang(code: 'ja', name: 'Japanese', native: 'Japanese', flag: 'JP'),
 ];
 
 class LanguageButton extends StatelessWidget {
