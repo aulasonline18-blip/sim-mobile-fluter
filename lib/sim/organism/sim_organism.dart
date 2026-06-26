@@ -289,10 +289,6 @@ class SimOrganism {
       accessTokenProvider: tokenProvider,
       t02Path: '/api/complete-lesson',
     );
-    final lovableConfig = SimAiServerConfig(
-      baseUrl: 'https://gemini-aid-pal.lovable.app',
-      accessTokenProvider: tokenProvider,
-    );
 
     final stateService = StudentLearningStateService();
     stateService.ensure(lessonLocalId: lessonLocalId);
@@ -300,9 +296,9 @@ class SimOrganism {
     return _build(
       lessonLocalId: lessonLocalId,
       t02Client: SimServerT02Client(config: vmConfig),
-      t00Client: SimServerT00Client(config: lovableConfig),
+      t00Client: SimServerT00Client(config: vmConfig),
       audioClient: SimServerGeneratedAudioClient(config: vmConfig),
-      imageClient: SimServerLessonImageClient(config: lovableConfig),
+      imageClient: SimServerLessonImageClient(config: vmConfig),
       sessionProvider: const SupabaseFlutterSessionProvider(),
       stateService: stateService,
       cloudQueueStorage: cloudQueueStorage,
