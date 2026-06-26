@@ -9,10 +9,10 @@ enum DecisionSignal { one, two, three }
 
 extension DecisionSignalValue on DecisionSignal {
   int get value => switch (this) {
-        DecisionSignal.one => 1,
-        DecisionSignal.two => 2,
-        DecisionSignal.three => 3,
-      };
+    DecisionSignal.one => 1,
+    DecisionSignal.two => 2,
+    DecisionSignal.three => 3,
+  };
 
   static DecisionSignal fromValue(Object? value) {
     return switch (value) {
@@ -27,10 +27,10 @@ enum LessonLayer { l1, l2, l3 }
 
 extension LessonLayerValue on LessonLayer {
   int get value => switch (this) {
-        LessonLayer.l1 => 1,
-        LessonLayer.l2 => 2,
-        LessonLayer.l3 => 3,
-      };
+    LessonLayer.l1 => 1,
+    LessonLayer.l2 => 2,
+    LessonLayer.l3 => 3,
+  };
 
   static LessonLayer fromValue(Object? value) {
     return switch (value) {
@@ -89,29 +89,31 @@ class StudentProfile {
   final JsonMap extra;
 
   JsonMap toJson() => {
-        ...extra,
-        if (preferredName != null) 'preferredName': preferredName,
-        if (language != null) 'language': language,
-        if (stableLang != null) 'stableLang': stableLang,
-        if (objetivo != null) 'objetivo': objetivo,
-        if (nivel != null) 'nivel': nivel,
-        if (academicLevel != null) 'academicLevel': academicLevel,
-        if (targetTopic != null) 'targetTopic': targetTopic,
-        if (sessionGoal != null) 'sessionGoal': sessionGoal,
-      };
+    ...extra,
+    if (preferredName != null) 'preferredName': preferredName,
+    if (language != null) 'language': language,
+    if (stableLang != null) 'stableLang': stableLang,
+    if (objetivo != null) 'objetivo': objetivo,
+    if (nivel != null) 'nivel': nivel,
+    if (academicLevel != null) 'academicLevel': academicLevel,
+    if (targetTopic != null) 'targetTopic': targetTopic,
+    if (sessionGoal != null) 'sessionGoal': sessionGoal,
+  };
 
   factory StudentProfile.fromJson(JsonMap json) {
     final extra = JsonMap.of(json)
-      ..removeWhere((key, _) => {
-            'preferredName',
-            'language',
-            'stableLang',
-            'objetivo',
-            'nivel',
-            'academicLevel',
-            'targetTopic',
-            'sessionGoal',
-          }.contains(key));
+      ..removeWhere(
+        (key, _) => {
+          'preferredName',
+          'language',
+          'stableLang',
+          'objetivo',
+          'nivel',
+          'academicLevel',
+          'targetTopic',
+          'sessionGoal',
+        }.contains(key),
+      );
     return StudentProfile(
       preferredName: json['preferredName'] as String?,
       language: json['language'] as String?,
@@ -168,27 +170,25 @@ class CurriculumItem {
   String get teacherText => microitemForTeacher ?? text;
 
   JsonMap toJson() => {
-        ...extra,
-        'marker': marker,
-        'text': text,
-        if (title != null) 'title': title,
-        if (microitemForTeacher != null)
-          'microitem_for_teacher': microitemForTeacher,
-      };
+    ...extra,
+    'marker': marker,
+    'text': text,
+    if (title != null) 'title': title,
+    if (microitemForTeacher != null)
+      'microitem_for_teacher': microitemForTeacher,
+  };
 
   factory CurriculumItem.fromJson(JsonMap json) => CurriculumItem(
-        marker: (json['marker'] ?? '').toString(),
-        text: (json['text'] ?? json['title'] ?? '').toString(),
-        title: json['title'] as String?,
-        microitemForTeacher: json['microitem_for_teacher'] as String?,
-        extra: JsonMap.of(json)
-          ..removeWhere((key, _) => {
-                'marker',
-                'text',
-                'title',
-                'microitem_for_teacher',
-              }.contains(key)),
-      );
+    marker: (json['marker'] ?? '').toString(),
+    text: (json['text'] ?? json['title'] ?? '').toString(),
+    title: json['title'] as String?,
+    microitemForTeacher: json['microitem_for_teacher'] as String?,
+    extra: JsonMap.of(json)
+      ..removeWhere(
+        (key, _) =>
+            {'marker', 'text', 'title', 'microitem_for_teacher'}.contains(key),
+      ),
+  );
 }
 
 class StudentCurriculum {
@@ -207,12 +207,12 @@ class StudentCurriculum {
   final List<CurriculumItem> items;
 
   JsonMap toJson() => {
-        'topic': topic,
-        'totalItems': totalItems,
-        'generatedAt': generatedAt,
-        'provisional': provisional,
-        'items': items.map((item) => item.toJson()).toList(),
-      };
+    'topic': topic,
+    'totalItems': totalItems,
+    'generatedAt': generatedAt,
+    'provisional': provisional,
+    'items': items.map((item) => item.toJson()).toList(),
+  };
 
   factory StudentCurriculum.fromJson(JsonMap json) {
     final items = (json['items'] as List? ?? const [])
@@ -249,14 +249,14 @@ class StudentCurriculumStatus {
   final String? error;
 
   JsonMap toJson() => {
-        'status': status.name,
-        'expansionStatus': expansionStatus.name,
-        'updatedAt': updatedAt,
-        'objectiveKey': objectiveKey,
-        'initialCount': initialCount,
-        'totalCount': totalCount,
-        if (error != null) 'error': error,
-      };
+    'status': status.name,
+    'expansionStatus': expansionStatus.name,
+    'updatedAt': updatedAt,
+    'objectiveKey': objectiveKey,
+    'initialCount': initialCount,
+    'totalCount': totalCount,
+    if (error != null) 'error': error,
+  };
 }
 
 class LessonCurrent {
@@ -273,18 +273,18 @@ class LessonCurrent {
   final int amparoLvl;
 
   JsonMap toJson() => {
-        'itemIdx': itemIdx,
-        'marker': marker,
-        'layer': layer.value,
-        'amparoLvl': amparoLvl,
-      };
+    'itemIdx': itemIdx,
+    'marker': marker,
+    'layer': layer.value,
+    'amparoLvl': amparoLvl,
+  };
 
   factory LessonCurrent.fromJson(JsonMap json) => LessonCurrent(
-        itemIdx: (json['itemIdx'] as num?)?.toInt() ?? 0,
-        marker: json['marker'] as String?,
-        layer: LessonLayerValue.fromValue(json['layer']),
-        amparoLvl: (json['amparoLvl'] as num?)?.toInt() ?? 0,
-      );
+    itemIdx: (json['itemIdx'] as num?)?.toInt() ?? 0,
+    marker: json['marker'] as String?,
+    layer: LessonLayerValue.fromValue(json['layer']),
+    amparoLvl: (json['amparoLvl'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class LessonProgress {
@@ -339,36 +339,36 @@ class LessonProgress {
   }
 
   JsonMap toJson() => {
-        'itemIdx': itemIdx,
-        'layer': layer.value,
-        'erros': erros,
-        'amparoLvl': amparoLvl,
-        'historia': historia,
-        'mainAdvances': mainAdvances,
-        'concluidos': concluidos,
-        'pendentesMarkers': pendentesMarkers,
-        'totalItems': totalItems,
-        'pctAvanco': pctAvanco,
-      };
+    'itemIdx': itemIdx,
+    'layer': layer.value,
+    'erros': erros,
+    'amparoLvl': amparoLvl,
+    'historia': historia,
+    'mainAdvances': mainAdvances,
+    'concluidos': concluidos,
+    'pendentesMarkers': pendentesMarkers,
+    'totalItems': totalItems,
+    'pctAvanco': pctAvanco,
+  };
 
   factory LessonProgress.fromJson(JsonMap json) => LessonProgress(
-        itemIdx: (json['itemIdx'] as num?)?.toInt() ?? 0,
-        layer: LessonLayerValue.fromValue(json['layer']),
-        erros: (json['erros'] as num?)?.toInt() ?? 0,
-        amparoLvl: (json['amparoLvl'] as num?)?.toInt() ?? 0,
-        historia: (json['historia'] as List? ?? const [])
-            .map((value) => value.toString())
-            .toList(),
-        mainAdvances: (json['mainAdvances'] as num?)?.toInt() ?? 0,
-        concluidos: (json['concluidos'] as List? ?? const [])
-            .map((value) => value.toString())
-            .toList(),
-        pendentesMarkers: (json['pendentesMarkers'] as List? ?? const [])
-            .map((value) => value.toString())
-            .toList(),
-        totalItems: (json['totalItems'] as num?)?.toInt() ?? 0,
-        pctAvanco: (json['pctAvanco'] as num?)?.toInt() ?? 0,
-      );
+    itemIdx: (json['itemIdx'] as num?)?.toInt() ?? 0,
+    layer: LessonLayerValue.fromValue(json['layer']),
+    erros: (json['erros'] as num?)?.toInt() ?? 0,
+    amparoLvl: (json['amparoLvl'] as num?)?.toInt() ?? 0,
+    historia: (json['historia'] as List? ?? const [])
+        .map((value) => value.toString())
+        .toList(),
+    mainAdvances: (json['mainAdvances'] as num?)?.toInt() ?? 0,
+    concluidos: (json['concluidos'] as List? ?? const [])
+        .map((value) => value.toString())
+        .toList(),
+    pendentesMarkers: (json['pendentesMarkers'] as List? ?? const [])
+        .map((value) => value.toString())
+        .toList(),
+    totalItems: (json['totalItems'] as num?)?.toInt() ?? 0,
+    pctAvanco: (json['pctAvanco'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class LessonAttempt {
@@ -389,25 +389,25 @@ class LessonAttempt {
   final int ts;
 
   JsonMap toJson() => {
-        'marker': marker,
-        'layer': layer.value,
-        'letra': letra.name,
-        'sinal': sinal.value,
-        'correct': correct,
-        'ts': ts,
-      };
+    'marker': marker,
+    'layer': layer.value,
+    'letra': letra.name,
+    'sinal': sinal.value,
+    'correct': correct,
+    'ts': ts,
+  };
 
   factory LessonAttempt.fromJson(JsonMap json) => LessonAttempt(
-        marker: (json['marker'] ?? '').toString(),
-        layer: LessonLayerValue.fromValue(json['layer']),
-        letra: AnswerLetter.values.firstWhere(
-          (letter) => letter.name == json['letra'],
-          orElse: () => AnswerLetter.A,
-        ),
-        sinal: DecisionSignalValue.fromValue(json['sinal']),
-        correct: json['correct'] == true,
-        ts: (json['ts'] as num?)?.toInt() ?? 0,
-      );
+    marker: (json['marker'] ?? '').toString(),
+    layer: LessonLayerValue.fromValue(json['layer']),
+    letra: AnswerLetter.values.firstWhere(
+      (letter) => letter.name == json['letra'],
+      orElse: () => AnswerLetter.A,
+    ),
+    sinal: DecisionSignalValue.fromValue(json['sinal']),
+    correct: json['correct'] == true,
+    ts: (json['ts'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class LiveEntry {
@@ -430,14 +430,14 @@ class LiveEntry {
   final int updatedAt;
 
   factory LiveEntry.empty([int now = 0]) => LiveEntry(
-        status: LiveEntryStatus.idle,
-        error: null,
-        firstItemMarker: null,
-        firstLessonMaterialKey: null,
-        firstLessonStartedAt: null,
-        firstLessonReadyAt: null,
-        updatedAt: now,
-      );
+    status: LiveEntryStatus.idle,
+    error: null,
+    firstItemMarker: null,
+    firstLessonMaterialKey: null,
+    firstLessonStartedAt: null,
+    firstLessonReadyAt: null,
+    updatedAt: now,
+  );
 
   LiveEntry copyWith({
     LiveEntryStatus? status,
@@ -454,36 +454,34 @@ class LiveEntry {
       firstItemMarker: firstItemMarker ?? this.firstItemMarker,
       firstLessonMaterialKey:
           firstLessonMaterialKey ?? this.firstLessonMaterialKey,
-      firstLessonStartedAt:
-          firstLessonStartedAt ?? this.firstLessonStartedAt,
+      firstLessonStartedAt: firstLessonStartedAt ?? this.firstLessonStartedAt,
       firstLessonReadyAt: firstLessonReadyAt ?? this.firstLessonReadyAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   JsonMap toJson() => {
-        'status': status.name,
-        'error': error,
-        'first_item_marker': firstItemMarker,
-        'first_lesson_material_key': firstLessonMaterialKey,
-        'first_lesson_started_at': firstLessonStartedAt,
-        'first_lesson_ready_at': firstLessonReadyAt,
-        'updated_at': updatedAt,
-      };
+    'status': status.name,
+    'error': error,
+    'first_item_marker': firstItemMarker,
+    'first_lesson_material_key': firstLessonMaterialKey,
+    'first_lesson_started_at': firstLessonStartedAt,
+    'first_lesson_ready_at': firstLessonReadyAt,
+    'updated_at': updatedAt,
+  };
 
   factory LiveEntry.fromJson(JsonMap json) => LiveEntry(
-        status: LiveEntryStatus.values.firstWhere(
-          (status) => status.name == json['status'],
-          orElse: () => LiveEntryStatus.idle,
-        ),
-        error: json['error'] as String?,
-        firstItemMarker: json['first_item_marker'] as String?,
-        firstLessonMaterialKey: json['first_lesson_material_key'] as String?,
-        firstLessonStartedAt:
-            (json['first_lesson_started_at'] as num?)?.toInt(),
-        firstLessonReadyAt: (json['first_lesson_ready_at'] as num?)?.toInt(),
-        updatedAt: (json['updated_at'] as num?)?.toInt() ?? 0,
-      );
+    status: LiveEntryStatus.values.firstWhere(
+      (status) => status.name == json['status'],
+      orElse: () => LiveEntryStatus.idle,
+    ),
+    error: json['error'] as String?,
+    firstItemMarker: json['first_item_marker'] as String?,
+    firstLessonMaterialKey: json['first_lesson_material_key'] as String?,
+    firstLessonStartedAt: (json['first_lesson_started_at'] as num?)?.toInt(),
+    firstLessonReadyAt: (json['first_lesson_ready_at'] as num?)?.toInt(),
+    updatedAt: (json['updated_at'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class StudentLearningEvent {
@@ -497,11 +495,135 @@ class StudentLearningEvent {
   final int ts;
   final JsonMap payload;
 
+  JsonMap toJson() => {'type': type, 'ts': ts, 'payload': payload};
+}
+
+class StudentMasteryTruth {
+  const StudentMasteryTruth({
+    this.masteryEvidence = const [],
+    this.falseMasteryFlags = const [],
+    this.needsRetestFlags = const [],
+    this.itemConsolidationStatus = const {},
+  });
+
+  final List<JsonMap> masteryEvidence;
+  final List<String> falseMasteryFlags;
+  final List<String> needsRetestFlags;
+  final Map<String, String> itemConsolidationStatus;
+
+  const StudentMasteryTruth.empty() : this();
+
   JsonMap toJson() => {
-        'type': type,
-        'ts': ts,
-        'payload': payload,
-      };
+    'mastery_evidence': masteryEvidence,
+    'false_mastery_flags': falseMasteryFlags,
+    'needs_retest_flags': needsRetestFlags,
+    'item_consolidation_status': itemConsolidationStatus,
+  };
+
+  factory StudentMasteryTruth.fromJson(JsonMap json) {
+    return StudentMasteryTruth(
+      masteryEvidence: (json['mastery_evidence'] as List? ?? const [])
+          .whereType<Map>()
+          .map((entry) => JsonMap.from(entry))
+          .toList(),
+      falseMasteryFlags: _stringList(json['false_mastery_flags']),
+      needsRetestFlags: _stringList(json['needs_retest_flags']),
+      itemConsolidationStatus:
+          (json['item_consolidation_status'] as Map? ?? const {}).map(
+            (key, value) => MapEntry(key.toString(), value.toString()),
+          ),
+    );
+  }
+
+  factory StudentMasteryTruth.fromLegacy(Object? legacy) {
+    if (legacy is Map) {
+      return StudentMasteryTruth.fromJson(JsonMap.from(legacy));
+    }
+    return const StudentMasteryTruth.empty();
+  }
+
+  StudentMasteryTruth copyWith({
+    List<JsonMap>? masteryEvidence,
+    List<String>? falseMasteryFlags,
+    List<String>? needsRetestFlags,
+    Map<String, String>? itemConsolidationStatus,
+  }) {
+    return StudentMasteryTruth(
+      masteryEvidence: masteryEvidence ?? this.masteryEvidence,
+      falseMasteryFlags: falseMasteryFlags ?? this.falseMasteryFlags,
+      needsRetestFlags: needsRetestFlags ?? this.needsRetestFlags,
+      itemConsolidationStatus:
+          itemConsolidationStatus ?? this.itemConsolidationStatus,
+    );
+  }
+
+  static List<String> _stringList(Object? value) {
+    return (value is List ? value : const [])
+        .map((item) => item.toString())
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+  }
+}
+
+class StudentSyncStatus {
+  const StudentSyncStatus({
+    required this.status,
+    required this.pendingJobs,
+    required this.highWaterMark,
+    required this.updatedAt,
+    this.lastSyncedAt,
+    this.lastError,
+  });
+
+  final String status;
+  final int pendingJobs;
+  final int highWaterMark;
+  final int updatedAt;
+  final int? lastSyncedAt;
+  final String? lastError;
+
+  factory StudentSyncStatus.empty([int now = 0]) => StudentSyncStatus(
+    status: 'idle',
+    pendingJobs: 0,
+    highWaterMark: 0,
+    updatedAt: now,
+  );
+
+  JsonMap toJson() => {
+    'status': status,
+    'pending_jobs': pendingJobs,
+    'high_water_mark': highWaterMark,
+    'updated_at': updatedAt,
+    if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+    if (lastError != null) 'last_error': lastError,
+  };
+
+  factory StudentSyncStatus.fromJson(JsonMap json) => StudentSyncStatus(
+    status: (json['status'] ?? 'idle').toString(),
+    pendingJobs: (json['pending_jobs'] as num?)?.toInt() ?? 0,
+    highWaterMark: (json['high_water_mark'] as num?)?.toInt() ?? 0,
+    updatedAt: (json['updated_at'] as num?)?.toInt() ?? 0,
+    lastSyncedAt: (json['last_synced_at'] as num?)?.toInt(),
+    lastError: json['last_error'] as String?,
+  );
+
+  StudentSyncStatus copyWith({
+    String? status,
+    int? pendingJobs,
+    int? highWaterMark,
+    int? updatedAt,
+    int? lastSyncedAt,
+    String? lastError,
+  }) {
+    return StudentSyncStatus(
+      status: status ?? this.status,
+      pendingJobs: pendingJobs ?? this.pendingJobs,
+      highWaterMark: highWaterMark ?? this.highWaterMark,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      lastError: lastError ?? this.lastError,
+    );
+  }
 }
 
 class StudentLearningState {
@@ -526,6 +648,8 @@ class StudentLearningState {
     this.readyLessonMaterials = const {},
     this.queuedActions = const [],
     this.inflightJobs = const [],
+    this.truth = const StudentMasteryTruth.empty(),
+    this.syncStatus,
     this.extra = const {},
   });
 
@@ -549,6 +673,8 @@ class StudentLearningState {
   final Map<String, JsonMap> readyLessonMaterials;
   final List<JsonMap> queuedActions;
   final List<JsonMap> inflightJobs;
+  final StudentMasteryTruth truth;
+  final StudentSyncStatus? syncStatus;
   final JsonMap extra;
 
   bool get hasCurriculum => curriculum?.items.isNotEmpty == true;
@@ -574,6 +700,8 @@ class StudentLearningState {
     Map<String, JsonMap>? readyLessonMaterials,
     List<JsonMap>? queuedActions,
     List<JsonMap>? inflightJobs,
+    StudentMasteryTruth? truth,
+    StudentSyncStatus? syncStatus,
     JsonMap? extra,
   }) {
     return StudentLearningState(
@@ -595,10 +723,11 @@ class StudentLearningState {
       auxRooms: auxRooms ?? this.auxRooms,
       currentLessonMaterial:
           currentLessonMaterial ?? this.currentLessonMaterial,
-      readyLessonMaterials:
-          readyLessonMaterials ?? this.readyLessonMaterials,
+      readyLessonMaterials: readyLessonMaterials ?? this.readyLessonMaterials,
       queuedActions: queuedActions ?? this.queuedActions,
       inflightJobs: inflightJobs ?? this.inflightJobs,
+      truth: truth ?? this.truth,
+      syncStatus: syncStatus ?? this.syncStatus,
       extra: extra ?? this.extra,
     );
   }
@@ -626,62 +755,72 @@ class StudentLearningState {
       entry: LiveEntry.empty(ts),
       placement: null,
       auxRooms: null,
+      truth: const StudentMasteryTruth.empty(),
+      syncStatus: StudentSyncStatus.empty(ts),
     );
   }
 
   JsonMap toJson() => {
-        ...extra,
-        'stateVersion': stateVersion,
-        'lessonLocalId': lessonLocalId,
-        'lessonCloudId': lessonCloudId,
-        'userId': userId,
-        'createdAt': createdAt,
-        'updatedAt': updatedAt,
-        'profile': profile.toJson(),
-        'curriculum': curriculum?.toJson(),
-        'curriculumStatus': curriculumStatus?.toJson(),
-        'current': current?.toJson(),
-        'progress': progress?.toJson(),
-        'attempts': attempts.map((attempt) => attempt.toJson()).toList(),
-        'events': events.map((event) => event.toJson()).toList(),
-        'entry': entry?.toJson(),
-        'placement': placement,
-        'auxRooms': auxRooms,
-        'currentLessonMaterial': currentLessonMaterial,
-        'readyLessonMaterials': readyLessonMaterials,
-        'queuedActions': queuedActions,
-        'inflightJobs': inflightJobs,
-      };
+    ...extra,
+    'stateVersion': stateVersion,
+    'lessonLocalId': lessonLocalId,
+    'lessonCloudId': lessonCloudId,
+    'userId': userId,
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+    'profile': profile.toJson(),
+    'curriculum': curriculum?.toJson(),
+    'curriculumStatus': curriculumStatus?.toJson(),
+    'current': current?.toJson(),
+    'progress': progress?.toJson(),
+    'attempts': attempts.map((attempt) => attempt.toJson()).toList(),
+    'events': events.map((event) => event.toJson()).toList(),
+    'entry': entry?.toJson(),
+    'placement': placement,
+    'auxRooms': auxRooms,
+    'currentLessonMaterial': currentLessonMaterial,
+    'readyLessonMaterials': readyLessonMaterials,
+    'queuedActions': queuedActions,
+    'inflightJobs': inflightJobs,
+    'truth_typed': truth.toJson(),
+    'sync_status_typed': syncStatus?.toJson(),
+  };
 
   factory StudentLearningState.fromJson(JsonMap json) {
     final extra = JsonMap.of(json)
-      ..removeWhere((key, _) => {
-            'stateVersion',
-            'lessonLocalId',
-            'lessonCloudId',
-            'userId',
-            'createdAt',
-            'updatedAt',
-            'profile',
-            'curriculum',
-            'curriculumStatus',
-            'current',
-            'progress',
-            'attempts',
-            'events',
-            'entry',
-            'placement',
-            'auxRooms',
-            'currentLessonMaterial',
-            'readyLessonMaterials',
-            'queuedActions',
-            'inflightJobs',
-          }.contains(key));
-    final ready = (json['readyLessonMaterials'] as Map? ?? const {})
-        .map((key, value) => MapEntry(key.toString(), JsonMap.from(value as Map)));
+      ..removeWhere(
+        (key, _) => {
+          'stateVersion',
+          'lessonLocalId',
+          'lessonCloudId',
+          'userId',
+          'createdAt',
+          'updatedAt',
+          'profile',
+          'curriculum',
+          'curriculumStatus',
+          'current',
+          'progress',
+          'attempts',
+          'events',
+          'entry',
+          'placement',
+          'auxRooms',
+          'currentLessonMaterial',
+          'readyLessonMaterials',
+          'queuedActions',
+          'inflightJobs',
+          'truth_typed',
+          'sync_status_typed',
+        }.contains(key),
+      );
+    final ready = (json['readyLessonMaterials'] as Map? ?? const {}).map(
+      (key, value) => MapEntry(key.toString(), JsonMap.from(value as Map)),
+    );
     return StudentLearningState(
       stateVersion:
-          (json['stateVersion'] as num?)?.toInt() ?? studentLearningStateSchemaVersion,
+          (json['stateVersion'] as num?)?.toInt() ??
+          studentLearningStateSchemaVersion,
       lessonLocalId: (json['lessonLocalId'] ?? '').toString(),
       lessonCloudId: json['lessonCloudId'] as String?,
       userId: json['userId'] as String?,
@@ -719,10 +858,12 @@ class StudentLearningState {
       entry: json['entry'] is Map
           ? LiveEntry.fromJson(JsonMap.from(json['entry'] as Map))
           : null,
-      placement:
-          json['placement'] is Map ? JsonMap.from(json['placement'] as Map) : null,
-      auxRooms:
-          json['auxRooms'] is Map ? JsonMap.from(json['auxRooms'] as Map) : null,
+      placement: json['placement'] is Map
+          ? JsonMap.from(json['placement'] as Map)
+          : null,
+      auxRooms: json['auxRooms'] is Map
+          ? JsonMap.from(json['auxRooms'] as Map)
+          : null,
       currentLessonMaterial: json['currentLessonMaterial'] is Map
           ? JsonMap.from(json['currentLessonMaterial'] as Map)
           : null,
@@ -735,6 +876,16 @@ class StudentLearningState {
           .whereType<Map>()
           .map((entry) => JsonMap.from(entry))
           .toList(),
+      truth: json['truth_typed'] is Map
+          ? StudentMasteryTruth.fromJson(
+              JsonMap.from(json['truth_typed'] as Map),
+            )
+          : StudentMasteryTruth.fromLegacy(json['truth']),
+      syncStatus: json['sync_status_typed'] is Map
+          ? StudentSyncStatus.fromJson(
+              JsonMap.from(json['sync_status_typed'] as Map),
+            )
+          : null,
       extra: extra,
     );
   }

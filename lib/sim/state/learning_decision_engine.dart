@@ -227,6 +227,22 @@ _MasteryDecisionSnapshot _masteryForMarker(
       needsReinforcement: false,
     );
   }
+  final typedStatus = state.truth.itemConsolidationStatus[marker];
+  if (typedStatus != null) {
+    var needsReinforcement =
+        typedStatus == 'weak' || typedStatus == 'falseMastery';
+    for (final item in state.truth.masteryEvidence.reversed) {
+      if (item['marker_id']?.toString() == marker) {
+        needsReinforcement = item['needs_reinforcement'] == true;
+        break;
+      }
+    }
+    return _MasteryDecisionSnapshot(
+      status: typedStatus,
+      needsReinforcement: needsReinforcement,
+    );
+  }
+
   final truth = state.extra['truth'];
   if (truth is! Map) {
     return const _MasteryDecisionSnapshot(

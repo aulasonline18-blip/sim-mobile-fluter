@@ -109,6 +109,38 @@ void main() {
     expect(decision.proposedMarker, 'M2');
   });
 
+  test('LearningDecisionEngine prefers typed truth over legacy extra', () {
+    final state = _state().copyWith(
+      truth: const StudentMasteryTruth(
+        itemConsolidationStatus: {'M1': 'mastered'},
+        masteryEvidence: [
+          {
+            'marker_id': 'M1',
+            'status': 'mastered',
+            'needs_reinforcement': false,
+          },
+        ],
+      ),
+      extra: const {
+        'truth': {
+          'item_consolidation_status': {'M1': 'falseMastery'},
+          'mastery_evidence': [
+            {
+              'marker_id': 'M1',
+              'status': 'falseMastery',
+              'needs_reinforcement': true,
+            },
+          ],
+        },
+      },
+    );
+
+    final decision = decideNextActionFromState(state);
+
+    expect(decision.actionType, DecisionActionType.advanceItem);
+    expect(decision.proposedMarker, 'M2');
+  });
+
   test('StudentLessonExecutor applies answer without legacy fallback', () {
     final next = processAnswerWithEngine(
       _state(),

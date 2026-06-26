@@ -257,7 +257,19 @@ class MasteryTruthEngine {
     if (evidence.needsReview && !retestFlags.contains(evidence.marker)) {
       retestFlags.add(evidence.marker);
     }
+    final typedTruth = state.truth.copyWith(
+      masteryEvidence: masteryEvidence
+          .whereType<Map>()
+          .map((entry) => JsonMap.from(entry))
+          .toList(),
+      falseMasteryFlags: falseFlags,
+      needsRetestFlags: retestFlags,
+      itemConsolidationStatus: consolidation.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      ),
+    );
     return state.copyWith(
+      truth: typedTruth,
       extra: {
         ...state.extra,
         'truth': {
