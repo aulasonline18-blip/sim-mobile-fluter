@@ -8,7 +8,14 @@ import 'sim/cloud/sim_server_cloud_functions.dart';
 import 'sim/cloud/supabase_flutter_session_provider.dart';
 import 'sim/cloud/supabase_student_state_cloud_storage.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
+import 'sim/external_ai/sim_server_ai_clients.dart';
+import 'sim/lesson/lesson_models.dart';
+import 'sim/media/audio_core.dart';
+import 'sim/media/audio_preference.dart';
+import 'sim/media/lesson_audio_controller.dart';
+import 'sim/media/student_lesson_media_service.dart';
 import 'sim/state/shared_prefs_state_storage.dart';
+import 'sim/state/student_learning_state.dart';
 import 'sim/state/student_state_store.dart';
 
 const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
@@ -116,8 +123,11 @@ class LabSession extends ChangeNotifier {
   String aulaMessage = '';
   bool doubtOpen = false;
   bool audioEnabled = true;
+  bool audioPlaying = false;
   bool audioLoading = false;
   String? audioError;
+  final AudioPreference _audioPreference = AudioPreference();
+  LessonAudioController? _lessonAudioController;
   String imageStatus = 'idle';
   String? imageError;
   String? externalDoorOpened;
@@ -398,6 +408,58 @@ class LabSession extends ChangeNotifier {
     unawaited(store.persistCloud(id).catchError((_) {}));
   }
 
+  SimAiServerConfig _serverConfig() {
+    return SimAiServerConfig(
+      baseUrl: simApiBaseUrl,
+      accessTokenProvider: () async =>
+          _supabaseClientOrNull()?.auth.currentSession?.accessToken,
+    );
+  }
+
+  LessonAudioController _audioControllerFor(String id) {
+    final existing = _lessonAudioController;
+    if (existing != null && existing.lessonLocalId == id) return existing;
+    final store = canonicalStore;
+    final controller = LessonAudioController(
+      lessonLocalId: id,
+      preference: _audioPreference,
+      mediaService: StudentLessonMediaService(
+        audioCore: AudioCore(
+          preference: _audioPreference,
+          playback: NoopAudioPlaybackAdapter(),
+          generatedAudioClient: SimServerGeneratedAudioClient(
+            config: _serverConfig(),
+          ),
+          stableLangProvider: () =>
+              stableLang ?? selectedLanguageCode ?? 'pt-BR',
+        ),
+        readState: (lessonLocalId) =>
+            store?.readState(lessonLocalId) ??
+            StudentLearningState.empty(lessonLocalId: lessonLocalId),
+        writeState: (state) => store?.writeState(state) ?? state,
+      ),
+    );
+    _lessonAudioController = controller;
+    return controller;
+  }
+
+  LessonContent _currentLessonContentForAudio() {
+    final topic = freeText.trim().isEmpty ? 'Aula SIM' : freeText.trim();
+    return LessonContent(
+      explanation:
+          'Explicação da aula mínima em laboratório. Aqui entra o conteúdo T02 real quando o servidor estiver conectado.',
+      question:
+          'Qual alternativa mostra que você entendeu este primeiro ponto?',
+      options: const {
+        AnswerLetter.A: 'Consigo explicar com minhas palavras.',
+        AnswerLetter.B: 'Entendi uma parte, mas preciso revisar.',
+        AnswerLetter.C: 'Ainda estou perdido e preciso de recuperação.',
+      },
+      correctAnswer: AnswerLetter.A,
+      whyCorrect: topic,
+    );
+  }
+
   void preparationDone() {
     entryStatus = 'primeira_aula_pronta';
     route = '/cyber/placement';
@@ -474,18 +536,43 @@ class LabSession extends ChangeNotifier {
   Future<void> toggleAudio() async {
     if (audioLoading) return;
     audioError = null;
-    if (!audioEnabled) {
-      audioEnabled = true;
+    final id =
+        lessonLocalId ??
+        _deriveLessonLocalId(
+          freeText.trim().isEmpty ? 'aula-sim' : freeText,
+          selectedLanguageCode ?? stableLang ?? 'pt',
+        );
+    if (audioPlaying) {
+      _lessonAudioController?.pararAudio();
+      audioPlaying = false;
+      audioEnabled = false;
+      _audioPreference.setAudioEnabled(false);
       notifyListeners();
       return;
     }
+    audioEnabled = true;
+    _audioPreference.setAudioEnabled(true);
     audioLoading = true;
     notifyListeners();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
-    audioLoading = false;
-    audioEnabled = false;
-    audioError = 'Áudio pausado.';
-    notifyListeners();
+    await Future<void>.delayed(Duration.zero);
+    try {
+      final started = await _audioControllerFor(id).playConteudo(
+        _currentLessonContentForAudio(),
+        'item-${aulaStep + 1}',
+        LessonLayer.l1,
+        language: stableLang,
+      );
+      audioPlaying = started;
+      if (!started) {
+        audioError = 'Áudio ainda não está disponível.';
+      }
+    } catch (_) {
+      audioError = 'Não foi possível preparar o áudio agora.';
+      audioPlaying = false;
+    } finally {
+      audioLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> requestLessonImage() async {
@@ -501,6 +588,7 @@ class LabSession extends ChangeNotifier {
   @override
   void dispose() {
     _authSub?.cancel();
+    _lessonAudioController?.pararAudio();
     super.dispose();
   }
 
@@ -2406,7 +2494,11 @@ class AulaLabScreen extends StatelessWidget {
                             icon: session.audioEnabled
                                 ? Icons.volume_up_outlined
                                 : Icons.volume_off_outlined,
-                            text: session.audioEnabled
+                            text: session.audioLoading
+                                ? 'Áudio da aula ligado'
+                                : session.audioPlaying
+                                ? 'Áudio da aula tocando'
+                                : session.audioEnabled
                                 ? 'Áudio da aula ligado'
                                 : 'Áudio da aula pausado',
                           ),

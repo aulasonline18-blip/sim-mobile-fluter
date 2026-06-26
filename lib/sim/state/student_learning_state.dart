@@ -565,6 +565,91 @@ class StudentMasteryTruth {
   }
 }
 
+class StudentAudioState {
+  const StudentAudioState({
+    required this.status,
+    required this.enabled,
+    required this.playing,
+    required this.updatedAt,
+    this.lessonKey,
+    this.language,
+    this.voice,
+    this.cacheKey,
+    this.audioUrlHead,
+    this.error,
+  });
+
+  final String status;
+  final bool enabled;
+  final bool playing;
+  final int updatedAt;
+  final String? lessonKey;
+  final String? language;
+  final String? voice;
+  final String? cacheKey;
+  final String? audioUrlHead;
+  final String? error;
+
+  factory StudentAudioState.empty([int now = 0]) => StudentAudioState(
+    status: 'idle',
+    enabled: true,
+    playing: false,
+    updatedAt: now,
+  );
+
+  JsonMap toJson() => {
+    'status': status,
+    'enabled': enabled,
+    'playing': playing,
+    'updated_at': updatedAt,
+    if (lessonKey != null) 'lesson_key': lessonKey,
+    if (language != null) 'language': language,
+    if (voice != null) 'voice': voice,
+    if (cacheKey != null) 'cache_key': cacheKey,
+    if (audioUrlHead != null) 'audio_url_head': audioUrlHead,
+    if (error != null) 'error': error,
+  };
+
+  factory StudentAudioState.fromJson(JsonMap json) => StudentAudioState(
+    status: (json['status'] ?? 'idle').toString(),
+    enabled: json['enabled'] != false,
+    playing: json['playing'] == true,
+    updatedAt: (json['updated_at'] as num?)?.toInt() ?? 0,
+    lessonKey: json['lesson_key'] as String?,
+    language: json['language'] as String?,
+    voice: json['voice'] as String?,
+    cacheKey: json['cache_key'] as String?,
+    audioUrlHead: json['audio_url_head'] as String?,
+    error: json['error'] as String?,
+  );
+
+  StudentAudioState copyWith({
+    String? status,
+    bool? enabled,
+    bool? playing,
+    int? updatedAt,
+    String? lessonKey,
+    String? language,
+    String? voice,
+    String? cacheKey,
+    String? audioUrlHead,
+    String? error,
+  }) {
+    return StudentAudioState(
+      status: status ?? this.status,
+      enabled: enabled ?? this.enabled,
+      playing: playing ?? this.playing,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lessonKey: lessonKey ?? this.lessonKey,
+      language: language ?? this.language,
+      voice: voice ?? this.voice,
+      cacheKey: cacheKey ?? this.cacheKey,
+      audioUrlHead: audioUrlHead ?? this.audioUrlHead,
+      error: error ?? this.error,
+    );
+  }
+}
+
 class StudentSyncStatus {
   const StudentSyncStatus({
     required this.status,
@@ -649,6 +734,12 @@ class StudentLearningState {
     this.queuedActions = const [],
     this.inflightJobs = const [],
     this.truth = const StudentMasteryTruth.empty(),
+    this.audio = const StudentAudioState(
+      status: 'idle',
+      enabled: true,
+      playing: false,
+      updatedAt: 0,
+    ),
     this.syncStatus,
     this.extra = const {},
   });
@@ -674,6 +765,7 @@ class StudentLearningState {
   final List<JsonMap> queuedActions;
   final List<JsonMap> inflightJobs;
   final StudentMasteryTruth truth;
+  final StudentAudioState audio;
   final StudentSyncStatus? syncStatus;
   final JsonMap extra;
 
@@ -701,6 +793,7 @@ class StudentLearningState {
     List<JsonMap>? queuedActions,
     List<JsonMap>? inflightJobs,
     StudentMasteryTruth? truth,
+    StudentAudioState? audio,
     StudentSyncStatus? syncStatus,
     JsonMap? extra,
   }) {
@@ -727,6 +820,7 @@ class StudentLearningState {
       queuedActions: queuedActions ?? this.queuedActions,
       inflightJobs: inflightJobs ?? this.inflightJobs,
       truth: truth ?? this.truth,
+      audio: audio ?? this.audio,
       syncStatus: syncStatus ?? this.syncStatus,
       extra: extra ?? this.extra,
     );
@@ -756,6 +850,7 @@ class StudentLearningState {
       placement: null,
       auxRooms: null,
       truth: const StudentMasteryTruth.empty(),
+      audio: StudentAudioState.empty(ts),
       syncStatus: StudentSyncStatus.empty(ts),
     );
   }
@@ -783,6 +878,7 @@ class StudentLearningState {
     'queuedActions': queuedActions,
     'inflightJobs': inflightJobs,
     'truth_typed': truth.toJson(),
+    'audio_typed': audio.toJson(),
     'sync_status_typed': syncStatus?.toJson(),
   };
 
@@ -811,6 +907,7 @@ class StudentLearningState {
           'queuedActions',
           'inflightJobs',
           'truth_typed',
+          'audio_typed',
           'sync_status_typed',
         }.contains(key),
       );
@@ -881,6 +978,9 @@ class StudentLearningState {
               JsonMap.from(json['truth_typed'] as Map),
             )
           : StudentMasteryTruth.fromLegacy(json['truth']),
+      audio: json['audio_typed'] is Map
+          ? StudentAudioState.fromJson(JsonMap.from(json['audio_typed'] as Map))
+          : StudentAudioState.empty((json['updatedAt'] as num?)?.toInt() ?? 0),
       syncStatus: json['sync_status_typed'] is Map
           ? StudentSyncStatus.fromJson(
               JsonMap.from(json['sync_status_typed'] as Map),

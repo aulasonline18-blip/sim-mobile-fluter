@@ -66,9 +66,9 @@ class FakeCredits implements CreditsGateway {
 }
 
 StudentLearningState seedState() {
-  return StudentLearningState.empty(lessonLocalId: 'l1').copyWith(
-    events: const [],
-  );
+  return StudentLearningState.empty(
+    lessonLocalId: 'l1',
+  ).copyWith(events: const []);
 }
 
 void main() {
@@ -128,7 +128,15 @@ void main() {
     );
 
     expect(await controller.playConteudo(content, 'M1', LessonLayer.l1), true);
-    expect(states['l1']!.events.single.type, 'AUDIO_STARTED');
+    expect(
+      states['l1']!.events.map((event) => event.type),
+      contains('AUDIO_STARTED'),
+    );
+    expect(
+      states['l1']!.events.map((event) => event.type),
+      contains('AUDIO_READY'),
+    );
+    expect(states['l1']!.audio.status, 'ready');
   });
 
   test('doubt audio appends doubt suffix and respects preference', () async {

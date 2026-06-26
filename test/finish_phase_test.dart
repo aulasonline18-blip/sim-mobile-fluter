@@ -43,7 +43,7 @@ void main() {
     await tester.pump();
     expect(find.text('Preparando áudio da aula...'), findsOneWidget);
     await tester.pumpAndSettle();
-    expect(find.text('Áudio pausado.'), findsOneWidget);
+    expect(find.text('Áudio ainda não está disponível.'), findsOneWidget);
 
     await tester.tap(find.textContaining('B. Entendi'));
     await tester.pumpAndSettle();

@@ -208,6 +208,15 @@ void main() {
                 {'marker_id': 'M1', 'status': 'mastered'},
               ],
             ),
+            audio: const StudentAudioState(
+              status: 'ready',
+              enabled: true,
+              playing: false,
+              updatedAt: 9,
+              lessonKey: 'lesson-typed:M1:1',
+              language: 'pt-BR',
+              voice: 'cedar',
+            ),
             syncStatus: const StudentSyncStatus(
               status: 'pending',
               pendingJobs: 2,
@@ -223,11 +232,14 @@ void main() {
 
       final json = state.toJson();
       expect(json['truth_typed'], isA<Map>());
+      expect(json['audio_typed'], isA<Map>());
       expect(json['sync_status_typed'], isA<Map>());
       expect(json['truth'], isA<Map>());
 
       final restored = StudentLearningState.fromJson(json);
       expect(restored.truth.itemConsolidationStatus['M1'], 'mastered');
+      expect(restored.audio.status, 'ready');
+      expect(restored.audio.lessonKey, 'lesson-typed:M1:1');
       expect(restored.syncStatus?.status, 'pending');
       expect(
         (restored.extra['truth'] as Map)['item_consolidation_status'],
