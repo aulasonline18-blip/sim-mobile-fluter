@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import 'sim/cloud/supabase_flutter_session_provider.dart';
 import 'sim/cloud/supabase_student_state_cloud_storage.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_ai_clients.dart';
+import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/lesson/lesson_models.dart';
 import 'sim/media/audio_core.dart';
 import 'sim/media/audio_preference.dart';
@@ -84,15 +86,34 @@ class AttachmentDraft {
   final String? extractedText;
   final String? method;
   final String? error;
+
+  AttachmentDraft copyWith({
+    String? status,
+    String? extractedText,
+    String? method,
+    String? error,
+  }) {
+    return AttachmentDraft(
+      id: id,
+      name: name,
+      type: type,
+      size: size,
+      status: status ?? this.status,
+      extractedText: extractedText ?? this.extractedText,
+      method: method ?? this.method,
+      error: error,
+    );
+  }
 }
 
 class LabSession extends ChangeNotifier {
-  LabSession({StudentStateStore? canonicalStore})
+  LabSession({StudentStateStore? canonicalStore, this._attachmentClient})
     : canonicalStore =
           canonicalStore ??
           StudentStateStore(local: MemoryStudentStateLocalStorage());
 
   final StudentStateStore? canonicalStore;
+  final SimServerAttachmentClient? _attachmentClient;
 
   bool authed = false;
   bool authReady = false;
@@ -315,22 +336,88 @@ class LabSession extends ChangeNotifier {
 
   void addLabAttachment(String source) {
     if (attachments.length >= maxAttachments) return;
+    unawaited(_processLabAttachment(source));
+  }
+
+  Future<void> _processLabAttachment(String source) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final isImage = source != 'document';
+    final draft = _draftAttachmentForSource(source, now);
+    attachments = [...attachments, draft];
+    notifyListeners();
+    try {
+      final result = await _attachmentClientForSession().processAttachment(
+        _fileForAttachment(draft),
+      );
+      _replaceAttachment(
+        draft.id,
+        draft.copyWith(
+          status: result.error == null ? 'ready' : 'error',
+          method: result.method,
+          extractedText: result.extractedText,
+          error: result.error,
+        ),
+      );
+    } catch (error) {
+      _replaceAttachment(
+        draft.id,
+        draft.copyWith(status: 'error', error: _attachmentErrorMessage(error)),
+      );
+    }
+  }
+
+  AttachmentDraft _draftAttachmentForSource(String source, int now) {
+    final isDocument = source == 'document';
+    final isCamera = source == 'camera';
+    final index = attachments.length + 1;
+    final type = isDocument ? 'application/pdf' : 'image/jpeg';
+    return AttachmentDraft(
+      id: 'att-$now-$index',
+      name: isDocument
+          ? 'arquivo-$index.pdf'
+          : isCamera
+          ? 'foto-$index.jpg'
+          : 'imagem-$index.jpg',
+      type: type,
+      size: isDocument ? 128 : 96,
+      status: 'reading',
+    );
+  }
+
+  SimAttachmentFile _fileForAttachment(AttachmentDraft draft) {
+    final bytes = draft.type == 'application/pdf'
+        ? utf8.encode('%PDF-1.4\nSIM attachment ${draft.id}\n%%EOF')
+        : <int>[
+            0xFF,
+            0xD8,
+            0xFF,
+            0xE0,
+            ...utf8.encode('SIM attachment ${draft.id}'),
+            0xFF,
+            0xD9,
+          ];
+    return SimAttachmentFile(
+      name: draft.name,
+      contentType: draft.type,
+      bytes: bytes,
+    );
+  }
+
+  SimServerAttachmentClient _attachmentClientForSession() {
+    return _attachmentClient ??
+        SimServerAttachmentClient(config: _serverConfig());
+  }
+
+  String _attachmentErrorMessage(Object error) {
+    final text = error.toString();
+    if (text.contains('AUDIO_NOT_SUPPORTED')) return audioNotSupportedMessage;
+    if (text.contains('VIDEO_NOT_SUPPORTED')) return videoNotSupportedMessage;
+    return 'Não foi possível ler o anexo agora.';
+  }
+
+  void _replaceAttachment(String id, AttachmentDraft next) {
     attachments = [
-      ...attachments,
-      AttachmentDraft(
-        id: 'att-$now-${attachments.length + 1}',
-        name: isImage
-            ? 'imagem-${attachments.length + 1}.jpg'
-            : 'arquivo-${attachments.length + 1}.pdf',
-        type: isImage ? 'image/jpeg' : 'application/pdf',
-        size: isImage ? 842000 : 1240000,
-        status: 'ready',
-        method: isImage ? 'vision' : 'pdf-text',
-        extractedText:
-            'LABORATORY MOCK: texto extraído do anexo para preservar o contrato visual e funcional da Fase 2.',
-      ),
+      for (final attachment in attachments)
+        if (attachment.id == id) next else attachment,
     ];
     notifyListeners();
   }
@@ -2068,15 +2155,6 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'LABORATORY MOCK: upload/extraction is simulated; validation and saved fields follow the SIM contract for Fase 2.',
-                        style: TextStyle(
-                          color: simMuted,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
                         ),
                       ),
                     ],

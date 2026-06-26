@@ -1,7 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:sim_mobile/sim/external_ai/sim_ai_server_config.dart';
+import 'package:sim_mobile/sim/external_ai/sim_http_transport.dart';
+import 'package:sim_mobile/sim/external_ai/sim_server_attachment_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/main.dart';
 import 'package:sim_mobile/sim/support/sim_finish_contract.dart';
+
+class FakeAttachmentTransport implements SimHttpTransport {
+  int calls = 0;
+
+  @override
+  Future<SimHttpResponse> postJson(
+    Uri uri, {
+    required Map<String, String> headers,
+    required Object? body,
+    Duration timeout = const Duration(seconds: 45),
+  }) async => const SimHttpResponse(statusCode: 200, body: '{}');
+
+  @override
+  Stream<String> postEventStream(
+    Uri uri, {
+    required Map<String, String> headers,
+    required Object? body,
+    Duration timeout = const Duration(seconds: 140),
+  }) async* {}
+
+  @override
+  Future<SimHttpResponse> postMultipart(
+    Uri uri, {
+    required Map<String, String> headers,
+    required String fieldName,
+    required String filename,
+    required String contentType,
+    required List<int> bytes,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    calls += 1;
+    return const SimHttpResponse(
+      statusCode: 200,
+      body:
+          '{"extractedText":"texto real extraido pelo servidor","method":"vision","charsExtracted":32}',
+    );
+  }
+}
 
 void main() {
   test('acabamento cobre todos os itens mandatarios', () {
@@ -15,6 +56,36 @@ void main() {
       simFinishRequirements.map((r) => r.label).join('\n'),
       contains('Imagem com estado visivel'),
     );
+  });
+
+  testWidgets('objetivo processa anexo pelo client real sem texto fixo', (
+    WidgetTester tester,
+  ) async {
+    final transport = FakeAttachmentTransport();
+    final session =
+        LabSession(
+            attachmentClient: SimServerAttachmentClient(
+              config: const SimAiServerConfig(baseUrl: 'https://sim.test'),
+              transport: transport,
+            ),
+          )
+          ..authed = true
+          ..authReady = true
+          ..credits = 3
+          ..route = '/cyber/objeto';
+
+    await tester.pumpWidget(SimMobileApp(initialSession: session));
+    session.addLabAttachment('gallery');
+    expect(session.attachments.single.status, 'reading');
+    await tester.pumpAndSettle();
+
+    expect(transport.calls, 1);
+    expect(session.attachments.single.status, 'ready');
+    expect(
+      session.attachments.single.extractedText,
+      'texto real extraido pelo servidor',
+    );
+    expect(session.attachments.single.extractedText, isNot(contains('MOCK')));
   });
 
   testWidgets('aula mostra imagem audio feedback loading e erro visual', (
