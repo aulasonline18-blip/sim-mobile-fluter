@@ -18,12 +18,12 @@ class T00StreamItem {
   final String? microitemForTeacher;
 
   factory T00StreamItem.fromJson(JsonMap json) => T00StreamItem(
-        order: (json['order'] as num?)?.toInt(),
-        marker: json['marker'] as String?,
-        text: json['text'] as String?,
-        title: json['title'] as String?,
-        microitemForTeacher: json['microitem_for_teacher'] as String?,
-      );
+    order: (json['order'] as num?)?.toInt(),
+    marker: json['marker'] as String?,
+    text: json['text'] as String?,
+    title: json['title'] as String?,
+    microitemForTeacher: json['microitem_for_teacher'] as String?,
+  );
 }
 
 class PartialCurriculumAppendResult {
@@ -44,11 +44,12 @@ PartialCurriculumAppendResult? appendPartialCurriculumItemToState({
   required String? objective,
   required int bootStartedAt,
 }) {
-  final marker = raw.marker?.trim().isNotEmpty == true
-      ? raw.marker!.trim()
+  final rawMarker = raw.marker?.trim() ?? '';
+  final marker = rawMarker.isNotEmpty
+      ? rawMarker
       : raw.order != null
-          ? 'M${raw.order}'
-          : 'M${partialItems.length + 1}';
+      ? 'M${raw.order}'
+      : 'M${partialItems.length + 1}';
   final text = (raw.microitemForTeacher ?? raw.text ?? raw.title ?? '').trim();
   if (marker.isEmpty || text.isEmpty) return null;
 
