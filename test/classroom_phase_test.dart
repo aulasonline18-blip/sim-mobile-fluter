@@ -13,8 +13,11 @@ import 'package:sim_mobile/sim/lesson/lesson_material_cache.dart';
 import 'package:sim_mobile/sim/lesson/lesson_orchestrator.dart';
 import 'package:sim_mobile/sim/lesson/student_lesson_material_service.dart';
 import 'package:sim_mobile/sim/modules/pedagogical_module_contracts.dart';
+import 'package:sim_mobile/sim/state/mastery_truth_engine.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
 import 'package:sim_mobile/sim/state/student_learning_state_service.dart';
+import 'package:sim_mobile/sim/state/student_state_store.dart';
+import 'package:sim_mobile/sim/state/student_state_store_adapter.dart';
 
 class FakeClassroomT02 implements T02LessonClient {
   int calls = 0;
@@ -90,7 +93,11 @@ StudentLearningState _classroomState() {
   );
 }
 
-LessonRuntimeEngine _runtime(StudentLearningStateService stateService, FakeClassroomT02 t02) {
+LessonRuntimeEngine _runtime(
+  StudentLearningStateService stateService,
+  FakeClassroomT02 t02, {
+  StudentStateStore? store,
+}) {
   final orchestrator = LessonOrchestrator(
     t02Client: t02,
     cache: LessonMaterialCache(),
@@ -121,25 +128,29 @@ LessonRuntimeEngine _runtime(StudentLearningStateService stateService, FakeClass
       stateService: stateService,
       materialService: materialService,
       materialController: materialController,
+      store: store,
     ),
   );
 }
 
 void main() {
-  test('LessonRuntimeEngine opens classroom and loads first material', () async {
-    final service = StudentLearningStateService(
-      seed: {'cyber-class': _classroomState()},
-    );
-    final t02 = FakeClassroomT02();
-    final runtime = _runtime(service, t02);
+  test(
+    'LessonRuntimeEngine opens classroom and loads first material',
+    () async {
+      final service = StudentLearningStateService(
+        seed: {'cyber-class': _classroomState()},
+      );
+      final t02 = FakeClassroomT02();
+      final runtime = _runtime(service, t02);
 
-    final snap = await runtime.open(lessonLocalId: 'cyber-class');
+      final snap = await runtime.open(lessonLocalId: 'cyber-class');
 
-    expect(snap.hasCurriculum, isTrue);
-    expect(snap.phase.type, ClassroomPhaseType.lendo);
-    expect(snap.conteudo?.question, 'Pergunta M1?');
-    expect(t02.calls, greaterThanOrEqualTo(1));
-  });
+      expect(snap.hasCurriculum, isTrue);
+      expect(snap.phase.type, ClassroomPhaseType.lendo);
+      expect(snap.conteudo?.question, 'Pergunta M1?');
+      expect(t02.calls, greaterThanOrEqualTo(1));
+    },
+  );
 
   test('Classroom answer A with signal 1 advances from L1 to L3', () async {
     final service = StudentLearningStateService(
@@ -164,6 +175,84 @@ void main() {
     expect(snap.itemMarker, 'M1');
     expect(service.read('cyber-class')?.current?.layer, LessonLayer.l3);
   });
+
+  test(
+    'answer signal writes false mastery truth and canonical event',
+    () async {
+      final store = StudentStateStore(local: MemoryStudentStateLocalStorage());
+      store.writeState(
+        _classroomState().copyWith(
+          attempts: const [
+            LessonAttempt(
+              marker: 'M1',
+              layer: LessonLayer.l1,
+              letra: AnswerLetter.B,
+              sinal: DecisionSignal.one,
+              correct: false,
+              ts: 1,
+            ),
+          ],
+        ),
+      );
+      final service = StudentStateStoreAdapter(store);
+      final t02 = FakeClassroomT02();
+      final runtime = _runtime(service, t02, store: store);
+      await runtime.open(lessonLocalId: 'cyber-class');
+
+      runtime.select(AnswerLetter.B);
+      runtime.signal(DecisionSignal.one);
+
+      final state = store.readState('cyber-class');
+      final truth = state.extra['truth'] as Map;
+      final status = truth['item_consolidation_status'] as Map;
+      expect(status['M1'], MasteryStatus.falseMastery.name);
+      expect(
+        store.getEventLog('cyber-class').map((event) => event.type),
+        contains('MASTERY_EVALUATED'),
+      );
+    },
+  );
+
+  test(
+    'answer signal writes mastered truth after three correct attempts',
+    () async {
+      final store = StudentStateStore(local: MemoryStudentStateLocalStorage());
+      store.writeState(
+        _classroomState().copyWith(
+          attempts: const [
+            LessonAttempt(
+              marker: 'M1',
+              layer: LessonLayer.l1,
+              letra: AnswerLetter.A,
+              sinal: DecisionSignal.one,
+              correct: true,
+              ts: 1,
+            ),
+            LessonAttempt(
+              marker: 'M1',
+              layer: LessonLayer.l1,
+              letra: AnswerLetter.A,
+              sinal: DecisionSignal.one,
+              correct: true,
+              ts: 2,
+            ),
+          ],
+        ),
+      );
+      final service = StudentStateStoreAdapter(store);
+      final t02 = FakeClassroomT02();
+      final runtime = _runtime(service, t02, store: store);
+      await runtime.open(lessonLocalId: 'cyber-class');
+
+      runtime.select(AnswerLetter.A);
+      runtime.signal(DecisionSignal.one);
+
+      final state = store.readState('cyber-class');
+      final truth = state.extra['truth'] as Map;
+      final status = truth['item_consolidation_status'] as Map;
+      expect(status['M1'], MasteryStatus.mastered.name);
+    },
+  );
 
   test('LessonMainViewModel locks after completion and labels next layer', () {
     final vm = buildLessonMainViewModel(

@@ -101,9 +101,11 @@ class SimOrganism {
     String lessonLocalId = 'lab-live-entry',
     StudentStateStore? canonicalStore,
   }) {
+    final activeStore =
+        canonicalStore ??
+        StudentStateStore(local: MemoryStudentStateLocalStorage());
     final StudentLearningStateService stateService = StudentStateStoreAdapter(
-      canonicalStore ??
-          StudentStateStore(local: MemoryStudentStateLocalStorage()),
+      activeStore,
     );
     stateService.ensure(lessonLocalId: lessonLocalId, userId: 'lab-user');
 
@@ -172,6 +174,7 @@ class SimOrganism {
         stateService: stateService,
         materialService: materialService,
         materialController: lessonMaterialController,
+        store: activeStore,
       ),
     );
 

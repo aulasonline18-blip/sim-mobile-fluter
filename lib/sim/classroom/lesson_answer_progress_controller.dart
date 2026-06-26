@@ -4,6 +4,8 @@ import '../lesson/student_lesson_material_service.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import '../state/student_lesson_executor.dart';
+import '../state/mastery_truth_engine.dart';
+import '../state/student_state_store.dart';
 import 'classroom_models.dart';
 import 'lesson_answer_feedback.dart';
 import 'lesson_material_controller.dart';
@@ -14,11 +16,15 @@ class LessonAnswerProgressController {
     required this.stateService,
     required this.materialService,
     required this.materialController,
-  });
+    this.store,
+    MasteryTruthEngine? truthEngine,
+  }) : truthEngine = truthEngine ?? const MasteryTruthEngine();
 
   final StudentLearningStateService stateService;
   final StudentLessonMaterialService materialService;
   final LessonMaterialController materialController;
+  final StudentStateStore? store;
+  final MasteryTruthEngine truthEngine;
 
   void selecionar(LessonPositionState position, AnswerLetter letter) {
     if (position.phase.type != ClassroomPhaseType.lendo &&
@@ -56,16 +62,26 @@ class LessonAnswerProgressController {
       id: questionId,
       text: content.question,
       options: [
-        QuestionOptionEntry(id: AnswerLetter.A, text: content.options[AnswerLetter.A] ?? ''),
-        QuestionOptionEntry(id: AnswerLetter.B, text: content.options[AnswerLetter.B] ?? ''),
-        QuestionOptionEntry(id: AnswerLetter.C, text: content.options[AnswerLetter.C] ?? ''),
+        QuestionOptionEntry(
+          id: AnswerLetter.A,
+          text: content.options[AnswerLetter.A] ?? '',
+        ),
+        QuestionOptionEntry(
+          id: AnswerLetter.B,
+          text: content.options[AnswerLetter.B] ?? '',
+        ),
+        QuestionOptionEntry(
+          id: AnswerLetter.C,
+          text: content.options[AnswerLetter.C] ?? '',
+        ),
       ],
       chosenOptionId: letter,
       correct: correct,
       imageUrl: position.imagem,
     );
-    if (!position.history.any((old) =>
-        old.id == entry.id && old.chosenOptionId == entry.chosenOptionId)) {
+    if (!position.history.any(
+      (old) => old.id == entry.id && old.chosenOptionId == entry.chosenOptionId,
+    )) {
       final next = [...position.history, entry];
       final firstImageToKeep = (next.length - 4).clamp(0, next.length);
       position.history = next.asMap().entries.map((mapEntry) {
@@ -95,8 +111,16 @@ class LessonAnswerProgressController {
           correctAnswer: content.correctAnswer,
         ),
       );
-      stateService.write(nextState);
-      final view = activeLessonView(nextState);
+      final savedState = stateService.write(nextState);
+      final evidence = truthEngine.evaluateMarker(savedState, item.marker);
+      final truthState = truthEngine.writeTruthToState(savedState, evidence);
+      final savedTruthState = stateService.write(truthState);
+      _appendMasteryEvaluatedEvent(
+        lessonLocalId: lessonLocalId,
+        state: savedTruthState,
+        evidence: evidence,
+      );
+      final view = activeLessonView(savedTruthState);
       if (view != null && !view.ended) {
         materialService.maintainLessonReadyWindow(
           lessonLocalId: lessonLocalId,
@@ -104,7 +128,10 @@ class LessonAnswerProgressController {
           itemIdx: view.itemIdx,
           layer: view.layer,
           items: baseItems
-              .map((item) => DopamineWindowItem(text: item.text, marker: item.marker))
+              .map(
+                (item) =>
+                    DopamineWindowItem(text: item.text, marker: item.marker),
+              )
               .toList(),
           source: 'cyber.aula.after-signal',
           priority: 'active',
@@ -136,6 +163,33 @@ class LessonAnswerProgressController {
           'correct': correct,
           'isReview': position.isReviewAtivo,
         },
+      ),
+    );
+  }
+
+  void _appendMasteryEvaluatedEvent({
+    required String lessonLocalId,
+    required StudentLearningState state,
+    required MasteryEvidence evidence,
+  }) {
+    final payload = {...evidence.toJson(), 'status': evidence.status.name};
+    final canonicalStore = store;
+    if (canonicalStore != null) {
+      canonicalStore.appendEvent(
+        lessonLocalId: lessonLocalId,
+        type: 'MASTERY_EVALUATED',
+        payload: payload,
+        source: 'lesson-answer-progress-controller',
+        userId: state.userId,
+      );
+      return;
+    }
+    stateService.appendEvent(
+      lessonLocalId,
+      StudentLearningEvent(
+        type: 'MASTERY_EVALUATED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: payload,
       ),
     );
   }
@@ -211,7 +265,9 @@ class LessonAnswerProgressController {
       itemIdx: view.itemIdx,
       layer: view.layer,
       items: baseItems
-          .map((item) => DopamineWindowItem(text: item.text, marker: item.marker))
+          .map(
+            (item) => DopamineWindowItem(text: item.text, marker: item.marker),
+          )
           .toList(),
       source: 'cyber.aula.after-answer',
       priority: 'background',
