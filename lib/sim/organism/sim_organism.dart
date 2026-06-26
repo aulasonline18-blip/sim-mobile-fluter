@@ -32,6 +32,8 @@ import '../placement/placement_t02_caller.dart';
 import '../placement/student_placement_service.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
+import '../state/student_state_store.dart';
+import '../state/student_state_store_adapter.dart';
 import 'sim_laboratory_adapters.dart';
 import 'sim_organism_health.dart';
 import 'sim_organism_router.dart';
@@ -95,8 +97,14 @@ class SimOrganism {
     return stateService.ensure(lessonLocalId: lessonLocalId);
   }
 
-  static SimOrganism laboratory({String lessonLocalId = 'lab-live-entry'}) {
-    final stateService = StudentLearningStateService();
+  static SimOrganism laboratory({
+    String lessonLocalId = 'lab-live-entry',
+    StudentStateStore? canonicalStore,
+  }) {
+    final StudentLearningStateService stateService = StudentStateStoreAdapter(
+      canonicalStore ??
+          StudentStateStore(local: MemoryStudentStateLocalStorage()),
+    );
     stateService.ensure(lessonLocalId: lessonLocalId, userId: 'lab-user');
 
     const t02Client = LaboratoryT02Client();
@@ -178,14 +186,17 @@ class SimOrganism {
     );
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
-    final curriculumSync = LessonCurriculumSyncEngine(stateService: stateService);
+    final curriculumSync = LessonCurriculumSyncEngine(
+      stateService: stateService,
+    );
 
     final audioPreference = AudioPreference();
     final audioCore = AudioCore(
       preference: audioPreference,
       playback: NoopAudioPlaybackAdapter(),
       generatedAudioClient: const LaboratoryGeneratedAudioClient(),
-      stableLangProvider: () => stateService.read(lessonLocalId)?.profile.stableLang ?? '',
+      stableLangProvider: () =>
+          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
     );
     final mediaService = StudentLessonMediaService(
       audioCore: audioCore,
