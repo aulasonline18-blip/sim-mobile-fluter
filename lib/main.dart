@@ -5699,6 +5699,12 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final locked = session.answersLocked || awaitingQualifier;
     final isConcluido = phase.type == ClassroomPhaseType.concluido;
     final selectedLetter = phase.letter?.name ?? session.selectedAnswer;
+    final hasLessonContent = session.t02Explanation?.trim().isNotEmpty == true &&
+        session.t02Question?.trim().isNotEmpty == true &&
+        opts != null &&
+        (opts['A']?.trim().isNotEmpty ?? false) &&
+        (opts['B']?.trim().isNotEmpty ?? false) &&
+        (opts['C']?.trim().isNotEmpty ?? false);
 
     if (isDone) return _buildDoneScreen(topic);
 
@@ -5779,26 +5785,58 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                                 ),
                               ),
                             ),
-                          ] else ...[
+                          ] else if (hasLessonContent) ...[
                             Text(
-                              session.t02Explanation ?? '',
+                              session.t02Explanation!,
                               style: const TextStyle(
                                 color: simMuted,
                                 fontSize: 15,
                                 height: 1.45,
                               ),
                             ),
+                          ] else ...[
+                            const Text(
+                              'A aula ainda nao carregou o conteudo real.',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'O SIM precisa receber explicacao, pergunta e alternativas A/B/C do T02 antes de abrir a sala.',
+                              style: TextStyle(
+                                color: simMuted,
+                                fontSize: 13.5,
+                                height: 1.35,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: session.loadT02Content,
+                              child: const Text(
+                                'Tentar novamente',
+                                style: TextStyle(
+                                  color: simDark,
+                                  fontWeight: FontWeight.w700,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
                           ],
-                          const SizedBox(height: 14),
-                          LessonImagePanel(session: session),
-                          if (session.audioError != null) ...[
+                          if (hasLessonContent) ...[
+                            const SizedBox(height: 14),
+                            LessonImagePanel(session: session),
+                          ],
+                          if (hasLessonContent && session.audioError != null) ...[
                             const SizedBox(height: 10),
                             StatusLine(
                               icon: Icons.volume_off_outlined,
                               text: session.audioError!,
                             ),
                           ],
-                          if (session.audioLoading) ...[
+                          if (hasLessonContent && session.audioLoading) ...[
                             const SizedBox(height: 10),
                             const StatusLine(
                               icon: Icons.volume_up_outlined,
@@ -5806,20 +5844,23 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               loading: true,
                             ),
                           ],
-                          const SizedBox(height: 10),
-                          StatusLine(
-                            icon: session.audioEnabled
-                                ? session.audioStatus == 'playing'
-                                    ? Icons.pause_circle_outline
-                                    : Icons.volume_up_outlined
-                                : Icons.volume_off_outlined,
-                            text: session.audioEnabled
-                                ? session.audioStatus == 'playing'
-                                    ? 'Audio da aula tocando'
-                                    : 'Audio da aula ligado'
-                                : 'Audio da aula desligado',
-                          ),
-                          if (session.audioEnabled &&
+                          if (hasLessonContent) ...[
+                            const SizedBox(height: 10),
+                            StatusLine(
+                              icon: session.audioEnabled
+                                  ? session.audioStatus == 'playing'
+                                      ? Icons.pause_circle_outline
+                                      : Icons.volume_up_outlined
+                                  : Icons.volume_off_outlined,
+                              text: session.audioEnabled
+                                  ? session.audioStatus == 'playing'
+                                      ? 'Audio da aula tocando'
+                                      : 'Audio da aula ligado'
+                                  : 'Audio da aula desligado',
+                            ),
+                          ],
+                          if (hasLessonContent &&
+                              session.audioEnabled &&
                               !session.audioLoading &&
                               session.t02Explanation != null) ...[
                             const SizedBox(height: 8),
@@ -5843,62 +5884,60 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Pergunta',
-                            style: TextStyle(
-                              color: simDark,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                          if (hasLessonContent) ...[
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Pergunta',
+                              style: TextStyle(
+                                color: simDark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            session.t02Question ??
-                                'Qual alternativa mostra que voce entendeu este ponto?',
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 15,
-                              height: 1.4,
+                            const SizedBox(height: 8),
+                            Text(
+                              session.t02Question!,
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 15,
+                                height: 1.4,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          AnswerButton(
-                            label: 'A',
-                            text: opts?['A'] ??
-                                'Consigo explicar com minhas palavras.',
-                            active: selectedLetter == 'A',
-                            locked: locked,
-                            correct: (isConcluido || awaitingQualifier) &&
-                                session.t02CorrectAnswer == 'A',
-                            onTap: locked
-                                ? null
-                                : () => session.chooseAulaAnswer('A'),
-                          ),
-                          AnswerButton(
-                            label: 'B',
-                            text: opts?['B'] ??
-                                'Entendi uma parte, mas preciso revisar.',
-                            active: selectedLetter == 'B',
-                            locked: locked,
-                            correct: (isConcluido || awaitingQualifier) &&
-                                session.t02CorrectAnswer == 'B',
-                            onTap: locked
-                                ? null
-                                : () => session.chooseAulaAnswer('B'),
-                          ),
-                          AnswerButton(
-                            label: 'C',
-                            text: opts?['C'] ??
-                                'Ainda estou perdido e preciso de recuperacao.',
-                            active: selectedLetter == 'C',
-                            locked: locked,
-                            correct: (isConcluido || awaitingQualifier) &&
-                                session.t02CorrectAnswer == 'C',
-                            onTap: locked
-                                ? null
-                                : () => session.chooseAulaAnswer('C'),
-                          ),
+                            const SizedBox(height: 12),
+                            AnswerButton(
+                              label: 'A',
+                              text: opts['A']!,
+                              active: selectedLetter == 'A',
+                              locked: locked,
+                              correct: (isConcluido || awaitingQualifier) &&
+                                  session.t02CorrectAnswer == 'A',
+                              onTap: locked
+                                  ? null
+                                  : () => session.chooseAulaAnswer('A'),
+                            ),
+                            AnswerButton(
+                              label: 'B',
+                              text: opts['B']!,
+                              active: selectedLetter == 'B',
+                              locked: locked,
+                              correct: (isConcluido || awaitingQualifier) &&
+                                  session.t02CorrectAnswer == 'B',
+                              onTap: locked
+                                  ? null
+                                  : () => session.chooseAulaAnswer('B'),
+                            ),
+                            AnswerButton(
+                              label: 'C',
+                              text: opts['C']!,
+                              active: selectedLetter == 'C',
+                              locked: locked,
+                              correct: (isConcluido || awaitingQualifier) &&
+                                  session.t02CorrectAnswer == 'C',
+                              onTap: locked
+                                  ? null
+                                  : () => session.chooseAulaAnswer('C'),
+                            ),
+                          ],
                           if (awaitingQualifier) ...[
                             const SizedBox(height: 14),
                             _FeedbackBanner(
