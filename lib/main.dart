@@ -178,7 +178,13 @@ class LabSession extends ChangeNotifier {
     if (_creditService != null) return _creditService!;
     final prefs = await SharedPreferences.getInstance();
     return _creditService = CreditService(
-      client: SimServerCreditClient(config: _getServerConfig()),
+      client: SimServerCreditClient(
+        config: SimAiServerConfig(
+          baseUrl: simServerBaseUrl,
+          accessTokenProvider: () async =>
+              Supabase.instance.client.auth.currentSession?.accessToken,
+        ),
+      ),
       stateService: _ensureController().organism.stateService,
       preferences: prefs,
     );
