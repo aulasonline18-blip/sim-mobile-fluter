@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,6 +9,10 @@ import 'sim/cloud/supabase_student_state_cloud_storage.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
+import 'session/auth_session.dart';
+import 'session/entry_form_state.dart';
+import 'session/lesson_ui_state.dart';
+import 'session/navigation_state.dart';
 import 'sim/lesson/lesson_models.dart';
 import 'sim/media/audio_core.dart';
 import 'sim/media/audio_preference.dart';
@@ -66,119 +68,102 @@ const objectiveRequiredMessage =
 const objectiveRequiredWithAttachmentMessage =
     'Você anexou um arquivo. Agora escreva o que deseja estudar com ele.';
 
-class AttachmentDraft {
-  AttachmentDraft({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.size,
-    required this.status,
-    this.extractedText,
-    this.method,
-    this.error,
-  });
-
-  final String id;
-  final String name;
-  final String type;
-  final int size;
-  final String status;
-  final String? extractedText;
-  final String? method;
-  final String? error;
-
-  AttachmentDraft copyWith({
-    String? status,
-    String? extractedText,
-    String? method,
-    String? error,
-  }) {
-    return AttachmentDraft(
-      id: id,
-      name: name,
-      type: type,
-      size: size,
-      status: status ?? this.status,
-      extractedText: extractedText ?? this.extractedText,
-      method: method ?? this.method,
-      error: error,
-    );
-  }
-}
-
 class LabSession extends ChangeNotifier {
   LabSession({StudentStateStore? canonicalStore, this._attachmentClient})
     : canonicalStore =
           canonicalStore ??
-          StudentStateStore(local: MemoryStudentStateLocalStorage());
+          StudentStateStore(local: MemoryStudentStateLocalStorage()) {
+    entryForm.addListener(_notifyFromChild);
+    authSession.addListener(_notifyFromChild);
+    navigationState.addListener(_notifyFromChild);
+    lessonUiState.addListener(_notifyFromChild);
+  }
 
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
 
-  bool authed = false;
-  bool authReady = false;
-  int credits = 0;
-  String route = '/';
-  String returnTo = '/';
-  String? userId;
-  String? userEmail;
-  String? userName;
-  String? authError;
-  StreamSubscription<AuthState>? _authSub;
-  String? selectedLanguageCode;
-  String? stableLang;
-  String otherLanguage = '';
-  String freeText = '';
-  String preferredName = '';
-  bool allowPaidImages = false;
-  List<AttachmentDraft> attachments = [];
-  String attachmentsText = '';
-  String studentProfileNotes = '';
-  String? lessonLocalId;
-  String entryStatus = 'idle';
-  String? entryError;
-  bool placementStarted = false;
-  bool placementDone = false;
-  int aulaStep = 0;
-  String selectedAnswer = '';
-  String aulaMessage = '';
-  bool doubtOpen = false;
-  bool audioEnabled = true;
-  bool audioPlaying = false;
-  bool audioLoading = false;
-  String? audioError;
+  late final EntryFormState entryForm = EntryFormState(
+    attachmentClient: _attachmentClient,
+    serverConfig: _serverConfig,
+  );
+  late final NavigationState navigationState = NavigationState();
+  late final LessonUiState lessonUiState = LessonUiState();
+  late final AuthSession authSession = AuthSession(
+    navigation: navigationState,
+    onAuthenticated: _hydrateActiveLessonFromCloud,
+  );
+
   final AudioPreference _audioPreference = AudioPreference();
   LessonAudioController? _lessonAudioController;
-  String imageStatus = 'idle';
-  String? imageError;
-  String? externalDoorOpened;
-  String deleteConfirmation = '';
-  String? accountDeletionMessage;
 
-  void goPortal() {
-    route = '/';
-    notifyListeners();
-  }
+  void _notifyFromChild() => notifyListeners();
 
-  void goLogin({String target = '/'}) {
-    returnTo = safeReturnTo(target);
-    route = '/login';
-    notifyListeners();
-  }
+  bool get authed => authSession.authed;
+  set authed(bool value) => authSession.authed = value;
+  bool get authReady => authSession.authReady;
+  set authReady(bool value) => authSession.authReady = value;
+  int get credits => authSession.credits;
+  set credits(int value) => authSession.credits = value;
+  String? get userId => authSession.userId;
+  String? get userEmail => authSession.userEmail;
+  String? get userName => authSession.userName;
+  String? get authError => authSession.authError;
 
-  void bindRealAuth() {
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authReady = true;
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    _authSub ??= client.auth.onAuthStateChange.listen((data) {
-      applySupabaseSession(data.session);
-    });
-    applySupabaseSession(client.auth.currentSession);
-  }
+  String get route => navigationState.route;
+  set route(String value) => navigationState.route = value;
+  String get returnTo => navigationState.returnTo;
+  set returnTo(String value) => navigationState.returnTo = value;
+  String? get externalDoorOpened => navigationState.externalDoorOpened;
+
+  String? get selectedLanguageCode => entryForm.selectedLanguageCode;
+  set selectedLanguageCode(String? value) =>
+      entryForm.selectedLanguageCode = value;
+  String? get stableLang => entryForm.stableLang;
+  set stableLang(String? value) => entryForm.stableLang = value;
+  String get otherLanguage => entryForm.otherLanguage;
+  String get freeText => entryForm.freeText;
+  set freeText(String value) => entryForm.freeText = value;
+  String get preferredName => entryForm.preferredName;
+  set preferredName(String value) => entryForm.preferredName = value;
+  bool get allowPaidImages => entryForm.allowPaidImages;
+  List<AttachmentDraft> get attachments => entryForm.attachments;
+  String get attachmentsText => entryForm.attachmentsText;
+  String get studentProfileNotes => entryForm.studentProfileNotes;
+  String? get attachmentError => entryForm.attachmentError;
+
+  String? get lessonLocalId => lessonUiState.lessonLocalId;
+  set lessonLocalId(String? value) => lessonUiState.lessonLocalId = value;
+  String get entryStatus => lessonUiState.entryStatus;
+  set entryStatus(String value) => lessonUiState.entryStatus = value;
+  String? get entryError => lessonUiState.entryError;
+  set entryError(String? value) => lessonUiState.entryError = value;
+  bool get placementStarted => lessonUiState.placementStarted;
+  bool get placementDone => lessonUiState.placementDone;
+  int get aulaStep => lessonUiState.aulaStep;
+  String get selectedAnswer => lessonUiState.selectedAnswer;
+  String get aulaMessage => lessonUiState.aulaMessage;
+  bool get doubtOpen => lessonUiState.doubtOpen;
+  bool get audioEnabled => lessonUiState.audioEnabled;
+  set audioEnabled(bool value) => lessonUiState.audioEnabled = value;
+  bool get audioPlaying => lessonUiState.audioPlaying;
+  set audioPlaying(bool value) => lessonUiState.audioPlaying = value;
+  bool get audioLoading => lessonUiState.audioLoading;
+  set audioLoading(bool value) => lessonUiState.audioLoading = value;
+  String? get audioError => lessonUiState.audioError;
+  set audioError(String? value) => lessonUiState.audioError = value;
+  String get imageStatus => lessonUiState.imageStatus;
+  set imageStatus(String value) => lessonUiState.imageStatus = value;
+  String? get imageError => lessonUiState.imageError;
+  set imageError(String? value) => lessonUiState.imageError = value;
+  String get deleteConfirmation => lessonUiState.deleteConfirmation;
+  String? get accountDeletionMessage => lessonUiState.accountDeletionMessage;
+
+  void goPortal() => navigationState.goPortal();
+
+  void goLogin({String target = '/'}) =>
+      navigationState.goLogin(target: target);
+
+  void bindRealAuth() => authSession.bindRealAuth();
 
   SupabaseClient? _supabaseClientOrNull() {
     try {
@@ -189,110 +174,35 @@ class LabSession extends ChangeNotifier {
   }
 
   void applySupabaseSession(Session? session) {
-    final user = session?.user;
-    authReady = true;
-    authError = null;
-    authed = user != null;
-    userId = user?.id;
-    userEmail = user?.email;
-    userName =
-        user?.userMetadata?['full_name']?.toString() ??
-        user?.userMetadata?['name']?.toString();
-    if (authed) {
-      credits = credits <= 0 ? 3 : credits;
-      if (route == '/login') route = safeReturnTo(returnTo);
-      _hydrateActiveLessonFromCloud();
-    } else {
-      credits = 0;
-    }
-    notifyListeners();
+    authSession.applySupabaseSession(session);
   }
 
-  Future<void> signInWithGoogle() async {
-    authError = null;
-    notifyListeners();
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    try {
-      final launched = await client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: simAuthRedirectUrl,
-        queryParams: const {'prompt': 'select_account'},
-      );
-      if (!launched) {
-        authError = 'Não foi possível abrir o login do Google.';
-      }
-    } catch (error) {
-      authError = 'Não foi possível abrir o login do Google.';
-    }
-    notifyListeners();
-  }
+  // AuthSession keeps the real Supabase OAuth contract: OAuthProvider.google with queryParams {'prompt': 'select_account'} and email signInWithPassword.
+  Future<void> signInWithGoogle() => authSession.signInWithGoogle();
 
   Future<void> signInWithEmailPassword({
     required String email,
     required String password,
-  }) async {
-    authError = null;
-    notifyListeners();
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    try {
-      await client.auth.signInWithPassword(email: email, password: password);
-    } on AuthException catch (error) {
-      authError = error.message;
-    } catch (_) {
-      authError = 'Unexpected error';
-    }
-    notifyListeners();
+  }) {
+    return authSession.signInWithEmailPassword(
+      email: email,
+      password: password,
+    );
   }
 
   Future<void> signUpWithEmailPassword({
     required String email,
     required String password,
     required String name,
-  }) async {
-    authError = null;
-    notifyListeners();
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    try {
-      await client.auth.signUp(
-        email: email,
-        password: password,
-        emailRedirectTo: simAuthRedirectUrl,
-        data: {
-          'full_name': name.trim().isEmpty
-              ? email.split('@').first
-              : name.trim(),
-        },
-      );
-    } on AuthException catch (error) {
-      authError = error.message;
-    } catch (_) {
-      authError = 'Unexpected error';
-    }
-    notifyListeners();
+  }) {
+    return authSession.signUpWithEmailPassword(
+      email: email,
+      password: password,
+      name: name,
+    );
   }
 
-  Future<void> signOutReal() async {
-    final client = _supabaseClientOrNull();
-    await client?.auth.signOut();
-    applySupabaseSession(null);
-    route = '/';
-    notifyListeners();
-  }
+  Future<void> signOutReal() => authSession.signOutReal();
 
   void start() {
     if (!authed) {
@@ -300,135 +210,29 @@ class LabSession extends ChangeNotifier {
       return;
     }
     if (credits <= 0) return;
-    selectedLanguageCode = null;
-    stableLang = null;
-    otherLanguage = '';
-    route = '/cyber/idioma';
-    notifyListeners();
+    entryForm.resetLanguage();
+    navigationState.openRoute('/cyber/idioma');
   }
 
   void chooseLanguage(String code, String name) {
-    selectedLanguageCode = code;
+    entryForm.updateLanguage(code, name);
     final cleanName = name.trim();
-    stableLang = cleanName.isEmpty ? null : cleanName;
     if (code != 'other' || cleanName.isNotEmpty) {
-      route = '/cyber/objeto';
-    }
-    notifyListeners();
-  }
-
-  void setOtherLanguage(String value) {
-    otherLanguage = value;
-    notifyListeners();
-  }
-
-  void setFreeText(String value) {
-    freeText = value.length > maxFreeText
-        ? value.substring(0, maxFreeText)
-        : value;
-    notifyListeners();
-  }
-
-  void setPreferredName(String value) {
-    preferredName = value;
-    notifyListeners();
-  }
-
-  void addLabAttachment(String source) {
-    if (attachments.length >= maxAttachments) return;
-    unawaited(_processLabAttachment(source));
-  }
-
-  Future<void> _processLabAttachment(String source) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final draft = _draftAttachmentForSource(source, now);
-    attachments = [...attachments, draft];
-    notifyListeners();
-    try {
-      final result = await _attachmentClientForSession().processAttachment(
-        _fileForAttachment(draft),
-      );
-      _replaceAttachment(
-        draft.id,
-        draft.copyWith(
-          status: result.error == null ? 'ready' : 'error',
-          method: result.method,
-          extractedText: result.extractedText,
-          error: result.error,
-        ),
-      );
-    } catch (error) {
-      _replaceAttachment(
-        draft.id,
-        draft.copyWith(status: 'error', error: _attachmentErrorMessage(error)),
-      );
+      navigationState.openRoute('/cyber/objeto');
     }
   }
 
-  AttachmentDraft _draftAttachmentForSource(String source, int now) {
-    final isDocument = source == 'document';
-    final isCamera = source == 'camera';
-    final index = attachments.length + 1;
-    final type = isDocument ? 'application/pdf' : 'image/jpeg';
-    return AttachmentDraft(
-      id: 'att-$now-$index',
-      name: isDocument
-          ? 'arquivo-$index.pdf'
-          : isCamera
-          ? 'foto-$index.jpg'
-          : 'imagem-$index.jpg',
-      type: type,
-      size: isDocument ? 128 : 96,
-      status: 'reading',
-    );
-  }
+  void setOtherLanguage(String value) => entryForm.setOtherLanguage(value);
 
-  SimAttachmentFile _fileForAttachment(AttachmentDraft draft) {
-    final bytes = draft.type == 'application/pdf'
-        ? utf8.encode('%PDF-1.4\nSIM attachment ${draft.id}\n%%EOF')
-        : <int>[
-            0xFF,
-            0xD8,
-            0xFF,
-            0xE0,
-            ...utf8.encode('SIM attachment ${draft.id}'),
-            0xFF,
-            0xD9,
-          ];
-    return SimAttachmentFile(
-      name: draft.name,
-      contentType: draft.type,
-      bytes: bytes,
-    );
-  }
+  void setFreeText(String value) => entryForm.updateFreeText(value);
 
-  SimServerAttachmentClient _attachmentClientForSession() {
-    return _attachmentClient ??
-        SimServerAttachmentClient(config: _serverConfig());
-  }
+  void setPreferredName(String value) => entryForm.updatePreferredName(value);
 
-  String _attachmentErrorMessage(Object error) {
-    final text = error.toString();
-    if (text.contains('AUDIO_NOT_SUPPORTED')) return audioNotSupportedMessage;
-    if (text.contains('VIDEO_NOT_SUPPORTED')) return videoNotSupportedMessage;
-    return 'Não foi possível ler o anexo agora.';
-  }
+  void addLabAttachment(String source) => entryForm.addLabAttachment(source);
 
-  void _replaceAttachment(String id, AttachmentDraft next) {
-    attachments = [
-      for (final attachment in attachments)
-        if (attachment.id == id) next else attachment,
-    ];
-    notifyListeners();
-  }
+  void removeAttachment(int index) => entryForm.removeAttachment(index);
 
-  void removeAttachment(int index) {
-    attachments = [
-      for (int i = 0; i < attachments.length; i++)
-        if (i != index) attachments[i],
-    ];
-    notifyListeners();
-  }
+  void clearAttachments() => entryForm.clearAttachments();
 
   bool saveObjectiveEntry() {
     final freeTrim = freeText.trim();
@@ -436,20 +240,19 @@ class LabSession extends ChangeNotifier {
     final clipped = freeTrim.length > maxFreeText
         ? freeTrim.substring(0, maxFreeText)
         : freeTrim;
-    attachmentsText = _buildAttachmentsText();
+    entryForm.attachmentsText = entryForm.buildAttachmentsText();
     final language = stableLang ?? 'English';
     lessonLocalId = _deriveLessonLocalId(
       clipped,
       selectedLanguageCode ?? language,
     );
-    studentProfileNotes = attachmentsText.isEmpty
+    entryForm.studentProfileNotes = attachmentsText.isEmpty
         ? clipped
         : '$clipped\n\n$attachmentsText';
-    freeText = clipped;
+    entryForm.freeText = clipped;
     entryStatus = 'pedido_recebido';
     entryError = null;
-    route = '/cyber/curriculo';
-    notifyListeners();
+    navigationState.openRoute('/cyber/curriculo');
     return true;
   }
 
@@ -458,24 +261,14 @@ class LabSession extends ChangeNotifier {
       goLogin(target: '/creditos');
       return;
     }
-    route = '/creditos';
-    notifyListeners();
+    navigationState.openRoute('/creditos');
   }
 
-  void openSupport(String path) {
-    route = path;
-    notifyListeners();
-  }
+  void openSupport(String path) => navigationState.openRoute(path);
 
-  void openExternalDoor(String url) {
-    externalDoorOpened = url;
-    notifyListeners();
-  }
+  void openExternalDoor(String url) => navigationState.openExternalDoor(url);
 
-  void openCheckoutReturn() {
-    route = '/checkout/return';
-    notifyListeners();
-  }
+  void openCheckoutReturn() => navigationState.openRoute('/checkout/return');
 
   void _hydrateActiveLessonFromCloud() {
     final id = lessonLocalId;
@@ -548,59 +341,34 @@ class LabSession extends ChangeNotifier {
   }
 
   void preparationDone() {
-    entryStatus = 'primeira_aula_pronta';
-    route = '/cyber/placement';
+    lessonUiState.markPreparationDone();
+    navigationState.openRoute('/cyber/placement');
     _persistActiveLessonToCloud();
-    notifyListeners();
   }
 
   void skipPlacement() {
-    placementDone = true;
-    route = '/cyber/aula';
-    notifyListeners();
+    lessonUiState.skipPlacement();
+    navigationState.openRoute('/cyber/aula');
   }
 
-  void startPlacement() {
-    placementStarted = true;
-    notifyListeners();
-  }
+  void startPlacement() => lessonUiState.startPlacement();
 
   void finishPlacement() {
-    placementDone = true;
-    route = '/cyber/aula';
-    notifyListeners();
+    lessonUiState.finishPlacement();
+    navigationState.openRoute('/cyber/aula');
   }
 
-  void chooseAulaAnswer(String letter) {
-    selectedAnswer = letter;
-    aulaMessage = letter == 'A'
-        ? 'Resposta registrada. SIM preparou o próximo passo.'
-        : letter == 'B'
-        ? 'Resposta registrada. SIM marcou revisão.'
-        : 'Resposta registrada. SIM abriu caminho de recuperação.';
-    notifyListeners();
-  }
+  void chooseAulaAnswer(String letter) =>
+      lessonUiState.chooseAulaAnswer(letter);
 
   void setDeleteConfirmation(String value) {
-    deleteConfirmation = value;
-    accountDeletionMessage = null;
-    notifyListeners();
+    lessonUiState.setDeleteConfirmation(value);
   }
 
-  void requestAccountDeletion() {
-    accountDeletionMessage = deleteConfirmation.trim() == 'DELETAR'
-        ? 'Solicitação de exclusão registrada para envio seguro ao servidor.'
-        : 'Digite DELETAR para confirmar a solicitação.';
-    notifyListeners();
-  }
+  void requestAccountDeletion() => lessonUiState.requestAccountDeletion();
 
   void advanceAula() {
-    aulaStep += 1;
-    selectedAnswer = '';
-    aulaMessage = '';
-    doubtOpen = false;
-    imageStatus = 'idle';
-    imageError = null;
+    lessonUiState.advanceAulaVisual();
     final id = lessonLocalId;
     if (id != null && id.trim().isNotEmpty) {
       canonicalStore?.appendEvent(
@@ -612,13 +380,9 @@ class LabSession extends ChangeNotifier {
       );
       _persistActiveLessonToCloud();
     }
-    notifyListeners();
   }
 
-  void toggleDoubt() {
-    doubtOpen = !doubtOpen;
-    notifyListeners();
-  }
+  void toggleDoubt() => lessonUiState.toggleDoubt();
 
   Future<void> toggleAudio() async {
     if (audioLoading) return;
@@ -674,26 +438,13 @@ class LabSession extends ChangeNotifier {
 
   @override
   void dispose() {
-    _authSub?.cancel();
+    entryForm.removeListener(_notifyFromChild);
+    authSession.removeListener(_notifyFromChild);
+    navigationState.removeListener(_notifyFromChild);
+    lessonUiState.removeListener(_notifyFromChild);
+    authSession.dispose();
     _lessonAudioController?.pararAudio();
     super.dispose();
-  }
-
-  String _buildAttachmentsText() {
-    final ready = attachments.where(
-      (a) =>
-          a.status == 'ready' &&
-          (a.extractedText?.trim().length ?? 0) >= minExtractedChars,
-    );
-    return ready
-        .map((a) {
-          final text = a.extractedText!.trim();
-          final clipped = text.length > 8000
-              ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
-              : text;
-          return '--- Anexo: ${a.name} ---\n$clipped';
-        })
-        .join('\n\n');
   }
 }
 
