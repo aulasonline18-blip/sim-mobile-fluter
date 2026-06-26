@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'sim/cloud/sim_server_cloud_functions.dart';
+import 'sim/cloud/supabase_flutter_session_provider.dart';
+import 'sim/cloud/supabase_student_state_cloud_storage.dart';
+import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/state/shared_prefs_state_storage.dart';
 import 'sim/state/student_state_store.dart';
 
@@ -11,6 +15,7 @@ const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
 const simSupabaseAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
+const simApiBaseUrl = 'http://167.179.109.137:3000';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +25,17 @@ Future<void> main() async {
   );
   final prefs = await SharedPreferences.getInstance();
   final stateStorage = SharedPrefsStudentStateLocalStorage(prefs);
-  final canonicalStore = StudentStateStore(local: stateStorage);
+  const sessionProvider = SupabaseFlutterSessionProvider();
+  final cloudStorage = SupabaseStudentStateCloudStorage(
+    cloudFunctions: SimServerCloudFunctions(
+      config: const SimAiServerConfig(baseUrl: simApiBaseUrl),
+    ),
+    sessionProvider: sessionProvider,
+  );
+  final canonicalStore = StudentStateStore(
+    local: stateStorage,
+    cloud: cloudStorage,
+  );
   runApp(SimMobileApp(canonicalStore: canonicalStore));
 }
 
@@ -155,6 +170,7 @@ class LabSession extends ChangeNotifier {
     if (authed) {
       credits = credits <= 0 ? 3 : credits;
       if (route == '/login') route = safeReturnTo(returnTo);
+      _hydrateActiveLessonFromCloud();
     } else {
       credits = 0;
     }
@@ -364,9 +380,28 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _hydrateActiveLessonFromCloud() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return;
+    final store = canonicalStore;
+    if (store == null) return;
+    unawaited(
+      store.hydrateFromCloud(id).catchError((_) => store.readState(id)),
+    );
+  }
+
+  void _persistActiveLessonToCloud() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return;
+    final store = canonicalStore;
+    if (store == null) return;
+    unawaited(store.persistCloud(id).catchError((_) {}));
+  }
+
   void preparationDone() {
     entryStatus = 'primeira_aula_pronta';
     route = '/cyber/placement';
+    _persistActiveLessonToCloud();
     notifyListeners();
   }
 
@@ -417,6 +452,17 @@ class LabSession extends ChangeNotifier {
     doubtOpen = false;
     imageStatus = 'idle';
     imageError = null;
+    final id = lessonLocalId;
+    if (id != null && id.trim().isNotEmpty) {
+      canonicalStore?.appendEvent(
+        lessonLocalId: id,
+        type: 'ITEM_ADVANCED',
+        payload: {'aula_step': aulaStep},
+        source: 'lab_session',
+        userId: userId,
+      );
+      _persistActiveLessonToCloud();
+    }
     notifyListeners();
   }
 
