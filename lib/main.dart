@@ -1,7 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'sim/state/shared_prefs_state_storage.dart';
+import 'sim/state/student_state_store.dart';
 
 const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
 const simSupabaseAnonKey =
@@ -14,7 +18,10 @@ Future<void> main() async {
     url: simSupabaseUrl,
     publishableKey: simSupabaseAnonKey,
   );
-  runApp(const SimMobileApp());
+  final prefs = await SharedPreferences.getInstance();
+  final stateStorage = SharedPrefsStudentStateLocalStorage(prefs);
+  final canonicalStore = StudentStateStore(local: stateStorage);
+  runApp(SimMobileApp(canonicalStore: canonicalStore));
 }
 
 const simDark = Color(0xFF111827);
@@ -58,6 +65,13 @@ class AttachmentDraft {
 }
 
 class LabSession extends ChangeNotifier {
+  LabSession({StudentStateStore? canonicalStore})
+    : canonicalStore =
+          canonicalStore ??
+          StudentStateStore(local: MemoryStudentStateLocalStorage());
+
+  final StudentStateStore canonicalStore;
+
   bool authed = false;
   bool authReady = false;
   int credits = 0;
@@ -481,8 +495,13 @@ String _deriveLessonLocalId(String objetivo, String idioma) {
 }
 
 class SimMobileApp extends StatefulWidget {
-  const SimMobileApp({super.key, this.initialSession});
+  const SimMobileApp({
+    required this.canonicalStore,
+    super.key,
+    this.initialSession,
+  });
 
+  final StudentStateStore canonicalStore;
   final LabSession? initialSession;
 
   @override
@@ -490,7 +509,9 @@ class SimMobileApp extends StatefulWidget {
 }
 
 class _SimMobileAppState extends State<SimMobileApp> {
-  late final LabSession session = widget.initialSession ?? LabSession();
+  late final LabSession session =
+      widget.initialSession ??
+      LabSession(canonicalStore: widget.canonicalStore);
 
   @override
   void initState() {
