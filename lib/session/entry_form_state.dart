@@ -163,7 +163,7 @@ class EntryFormState extends ChangeNotifier {
     );
     return ready
         .map((a) {
-          final text = a.extractedText!.trim();
+          final text = a.extractedText?.trim() ?? '';
           final clipped = text.length > 8000
               ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
               : text;
