@@ -83,29 +83,37 @@ void main() {
     expect(service.read('cyber-x')?.curriculum?.items, hasLength(1));
   });
 
-  test('StudentExperienceEngine releases first item and routes to placement', () async {
-    final service = StudentLearningStateService();
-    final t00 = StudentExperienceT00Adapter(
-      service: service,
-      client: FakeT00Client(),
-    );
-    final engine = StudentExperienceEngine(
-      service: service,
-      t00: t00,
-      placement: const LabPlacementDecisionReader(settled: false),
-    );
+  test(
+    'StudentExperienceEngine releases first item and routes to placement',
+    () async {
+      final service = StudentLearningStateService();
+      final t00 = StudentExperienceT00Adapter(
+        service: service,
+        client: FakeT00Client(),
+      );
+      final engine = StudentExperienceEngine(
+        service: service,
+        t00: t00,
+        placement: const LabPlacementDecisionReader(settled: false),
+      );
 
-    final result = await engine.prepareStudentExperienceEntry(
-      const StudentExperienceArgs(
-        academic: 'fundamental',
-        idioma: 'pt-BR',
-        lessonLocalId: 'cyber-fractions',
-        onboarding: {'objetivo': 'Aprender frações'},
-      ),
-    );
+      final result = await engine.prepareStudentExperienceEntry(
+        const StudentExperienceArgs(
+          academic: 'fundamental',
+          idioma: 'pt-BR',
+          lessonLocalId: 'cyber-fractions',
+          onboarding: {'objetivo': 'Aprender frações'},
+        ),
+      );
 
-    expect(result.destination, '/cyber/placement');
-    expect(result.curriculum.items.first.marker, 'M1');
-    expect(service.read('cyber-fractions')?.entry?.firstItemMarker, 'M1');
-  });
+      expect(result.destination, '/cyber/placement');
+      expect(result.curriculum.items.first.marker, 'M1');
+      final state = service.read('cyber-fractions');
+      expect(state?.entry?.firstItemMarker, 'M1');
+      expect(
+        state?.events.map((event) => event.type),
+        contains('CURRICULUM_GENERATED'),
+      );
+    },
+  );
 }

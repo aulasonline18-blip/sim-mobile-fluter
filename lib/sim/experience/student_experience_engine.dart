@@ -1,3 +1,4 @@
+import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import 'student_experience_guards.dart';
 import 'student_experience_store.dart';
@@ -57,6 +58,21 @@ class StudentExperienceEngine {
 
     try {
       final first = await t00.startT00UntilFirstItem(args);
+      service.appendEvent(
+        args.lessonLocalId,
+        StudentLearningEvent(
+          type: 'CURRICULUM_GENERATED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: {
+            'lessonLocalId': args.lessonLocalId,
+            'topic': first.curriculum.topic,
+            'totalItems': first.curriculum.items.length,
+            'firstMarker': first.marker,
+            'firstItemIndex': first.itemIndex,
+            'source': 'StudentExperienceEngine',
+          },
+        ),
+      );
       publishStudentExperienceEvent(
         service,
         args.lessonLocalId,

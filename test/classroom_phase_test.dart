@@ -208,10 +208,12 @@ void main() {
       final truth = state.extra['truth'] as Map;
       final status = truth['item_consolidation_status'] as Map;
       expect(status['M1'], MasteryStatus.falseMastery.name);
-      expect(
-        store.getEventLog('cyber-class').map((event) => event.type),
-        contains('MASTERY_EVALUATED'),
-      );
+      final eventTypes = store
+          .getEventLog('cyber-class')
+          .map((event) => event.type);
+      expect(eventTypes, contains('MASTERY_EVALUATED'));
+      expect(eventTypes, contains('WEAKNESS_REGISTERED'));
+      expect(eventTypes, contains('REINFORCEMENT_REQUIRED'));
     },
   );
 
@@ -253,6 +255,12 @@ void main() {
       final truth = state.extra['truth'] as Map;
       final status = truth['item_consolidation_status'] as Map;
       expect(status['M1'], MasteryStatus.mastered.name);
+      final eventTypes = store
+          .getEventLog('cyber-class')
+          .map((event) => event.type);
+      expect(eventTypes, contains('NEXT_ACTION_DECIDED'));
+      expect(eventTypes, contains('ITEM_MASTERED'));
+      expect(eventTypes, contains('ITEM_ADVANCED'));
     },
   );
 

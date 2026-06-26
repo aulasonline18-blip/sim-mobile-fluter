@@ -121,6 +121,11 @@ class LessonAnswerProgressController {
         state: savedTruthState,
         evidence: evidence,
       );
+      _appendWeaknessEventsIfNeeded(
+        lessonLocalId: lessonLocalId,
+        state: savedTruthState,
+        evidence: evidence,
+      );
       final postMasteryState =
           stateService.read(lessonLocalId) ?? savedTruthState;
       final decidedState = _applyPostMasteryDecision(
@@ -270,6 +275,36 @@ class LessonAnswerProgressController {
       );
     }
     return stateService.read(lessonLocalId) ?? saved;
+  }
+
+  void _appendWeaknessEventsIfNeeded({
+    required String lessonLocalId,
+    required StudentLearningState state,
+    required MasteryEvidence evidence,
+  }) {
+    if (!evidence.needsReinforcement) return;
+    final payload = {
+      'marker': evidence.marker,
+      'status': evidence.status.name,
+      'reason': evidence.reason,
+      'score': evidence.score,
+      'consecutiveWrong': evidence.consecutiveWrong,
+      'attemptCount': evidence.attemptCount,
+      'needsReview': evidence.needsReview,
+      'needsReinforcement': evidence.needsReinforcement,
+    };
+    _appendCanonicalOrLegacyEvent(
+      lessonLocalId: lessonLocalId,
+      state: state,
+      type: 'WEAKNESS_REGISTERED',
+      payload: payload,
+    );
+    _appendCanonicalOrLegacyEvent(
+      lessonLocalId: lessonLocalId,
+      state: state,
+      type: 'REINFORCEMENT_REQUIRED',
+      payload: payload,
+    );
   }
 
   void _appendMasteryEvaluatedEvent({
