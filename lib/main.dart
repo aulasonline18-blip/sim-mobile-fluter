@@ -2281,7 +2281,7 @@ class LabSession extends ChangeNotifier {
       );
       notifyListeners();
     } catch (_) {
-      doubtInputError = 'Nao foi possivel anexar a imagem.';
+      doubtInputError = 'Não foi possível anexar a imagem.';
       notifyListeners();
     }
   }
@@ -3089,7 +3089,7 @@ class PortalScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          const BackgroundDecor(),
+          const _PortalBackgroundDecor(),
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -3108,7 +3108,9 @@ class PortalScreen extends StatelessWidget {
                             : const SizedBox(width: 48, height: 48),
                         CreditsPill(
                           value: displayBalance,
-                          onTap: session.openCredits,
+                          onTap: session.authed
+                              ? session.openCredits
+                              : () => session.goLogin(target: '/'),
                         ),
                       ],
                     ),
@@ -3157,6 +3159,196 @@ class PortalScreen extends StatelessWidget {
         height: MediaQuery.of(context).size.height * .82,
         child: _LessonHistoryDrawer(session: session),
       ),
+    );
+  }
+}
+
+class _PortalBackgroundDecor extends StatelessWidget {
+  const _PortalBackgroundDecor();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: const [
+        BackgroundDecor(),
+        Positioned(
+          top: 160,
+          left: -48,
+          child: _PortalRingDecor(width: 160, height: 420),
+        ),
+        Positioned(
+          right: -48,
+          bottom: 40,
+          child: _PortalRingDecor(width: 160, height: 380),
+        ),
+      ],
+    );
+  }
+}
+
+class _PortalRingDecor extends StatelessWidget {
+  const _PortalRingDecor({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.40,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: CustomPaint(painter: _PortalRingPainter()),
+      ),
+    );
+  }
+}
+
+class _PortalRingPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = simDark.withAlpha(20)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final center = Offset(size.width / 2, size.height / 2);
+    for (var radius = 18.0; radius < size.height; radius += 20) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: center,
+          width: radius * 0.75,
+          height: radius,
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PortalCopy {
+  const _PortalCopy({
+    required this.tagline,
+    required this.statementP1,
+    required this.realLearning,
+    required this.statementP2,
+    required this.statementP3,
+    required this.realProgress,
+    required this.signIn,
+    required this.start,
+    required this.helpTitle,
+    required this.helpBody,
+    required this.whatsapp,
+    required this.messenger,
+  });
+
+  final String tagline;
+  final String statementP1;
+  final String realLearning;
+  final String statementP2;
+  final String statementP3;
+  final String realProgress;
+  final String signIn;
+  final String start;
+  final String helpTitle;
+  final String helpBody;
+  final String whatsapp;
+  final String messenger;
+
+  static _PortalCopy of(LabSession session) {
+    final raw = (session.selectedLanguageCode ?? session.stableLang ?? 'en')
+        .toLowerCase();
+    if (raw.startsWith('pt') || raw.startsWith('portug')) {
+      return const _PortalCopy(
+        tagline: 'Mentor de Inteligência Inteligente',
+        statementP1: 'Inteligência artificial guiada para',
+        realLearning: 'aprendizado real',
+        statementP2: 'adaptado ao aluno',
+        statementP3:
+            ', supervisionada pelo sistema, feita para transformar esforço em',
+        realProgress: 'progresso real',
+        signIn: 'Entrar para começar',
+        start: 'Começar',
+        helpTitle: 'Ajude a melhorar o SIM.',
+        helpBody:
+            'Envie sugestões, relate dificuldades e fale direto com o desenvolvedor.',
+        whatsapp: 'Fale conosco no WhatsApp',
+        messenger: 'Fale conosco no Messenger',
+      );
+    }
+    if (raw.startsWith('es') ||
+        raw.startsWith('span') ||
+        raw.startsWith('espa')) {
+      return const _PortalCopy(
+        tagline: 'Smart Intelligence Mentor',
+        statementP1: 'Inteligencia artificial guiada para',
+        realLearning: 'aprendizaje real',
+        statementP2: 'adaptado al alumno',
+        statementP3:
+            ', supervisada por el sistema, hecha para convertir el esfuerzo en',
+        realProgress: 'progreso real',
+        signIn: 'Iniciar sesión para empezar',
+        start: 'Comenzar',
+        helpTitle: 'Ayuda a mejorar SIM.',
+        helpBody:
+            'Envía sugerencias, reporta dificultades y habla con el desarrollador.',
+        whatsapp: 'Contáctanos por WhatsApp',
+        messenger: 'Contáctanos por Messenger',
+      );
+    }
+    if (raw.startsWith('fr') ||
+        raw.startsWith('french') ||
+        raw.startsWith('franc')) {
+      return const _PortalCopy(
+        tagline: 'Smart Intelligence Mentor',
+        statementP1: 'Intelligence artificielle guidée pour',
+        realLearning: 'un vrai apprentissage',
+        statementP2: "adaptée à l'apprenant",
+        statementP3:
+            ", supervisée par le système, conçue pour transformer l'effort en",
+        realProgress: 'vrais progrès',
+        signIn: 'Se connecter pour commencer',
+        start: 'Démarrer',
+        helpTitle: 'Aidez à améliorer SIM.',
+        helpBody:
+            'Envoyez des suggestions, signalez des difficultés et parlez au développeur.',
+        whatsapp: 'Contactez-nous sur WhatsApp',
+        messenger: 'Contactez-nous sur Messenger',
+      );
+    }
+    if (raw.startsWith('ja') || raw.startsWith('japa')) {
+      return const _PortalCopy(
+        tagline: 'Smart Intelligence Mentor',
+        statementP1: 'ガイド付き人工知能で',
+        realLearning: '本当の学び',
+        statementP2: '学習者に合わせ',
+        statementP3: '、システムが監修し、努力を本当の',
+        realProgress: '進歩へと変える',
+        signIn: 'サインインして開始',
+        start: '開始',
+        helpTitle: 'SIMの改善にご協力ください。',
+        helpBody: '提案や困りごとを送り、開発者と直接話せます。',
+        whatsapp: 'WhatsAppでお問い合わせ',
+        messenger: 'Messengerでお問い合わせ',
+      );
+    }
+    return const _PortalCopy(
+      tagline: 'Smart Intelligence Mentor',
+      statementP1: 'Guided artificial intelligence for',
+      realLearning: 'real learning',
+      statementP2: 'adapted to the learner',
+      statementP3: ', supervised by the system, and built to turn effort into',
+      realProgress: 'real progress',
+      signIn: 'Sign in to start',
+      start: 'Start',
+      helpTitle: 'Help improve SIM.',
+      helpBody:
+          'Send suggestions, report difficulties, and talk directly to the developer.',
+      whatsapp: 'Contact us on WhatsApp',
+      messenger: 'Contact us on Messenger',
     );
   }
 }
@@ -3515,6 +3707,7 @@ class PortalHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _PortalCopy.of(session);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
@@ -3570,53 +3763,69 @@ class PortalHeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(width: 32, child: Divider(color: simMid, thickness: 1)),
-              SizedBox(width: 12),
+              const SizedBox(
+                width: 32,
+                child: Divider(color: simMid, thickness: 1),
+              ),
+              const SizedBox(width: 12),
               Flexible(
                 child: Text(
-                  'Smart Intelligence Mentor',
+                  copy.tagline,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: simDark,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              SizedBox(width: 12),
-              SizedBox(width: 32, child: Divider(color: simMid, thickness: 1)),
+              const SizedBox(width: 12),
+              const SizedBox(
+                width: 32,
+                child: Divider(color: simMid, thickness: 1),
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          const Text.rich(
+          Text.rich(
             TextSpan(
               children: [
-                TextSpan(text: 'Guided artificial intelligence for '),
+                TextSpan(text: '${copy.statementP1} '),
                 TextSpan(
-                  text: 'real learning',
-                  style: TextStyle(color: simDark, fontWeight: FontWeight.w700),
+                  text: copy.realLearning,
+                  style: const TextStyle(
+                    color: simDark,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                TextSpan(text: ' - '),
+                const TextSpan(text: ' - '),
                 TextSpan(
-                  text: 'adapted to the learner',
-                  style: TextStyle(color: simDark, fontWeight: FontWeight.w700),
+                  text: copy.statementP2,
+                  style: const TextStyle(
+                    color: simDark,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+                TextSpan(text: '${copy.statementP3} '),
                 TextSpan(
-                  text:
-                      ', supervised by the system, and built to turn effort into ',
+                  text: copy.realProgress,
+                  style: const TextStyle(
+                    color: simDark,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                TextSpan(
-                  text: 'real progress',
-                  style: TextStyle(color: simDark, fontWeight: FontWeight.w700),
-                ),
-                TextSpan(text: '.'),
+                const TextSpan(text: '.'),
               ],
             ),
             textAlign: TextAlign.center,
-            style: TextStyle(color: simMuted, fontSize: 15.5, height: 1.55),
+            style: const TextStyle(
+              color: simMuted,
+              fontSize: 15.5,
+              height: 1.55,
+            ),
           ),
           const SizedBox(height: 30),
           SizedBox(
@@ -3644,9 +3853,7 @@ class PortalHeroCard extends StatelessWidget {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          session.authed
-                              ? 'Iniciar agora'
-                              : 'Entrar para começar',
+                          session.authed ? copy.start : copy.signIn,
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -3673,6 +3880,7 @@ class HelpCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = _PortalCopy.of(session);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -3697,22 +3905,22 @@ class HelpCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ajude a melhorar o SIM.',
-                      style: TextStyle(
+                      copy.helpTitle,
+                      style: const TextStyle(
                         color: simDark,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Envie sugestoes, reporte dificuldades e fale direto com o desenvolvedor.',
-                      style: TextStyle(
+                      copy.helpBody,
+                      style: const TextStyle(
                         color: simMuted,
                         fontSize: 13.5,
                         height: 1.5,
@@ -3731,14 +3939,14 @@ class HelpCard extends StatelessWidget {
             children: [
               ContactButton(
                 asset: 'assets/whatsapp-logo.png',
-                label: 'Falar no WhatsApp',
+                label: copy.whatsapp,
                 onTap: () => session.openExternalDoor(
                   'https://wa.me/message/RLCYEXAYFUIIA1',
                 ),
               ),
               ContactButton(
                 asset: 'assets/messenger-logo.png',
-                label: 'Falar no Messenger',
+                label: copy.messenger,
                 onTap: () =>
                     session.openExternalDoor('https://m.me/61557707493807'),
               ),
@@ -3922,8 +4130,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Entrar',
+                  Text(
+                    signup ? 'CREATE ACCOUNT' : 'SIGN IN',
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 12,
@@ -3957,8 +4165,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(width: 10),
                                 Text(
                                   loading
-                                      ? 'Aguarde...'
-                                      : 'Continuar com Google',
+                                      ? 'Please wait...'
+                                      : 'Continue with Google',
                                   style: const TextStyle(
                                     color: Color(0xFF1A1A1A),
                                     fontWeight: FontWeight.w600,
@@ -3990,21 +4198,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         if (signup) ...[
                           SimInput(
-                            hint: 'Seu nome',
+                            hint: 'Your name',
                             controller: nameController,
                             onChanged: (_) {},
                           ),
                           const SizedBox(height: 12),
                         ],
                         SimInput(
-                          hint: 'email@exemplo.com',
+                          hint: 'email@example.com',
                           controller: emailController,
                           keyboardType: TextInputType.emailAddress,
                           onChanged: (_) {},
                         ),
                         const SizedBox(height: 12),
                         SimInput(
-                          hint: 'Senha (min. 6 caracteres)',
+                          hint: 'Password (min. 6 characters)',
                           controller: passwordController,
                           obscureText: true,
                           onChanged: (_) {},
@@ -4019,10 +4227,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: loading ? null : emailSubmit,
                               child: Text(
                                 loading
-                                    ? 'Aguarde...'
+                                    ? 'Please wait...'
                                     : signup
-                                        ? 'Criar conta e ganhar 3 aulas gratis'
-                                        : 'Entrar',
+                                        ? 'Create account and get 3 free lessons'
+                                        : 'Sign in',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: simDark,
@@ -4075,7 +4283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: widget.session.goPortal,
                     child: const Text(
-                      '<- Voltar ao portal',
+                      '<- Back to portal',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
@@ -4158,7 +4366,7 @@ class IdiomaScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(step: 1, total: 5, label: 'Passo 1 de 5'),
+            const StepHeader(step: 1, total: 5, label: 'Step 1 of 5'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
@@ -4178,7 +4386,7 @@ class IdiomaScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'SIM will use this language for the app, lessons, explanations, images, audio and all guidance - from this point onward.',
+                        'SIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.',
                         style: TextStyle(
                           color: simMuted,
                           fontSize: 18,
@@ -4271,7 +4479,7 @@ class _OtherLanguageBoxState extends State<OtherLanguageBox> {
             controller: controller,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: 'e.g. Italian, German, Arabic, Kiribati...',
+              hintText: 'e.g. Italian, German, Arabic, Kiribati…',
               border: InputBorder.none,
             ),
             style: const TextStyle(color: simDark, fontSize: 18),
@@ -4389,7 +4597,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const StepHeader(step: 3, total: 5, label: 'Entrada pedagogica'),
+            const StepHeader(step: 3, total: 5, label: 'Pedagogical form'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
@@ -4399,7 +4607,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Tell us about who is going to study',
+                        "Tell us who's going to study",
                         style: TextStyle(
                           color: simDark,
                           fontSize: 28,
@@ -4436,7 +4644,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Campo obrigatorio',
+                                        'Campo obrigatório',
                                         style: TextStyle(
                                           color: Colors.black,
                                           fontSize: 12,
@@ -4446,7 +4654,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       const Text(
-                                        'Escreva o que voce quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
+                                        'Escreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
                                         style: TextStyle(
                                           color: simMuted,
                                           fontSize: 13,
@@ -4528,7 +4736,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                             ),
                             const SizedBox(height: 12),
                             const Text(
-                              'Conte do seu jeito: idade, serie, materia, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
+                              'The more you share, the better the teacher adapts the lesson: age, grade, subject, goal, deadline, difficulties, learning style, attention, reading, math, confidence and any important note.',
                               style: TextStyle(
                                 color: simMuted,
                                 fontSize: 13,
@@ -4574,7 +4782,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Preferred name',
+                                    'How would you like to be called?',
                                     style: TextStyle(
                                       color: simDark,
                                       fontSize: 14,
@@ -4583,7 +4791,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   SimInput(
-                                    hint: 'What should SIM call the student?',
+                                    hint: 'e.g.: Ana, David, student, teacher',
                                     controller: nameController,
                                     onChanged: widget.session.setPreferredName,
                                   ),
@@ -4725,10 +4933,10 @@ class AttachmentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = attachment.type.startsWith('image/')
-        ? 'foto'
+        ? '📷'
         : attachment.type == 'application/pdf'
-            ? 'pdf'
-            : 'doc';
+            ? '📄'
+            : '📝';
     final suffix =
         attachment.status == 'uploading' || attachment.status == 'processing'
             ? ' lendo...'
@@ -4772,7 +4980,7 @@ class AttachmentChip extends StatelessWidget {
           InkWell(
             onTap: onRemove,
             child: const Text(
-              'x',
+              '✕',
               style: TextStyle(color: simMuted, fontSize: 13),
             ),
           ),
@@ -4859,26 +5067,26 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
   static const _msgIntervalMs = 3200;
 
   static const _stages = [
-    _PrepStage(title: 'Conectando ao T00 real...', progress: 0.15),
-    _PrepStage(title: 'Preparando seu perfil...', progress: 0.40),
-    _PrepStage(title: 'Preparando seu curriculo...', progress: 0.65),
-    _PrepStage(title: 'Preparando sua aula...', progress: 0.85),
-    _PrepStage(title: 'Preparo concluido.', progress: 1.00),
+    _PrepStage(title: 'Preparing your profile…', progress: 0.15),
+    _PrepStage(title: 'Preparing your profile…', progress: 0.40),
+    _PrepStage(title: 'Preparing your curriculum…', progress: 0.65),
+    _PrepStage(title: 'Preparing your lesson…', progress: 0.85),
+    _PrepStage(title: 'Congratulations on your dedication!', progress: 1.00),
   ];
 
   static const _messages = [
-    'Enquanto sua aula e preparada...',
-    'O SIM esta dividindo o topico em passos menores.',
-    'A IA nao vai apenas responder.',
-    'Ela vai tentar ensinar do melhor jeito para voce.',
-    'Se algo parecer dificil, o caminho pode mudar.',
-    'Se voce errar, o erro vira uma pista.',
-    'Se voce entender, o SIM te ajuda a avancar.',
-    'Todo dia, a IA fica mais poderosa.',
-    'O SIM traz esse poder para o estudo.',
-    'Estudar pode ficar mais leve, claro e eficiente.',
-    'Sua aula esta quase pronta.',
-    'Respire. Aprender pode ser mais facil do que voce imagina.',
+    'While your lesson is being prepared…',
+    'SIM is organizing the topic into smaller steps.',
+    'The AI will not just answer.',
+    'It will try to teach in the best way for you.',
+    'If something feels difficult, the path can change.',
+    'If you make a mistake, the mistake becomes a clue.',
+    'If you understand, SIM helps you move forward.',
+    'Every day, AI becomes more powerful.',
+    'SIM brings that power into learning.',
+    'Study can become lighter, clearer, and more efficient.',
+    'Your lesson is almost ready.',
+    'Breathe. Learning can be easier than you imagine.',
   ];
 
   int _stageIdx = 0;
@@ -5024,15 +5232,15 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
         break;
       case 't00_profile':
         widget.session.recordT00Profile(payload);
-        _moveToStage(1, detail: 'Perfil recebido do T00.');
+        _moveToStage(1);
         break;
       case 't00_item_partial':
         widget.session.recordT00ItemPartial(payload);
-        _moveToStage(2, detail: 'Item recebido: ${payload['marker'] ?? ''}');
+        _moveToStage(2);
         break;
       case 't00_final':
         widget.session.recordT00Final(payload);
-        _moveToStage(3, detail: 'Curriculo completo recebido.');
+        _moveToStage(3);
         break;
       case 'done':
         widget.session.recordT00Done();
@@ -5042,7 +5250,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
           _ready = true;
           _loading = false;
           _error = null;
-          _detail = 'T00 concluido.';
+          _detail = null;
         });
         break;
       case 'fatal':
@@ -5080,7 +5288,9 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
     final stage = _stages[_stageIdx];
     final statusColor = _error == null ? simDark : const Color(0xFFDC2626);
     final titleText = _error ?? stage.title;
-    final messageText = _detail ?? _messages[_msgIdx];
+    final isDone = _ready && _error == null;
+    final messageText = _detail ??
+        (isDone ? 'Your progress has been saved.' : _messages[_msgIdx]);
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
@@ -5198,7 +5408,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                                     child: TextButton(
                                       onPressed: widget.session.preparationDone,
                                       child: const Text(
-                                        'Continuar ->',
+                                        'Continue →',
                                         style: TextStyle(
                                           color: simDark,
                                           fontSize: 17,
@@ -5214,7 +5424,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                                     ),
                                     child: const Center(
                                       child: Text(
-                                        'Preparando...',
+                                        'Preparing…',
                                         style: TextStyle(
                                           color: simMuted,
                                           fontSize: 17,
@@ -5227,10 +5437,10 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                       const SizedBox(height: 10),
                       Text(
                         _error != null
-                            ? 'O preparo real falhou. Tente novamente.'
+                            ? 'Não consegui preparar agora.'
                             : _ready
-                                ? 'Pronto para continuar.'
-                                : 'Aguardando o preparo real da aula...',
+                                ? 'Your lesson is ready. You can continue now.'
+                                : 'You can skip the animation as soon as the lesson is ready.',
                         style: const TextStyle(color: simMuted, fontSize: 13),
                         textAlign: TextAlign.center,
                       ),
@@ -5455,7 +5665,7 @@ class PlacementLabScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            StepHeader(step: _step, total: 4, label: 'Nivelamento'),
+            StepHeader(step: _step, total: 4, label: 'Placement'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -5492,7 +5702,7 @@ class _ChoiceBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Por onde voce quer comecar?',
+          'Where do you want to start?',
           style: TextStyle(
             color: simDark,
             fontSize: 24,
@@ -5501,17 +5711,17 @@ class _ChoiceBody extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Voce pode comecar do inicio, ou fazer um teste rapido pra eu ja te colocar no ponto certo.',
+          'You can start from the beginning, or take a quick check so I can place you at the right point.',
           style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
         ),
         const SizedBox(height: 22),
         PrimaryWideButton(
-          label: 'Comecar do inicio',
+          label: 'Start from the beginning',
           onTap: session.skipPlacement,
         ),
         const SizedBox(height: 12),
         SecondaryWideButton(
-          label: 'Fazer teste rapido',
+          label: 'Take a quick check',
           onTap: session.startPlacement,
         ),
       ],
@@ -5529,7 +5739,7 @@ class _IntroBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Teste rapido',
+          'Quick check',
           style: TextStyle(
             color: simDark,
             fontSize: 24,
@@ -5538,12 +5748,12 @@ class _IntroBody extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Vou te fazer algumas perguntas curtas. Nao tem nota, nao tem erro ruim - e so pra eu saber por onde comecar.',
+          "I'll ask you a few short questions. No grades, no bad mistakes — it only helps me know where to start.",
           style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
         ),
         const SizedBox(height: 22),
         PrimaryWideButton(
-          label: session.placementLoading ? 'Preparando...' : 'Comecar',
+          label: session.placementLoading ? 'Preparing…' : 'Start',
           onTap: session.placementLoading ? () {} : session.loadPlacementT02,
         ),
       ],
@@ -5571,7 +5781,7 @@ class _RunningBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Pergunta 1 de 1',
+          'Question 1 of 1',
           style: TextStyle(color: simMuted, fontSize: 12, letterSpacing: 1.2),
         ),
         const SizedBox(height: 12),
@@ -5612,7 +5822,7 @@ class _ResultBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Tudo certo',
+          'All set',
           style: TextStyle(
             color: simDark,
             fontSize: 24,
@@ -5621,7 +5831,7 @@ class _ResultBody extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Vou te levar pro ponto certo.',
+          "I'll take you to the right point.",
           style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
         ),
         const SizedBox(height: 16),
@@ -5635,7 +5845,7 @@ class _ResultBody extends StatelessWidget {
           ),
           child: Text.rich(
             TextSpan(
-              text: 'Comecando em ',
+              text: 'Starting at ',
               style: const TextStyle(color: simDark, fontSize: 14),
               children: [
                 TextSpan(
@@ -5648,7 +5858,7 @@ class _ResultBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 22),
-        PrimaryWideButton(label: 'Continuar', onTap: session.finishPlacement),
+        PrimaryWideButton(label: 'Continue', onTap: session.finishPlacement),
       ],
     );
   }
@@ -5685,32 +5895,32 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     }
     if (raw.startsWith('aula_review_review:')) {
       final inner = raw.substring('aula_review_review:'.length);
-      return 'Revisao - ${_layerName(inner)}';
+      return 'Review - ${_layerName(inner)}';
     }
-    if (raw.isEmpty) return 'Item ${session.aulaStep + 1} - Camada 1';
+    if (raw.isEmpty) return 'Item ${session.aulaStep + 1} - Layer 1';
     return _layerName(raw);
   }
 
   String _layerName(String key) => switch (key) {
-        'aula_layer_1' || 'aula_layer_label_1' => 'Camada 1',
-        'aula_layer_2' || 'aula_layer_label_2' => 'Camada 2',
-        'aula_layer_3' || 'aula_layer_label_3' => 'Camada 3',
-        'aula_review_lbl_1' => 'Revisao C1',
-        'aula_review_lbl_2' => 'Revisao C2',
-        'aula_review_lbl_3' => 'Revisao C3',
+        'aula_layer_1' || 'aula_layer_label_1' => 'Layer 1',
+        'aula_layer_2' || 'aula_layer_label_2' => 'Layer 2',
+        'aula_layer_3' || 'aula_layer_label_3' => 'Layer 3',
+        'aula_review_lbl_1' => 'Review C1',
+        'aula_review_lbl_2' => 'Review C2',
+        'aula_review_lbl_3' => 'Review C3',
         _ => key,
       };
 
   String _nextLabel() {
     final raw = session.nextStepLabel;
     return switch (raw) {
-      'aula_layer_label_1' => 'Ir para Camada 1',
-      'aula_layer_label_2' => 'Ir para Camada 2',
-      'aula_layer_label_3' => 'Ir para Camada 3',
-      'aula_next' => 'Proximo',
-      'aula_next_item' => 'Proximo item',
-      'aula_consolidate' => 'Consolidar',
-      _ when raw.isEmpty => 'Avancar',
+      'aula_layer_label_1' => 'Layer 1',
+      'aula_layer_label_2' => 'Layer 2',
+      'aula_layer_label_3' => 'Layer 3',
+      'aula_next' => 'Next',
+      'aula_next_item' => 'Next item',
+      'aula_consolidate' => 'Consolidate',
+      _ when raw.isEmpty => 'Next',
       _ => raw,
     };
   }
@@ -5721,15 +5931,15 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final correct = phase.wasCorrect ?? false;
     final signal = phase.signal ?? DecisionSignal.three;
     if (correct && signal == DecisionSignal.one) {
-      return 'Excelente! Resposta correta e solida.';
+      return '✅ Correct. Next.';
     }
     if (correct && signal == DecisionSignal.two) {
-      return 'Correto, mas SIM marcou revisao leve.';
+      return "✅ Correct. I'll revisit this later to lock it in.";
     }
     if (signal == DecisionSignal.three) {
-      return 'SIM abriu recuperacao para reforcar este ponto.';
+      return "↻ Noted. I'll explain it differently later.";
     }
-    return 'Errou. SIM refaz este ponto.';
+    return "↻ Let's redo this point later.";
   }
 
   String _answerFeedbackMsg() {
@@ -5737,10 +5947,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final letter = phase.letter?.name ?? session.selectedAnswer;
     final correct =
         session.t02CorrectAnswer == null || session.t02CorrectAnswer == letter;
-    if (correct) {
-      return 'Resposta registrada. Veja o feedback e escolha o qualificador.';
-    }
-    return 'Resposta registrada. Veja o feedback e escolha o qualificador.';
+    return correct ? '✅ Correct. Next.' : "↻ Let's redo this point later.";
   }
 
   Widget _buildDoneScreen(String topic) {
@@ -5764,7 +5971,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Sessao concluida!',
+                          'Session completed',
                           style: TextStyle(
                             color: simDark,
                             fontSize: 22,
@@ -5783,7 +5990,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Solido: ${session.signalsSolid}  -  Entendeu: ${session.signalsUnderstood}  -  Fragil: ${session.signalsFragile}',
+                          'Certain: ${session.signalsSolid}  -  Review: ${session.signalsUnderstood}  -  Don\'t know: ${session.signalsFragile}',
                           style: const TextStyle(
                             color: simMuted,
                             fontSize: 13,
@@ -5792,7 +5999,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ),
                         const SizedBox(height: 20),
                         PrimaryWideButton(
-                          label: 'Voltar ao inicio',
+                          label: '▶ Portal',
                           onTap: session.goPortal,
                         ),
                       ],
@@ -5830,355 +6037,392 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            AulaTopBar(session: session),
-            ClipRRect(
-              child: LinearProgressIndicator(
-                value: session.lessonProgress > 0
-                    ? session.lessonProgress / 100
-                    : null,
-                minHeight: 3,
-                backgroundColor: simLight,
-                color: simDark,
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    SimCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _headerLabel(),
-                            style: const TextStyle(
-                              color: simMuted,
-                              fontSize: 12,
-                              fontFamily: 'monospace',
-                            ),
+            Column(
+              children: [
+                AulaTopBar(session: session),
+                ClipRRect(
+                  child: LinearProgressIndicator(
+                    value: session.lessonProgress > 0
+                        ? session.lessonProgress / 100
+                        : null,
+                    minHeight: 3,
+                    backgroundColor: simLight,
+                    color: simDark,
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        SimCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _headerLabel(),
+                                style: const TextStyle(
+                                  color: simMuted,
+                                  fontSize: 12,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                topic,
+                                style: const TextStyle(
+                                  color: simDark,
+                                  fontSize: 22,
+                                  height: 1.2,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              if (session.t02Loading) ...[
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 20),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                                const Text(
+                                  'Building layer 1…',
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      TextStyle(color: simMuted, fontSize: 14),
+                                ),
+                              ] else if (session.t02Error != null) ...[
+                                Text(
+                                  session.t02Error!,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: session.loadT02Content,
+                                  child: const Text(
+                                    'Try again',
+                                    style: TextStyle(
+                                      color: simDark,
+                                      fontWeight: FontWeight.w700,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (hasLessonContent) ...[
+                                Text(
+                                  session.t02Explanation!,
+                                  style: const TextStyle(
+                                    color: simMuted,
+                                    fontSize: 15,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ] else ...[
+                                const Text(
+                                  'Failed to generate content',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'I could not load a valid explanation, question and A/B/C options from T02.',
+                                  style: TextStyle(
+                                    color: simMuted,
+                                    fontSize: 13.5,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: session.loadT02Content,
+                                  child: const Text(
+                                    'Try again',
+                                    style: TextStyle(
+                                      color: simDark,
+                                      fontWeight: FontWeight.w700,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (hasLessonContent) ...[
+                                const SizedBox(height: 14),
+                                LessonImagePanel(session: session),
+                              ],
+                              if (hasLessonContent &&
+                                  session.audioError != null) ...[
+                                const SizedBox(height: 10),
+                                StatusLine(
+                                  icon: Icons.volume_off_outlined,
+                                  text: session.audioError!,
+                                ),
+                              ],
+                              if (hasLessonContent && session.audioLoading) ...[
+                                const SizedBox(height: 10),
+                                const StatusLine(
+                                  icon: Icons.volume_up_outlined,
+                                  text: 'Preparing audio…',
+                                  loading: true,
+                                ),
+                              ],
+                              if (hasLessonContent) ...[
+                                const SizedBox(height: 10),
+                                StatusLine(
+                                  icon: session.audioEnabled
+                                      ? session.audioStatus == 'playing'
+                                          ? Icons.pause_circle_outline
+                                          : Icons.volume_up_outlined
+                                      : Icons.volume_off_outlined,
+                                  text: session.audioEnabled
+                                      ? session.audioStatus == 'playing'
+                                          ? 'Audio on'
+                                          : 'Audio on'
+                                      : 'Audio off',
+                                ),
+                              ],
+                              if (hasLessonContent &&
+                                  session.audioEnabled &&
+                                  !session.audioLoading &&
+                                  session.t02Explanation != null) ...[
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: session.audioStatus == 'playing'
+                                        ? session.stopLessonAudio
+                                        : session.playLessonAudio,
+                                    icon: Icon(
+                                      session.audioStatus == 'playing'
+                                          ? Icons.pause
+                                          : Icons.play_arrow,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      session.audioStatus == 'playing'
+                                          ? 'Stop audio'
+                                          : 'Listen',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (hasLessonContent) ...[
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Challenge',
+                                  style: TextStyle(
+                                    color: simDark,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  session.t02Question!,
+                                  style: const TextStyle(
+                                    color: simDark,
+                                    fontSize: 15,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                AnswerButton(
+                                  label: 'A',
+                                  text: opts['A']!,
+                                  active: selectedLetter == 'A',
+                                  locked: locked,
+                                  correct: (isConcluido || awaitingQualifier) &&
+                                      session.t02CorrectAnswer == 'A',
+                                  onTap: locked
+                                      ? null
+                                      : () => session.chooseAulaAnswer('A'),
+                                ),
+                                AnswerButton(
+                                  label: 'B',
+                                  text: opts['B']!,
+                                  active: selectedLetter == 'B',
+                                  locked: locked,
+                                  correct: (isConcluido || awaitingQualifier) &&
+                                      session.t02CorrectAnswer == 'B',
+                                  onTap: locked
+                                      ? null
+                                      : () => session.chooseAulaAnswer('B'),
+                                ),
+                                AnswerButton(
+                                  label: 'C',
+                                  text: opts['C']!,
+                                  active: selectedLetter == 'C',
+                                  locked: locked,
+                                  correct: (isConcluido || awaitingQualifier) &&
+                                      session.t02CorrectAnswer == 'C',
+                                  onTap: locked
+                                      ? null
+                                      : () => session.chooseAulaAnswer('C'),
+                                ),
+                              ],
+                              if (awaitingQualifier) ...[
+                                const SizedBox(height: 14),
+                                _FeedbackBanner(
+                                  message: _answerFeedbackMsg(),
+                                  wasCorrect:
+                                      session.t02CorrectAnswer == null ||
+                                          session.t02CorrectAnswer ==
+                                              selectedLetter,
+                                ),
+                                if (session.t02WhyCorrect != null ||
+                                    session.t02WhyWrong != null) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    (session.t02CorrectAnswer == null ||
+                                            session.t02CorrectAnswer ==
+                                                selectedLetter)
+                                        ? session.t02WhyCorrect?.toString() ??
+                                            ''
+                                        : session.t02WhyWrong?.toString() ?? '',
+                                    style: const TextStyle(
+                                      color: simMuted,
+                                      fontSize: 13.5,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 14),
+                                const SizedBox(height: 2),
+                                QualifierButton(
+                                  label: '1',
+                                  text: 'Certain',
+                                  onTap: () => session
+                                      .submitAulaQualifier(DecisionSignal.one),
+                                ),
+                                QualifierButton(
+                                  label: '2',
+                                  text: 'Review',
+                                  onTap: () => session
+                                      .submitAulaQualifier(DecisionSignal.two),
+                                ),
+                                QualifierButton(
+                                  label: '3',
+                                  text: "Don't know",
+                                  onTap: () => session.submitAulaQualifier(
+                                      DecisionSignal.three),
+                                ),
+                              ] else if (isConcluido) ...[
+                                const SizedBox(height: 14),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: OutlinedButton(
+                                    onPressed: session.doubtOpen
+                                        ? null
+                                        : session.toggleDoubt,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: simDark,
+                                      side: const BorderSide(color: simBorder),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      session.doubtOpen ? 'Doubt...' : 'Doubt',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _FeedbackBanner(
+                                  message: _feedbackMsg(),
+                                  wasCorrect: phase.wasCorrect ?? false,
+                                ),
+                                if (session.t02WhyCorrect != null ||
+                                    session.t02WhyWrong != null) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    (phase.wasCorrect ?? false)
+                                        ? session.t02WhyCorrect?.toString() ??
+                                            ''
+                                        : session.t02WhyWrong?.toString() ?? '',
+                                    style: const TextStyle(
+                                      color: simMuted,
+                                      fontSize: 13.5,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                PrimaryWideButton(
+                                  label: _nextLabel(),
+                                  onTap: session.advanceAula,
+                                ),
+                              ] else if (session.aulaMessage.isNotEmpty &&
+                                  !locked) ...[
+                                const SizedBox(height: 14),
+                                Text(
+                                  session.aulaMessage,
+                                  style: const TextStyle(
+                                    color: simDark,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                PrimaryWideButton(
+                                  label: 'Next',
+                                  onTap: session.advanceAula,
+                                ),
+                              ],
+                            ],
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            topic,
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 22,
-                              height: 1.2,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                        ),
+                        if (session.supportRoomView != null) ...[
                           const SizedBox(height: 14),
-                          if (session.t02Loading) ...[
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                            const Text(
-                              'Preparando sua aula...',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: simMuted, fontSize: 14),
-                            ),
-                          ] else if (session.t02Error != null) ...[
-                            Text(
-                              session.t02Error!,
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: session.loadT02Content,
-                              child: const Text(
-                                'Tentar novamente',
-                                style: TextStyle(
-                                  color: simDark,
-                                  fontWeight: FontWeight.w700,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ] else if (hasLessonContent) ...[
-                            Text(
-                              session.t02Explanation!,
-                              style: const TextStyle(
-                                color: simMuted,
-                                fontSize: 15,
-                                height: 1.45,
-                              ),
-                            ),
-                          ] else ...[
-                            const Text(
-                              'A aula ainda nao carregou o conteudo real.',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'O SIM precisa receber explicacao, pergunta e alternativas A/B/C do T02 antes de abrir a sala.',
-                              style: TextStyle(
-                                color: simMuted,
-                                fontSize: 13.5,
-                                height: 1.35,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: session.loadT02Content,
-                              child: const Text(
-                                'Tentar novamente',
-                                style: TextStyle(
-                                  color: simDark,
-                                  fontWeight: FontWeight.w700,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (hasLessonContent) ...[
-                            const SizedBox(height: 14),
-                            LessonImagePanel(session: session),
-                          ],
-                          if (hasLessonContent &&
-                              session.audioError != null) ...[
-                            const SizedBox(height: 10),
-                            StatusLine(
-                              icon: Icons.volume_off_outlined,
-                              text: session.audioError!,
-                            ),
-                          ],
-                          if (hasLessonContent && session.audioLoading) ...[
-                            const SizedBox(height: 10),
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando audio da aula...',
-                              loading: true,
-                            ),
-                          ],
-                          if (hasLessonContent) ...[
-                            const SizedBox(height: 10),
-                            StatusLine(
-                              icon: session.audioEnabled
-                                  ? session.audioStatus == 'playing'
-                                      ? Icons.pause_circle_outline
-                                      : Icons.volume_up_outlined
-                                  : Icons.volume_off_outlined,
-                              text: session.audioEnabled
-                                  ? session.audioStatus == 'playing'
-                                      ? 'Audio da aula tocando'
-                                      : 'Audio da aula ligado'
-                                  : 'Audio da aula desligado',
-                            ),
-                          ],
-                          if (hasLessonContent &&
-                              session.audioEnabled &&
-                              !session.audioLoading &&
-                              session.t02Explanation != null) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: session.audioStatus == 'playing'
-                                    ? session.stopLessonAudio
-                                    : session.playLessonAudio,
-                                icon: Icon(
-                                  session.audioStatus == 'playing'
-                                      ? Icons.pause
-                                      : Icons.play_arrow,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  session.audioStatus == 'playing'
-                                      ? 'Pausar audio'
-                                      : 'Tocar audio',
-                                ),
-                              ),
-                            ),
-                          ],
-                          if (hasLessonContent) ...[
-                            const SizedBox(height: 14),
-                            const Text(
-                              'Pergunta',
-                              style: TextStyle(
-                                color: simDark,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              session.t02Question!,
-                              style: const TextStyle(
-                                color: simDark,
-                                fontSize: 15,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            AnswerButton(
-                              label: 'A',
-                              text: opts['A']!,
-                              active: selectedLetter == 'A',
-                              locked: locked,
-                              correct: (isConcluido || awaitingQualifier) &&
-                                  session.t02CorrectAnswer == 'A',
-                              onTap: locked
-                                  ? null
-                                  : () => session.chooseAulaAnswer('A'),
-                            ),
-                            AnswerButton(
-                              label: 'B',
-                              text: opts['B']!,
-                              active: selectedLetter == 'B',
-                              locked: locked,
-                              correct: (isConcluido || awaitingQualifier) &&
-                                  session.t02CorrectAnswer == 'B',
-                              onTap: locked
-                                  ? null
-                                  : () => session.chooseAulaAnswer('B'),
-                            ),
-                            AnswerButton(
-                              label: 'C',
-                              text: opts['C']!,
-                              active: selectedLetter == 'C',
-                              locked: locked,
-                              correct: (isConcluido || awaitingQualifier) &&
-                                  session.t02CorrectAnswer == 'C',
-                              onTap: locked
-                                  ? null
-                                  : () => session.chooseAulaAnswer('C'),
-                            ),
-                          ],
-                          if (awaitingQualifier) ...[
-                            const SizedBox(height: 14),
-                            _FeedbackBanner(
-                              message: _answerFeedbackMsg(),
-                              wasCorrect: session.t02CorrectAnswer == null ||
-                                  session.t02CorrectAnswer == selectedLetter,
-                            ),
-                            if (session.t02WhyCorrect != null ||
-                                session.t02WhyWrong != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                (session.t02CorrectAnswer == null ||
-                                        session.t02CorrectAnswer ==
-                                            selectedLetter)
-                                    ? session.t02WhyCorrect?.toString() ?? ''
-                                    : session.t02WhyWrong?.toString() ?? '',
-                                style: const TextStyle(
-                                  color: simMuted,
-                                  fontSize: 13.5,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 14),
-                            const Text(
-                              'Como ficou este ponto?',
-                              style: TextStyle(
-                                color: simDark,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            QualifierButton(
-                              label: '1',
-                              text: 'Ficou sólido',
-                              onTap: () => session
-                                  .submitAulaQualifier(DecisionSignal.one),
-                            ),
-                            QualifierButton(
-                              label: '2',
-                              text: 'Entendi, mas quero revisar',
-                              onTap: () => session
-                                  .submitAulaQualifier(DecisionSignal.two),
-                            ),
-                            QualifierButton(
-                              label: '3',
-                              text: 'Ainda está frágil',
-                              onTap: () => session
-                                  .submitAulaQualifier(DecisionSignal.three),
-                            ),
-                          ] else if (isConcluido) ...[
-                            const SizedBox(height: 14),
-                            _FeedbackBanner(
-                              message: _feedbackMsg(),
-                              wasCorrect: phase.wasCorrect ?? false,
-                            ),
-                            if (session.t02WhyCorrect != null ||
-                                session.t02WhyWrong != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                (phase.wasCorrect ?? false)
-                                    ? session.t02WhyCorrect?.toString() ?? ''
-                                    : session.t02WhyWrong?.toString() ?? '',
-                                style: const TextStyle(
-                                  color: simMuted,
-                                  fontSize: 13.5,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                            PrimaryWideButton(
-                              label: _nextLabel(),
-                              onTap: session.advanceAula,
-                            ),
-                          ] else if (session.aulaMessage.isNotEmpty &&
-                              !locked) ...[
-                            const SizedBox(height: 14),
-                            Text(
-                              session.aulaMessage,
-                              style: const TextStyle(
-                                color: simDark,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            PrimaryWideButton(
-                              label: 'Avancar',
-                              onTap: session.advanceAula,
-                            ),
-                          ],
+                          SupportRoomPanel(session: session),
                         ],
+                        if (session.reviewRoomView != null ||
+                            session.reviewQueueCount > 0) ...[
+                          const SizedBox(height: 14),
+                          ReviewRoomPanel(
+                            session: session,
+                          ),
+                        ],
+                        if (session.recoveryRoomView != null ||
+                            session.recoveryQueueCount > 0) ...[
+                          const SizedBox(height: 14),
+                          RecoveryRoomPanel(
+                            session: session,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (session.doubtOpen)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withAlpha(18),
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: 0.86,
+                    alignment: Alignment.bottomCenter,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
+                      child: SingleChildScrollView(
+                        child: DoubtRoomPanel(session: session),
                       ),
                     ),
-                    if (session.supportRoomView != null) ...[
-                      const SizedBox(height: 14),
-                      SupportRoomPanel(session: session),
-                    ],
-                    if (session.reviewRoomView != null ||
-                        session.reviewQueueCount > 0) ...[
-                      const SizedBox(height: 14),
-                      ReviewRoomPanel(
-                        session: session,
-                      ),
-                    ],
-                    if (session.recoveryRoomView != null ||
-                        session.recoveryQueueCount > 0) ...[
-                      const SizedBox(height: 14),
-                      RecoveryRoomPanel(
-                        session: session,
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    if (session.doubtOpen) DoubtRoomPanel(session: session),
-                  ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -6410,17 +6654,28 @@ class DoubtRoomPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Duvida',
-            style: TextStyle(
-              color: simDark,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Enviar dúvida',
+                  style: TextStyle(
+                    color: simDark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Fechar',
+                onPressed: session.closeDoubt,
+                icon: const Icon(Icons.close, color: simMuted),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           const Text(
-            'Escreva sua duvida ou envie uma foto. A aula continua no mesmo ponto.',
+            'Escreva sua dúvida ou envie uma foto do exercício, resolução, fórmula, gráfico ou tabela.',
             style: TextStyle(color: simMuted, fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 14),
@@ -6433,6 +6688,15 @@ class DoubtRoomPanel extends StatelessWidget {
             ),
           ] else if (state.status == DoubtStatus.explaining &&
               state.response != null) ...[
+            const Text(
+              'Explicação da sua dúvida',
+              style: TextStyle(
+                color: simDark,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
               state.response!.explanation,
               style: const TextStyle(
@@ -6445,23 +6709,18 @@ class DoubtRoomPanel extends StatelessWidget {
             if (state.response!.visualTrigger != null) ...[
               const SizedBox(height: 10),
               const Text(
-                'Ha uma sugestao visual para este ponto. A imagem paga nao foi gerada automaticamente.',
+                'Há uma sugestão visual para este ponto. A imagem paga não foi gerada automaticamente.',
                 style: TextStyle(color: simMuted, fontSize: 13, height: 1.4),
               ),
             ],
-            const SizedBox(height: 12),
-            PrimaryWideButton(
-              label: 'Entendi',
-              onTap: session.closeDoubt,
-            ),
           ] else ...[
             TextFormField(
               initialValue: session.doubtText,
-              maxLines: 4,
+              maxLines: 5,
               maxLength: doubtTextMaxLength,
               onChanged: session.setDoubtText,
               decoration: InputDecoration(
-                hintText: 'Escreva sua duvida aqui...',
+                hintText: 'Escreva sua dúvida aqui...',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -6472,61 +6731,79 @@ class DoubtRoomPanel extends StatelessWidget {
             ),
             if (image != null) ...[
               const SizedBox(height: 10),
-              _DoubtImagePreview(image: image),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: session.removeDoubtImage,
-                child: const Text(
-                  'Remover foto',
-                  style: TextStyle(
-                    color: simDark,
-                    fontWeight: FontWeight.w700,
-                    decoration: TextDecoration.underline,
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: simBorder),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Foto: ${image.name}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: simDark, fontSize: 14),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: session.removeDoubtImage,
+                      child: const Text('Remover'),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 10),
+              _DoubtImagePreview(image: image),
             ],
+            Row(
+              children: [
+                PopupMenuButton<String>(
+                  tooltip: 'Abrir opções de foto',
+                  icon: const Icon(Icons.attach_file, color: simDark),
+                  onSelected: (_) => unawaited(session.pickDoubtImage()),
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'camera',
+                      child: Text('Tirar foto'),
+                    ),
+                    PopupMenuItem(
+                      value: 'gallery',
+                      child: Text('Escolher imagem'),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  '${session.doubtText.length}/1200',
+                  style: const TextStyle(
+                    color: simMuted,
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
             if (session.doubtInputError != null ||
                 state.status == DoubtStatus.error) ...[
               const SizedBox(height: 10),
               Text(
                 session.doubtInputError ??
                     state.error ??
-                    'Nao foi possivel responder agora.',
+                    'Não foi possível responder agora.',
                 style: const TextStyle(color: Colors.red, fontSize: 13),
               ),
             ],
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => unawaited(session.pickDoubtImage()),
-                    child: Text(image == null ? 'Anexar foto' : 'Trocar foto'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: PrimaryWideButton(
-                    label: state.status == DoubtStatus.error
-                        ? 'Tentar novamente'
-                        : 'Enviar duvida',
-                    onTap: () => unawaited(session.submitDoubt()),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: session.closeDoubt,
-              child: const Text(
-                'Fechar',
-                style: TextStyle(
-                  color: simMuted,
-                  fontWeight: FontWeight.w700,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
+            PrimaryWideButton(
+              label: state.status == DoubtStatus.error
+                  ? 'Tentar novamente'
+                  : 'Enviar dúvida',
+              onTap: () => unawaited(session.submitDoubt()),
             ),
           ],
         ],
@@ -6996,16 +7273,10 @@ class AulaTopBar extends StatelessWidget {
             ),
           ),
           RoundIconButton(
-            icon: Icons.help_outline,
-            tooltip: 'Duvida',
-            onTap: session.toggleDoubt,
-          ),
-          const SizedBox(width: 8),
-          RoundIconButton(
             icon: session.audioEnabled
                 ? Icons.volume_up_outlined
                 : Icons.volume_off_outlined,
-            tooltip: 'Audio',
+            tooltip: session.audioEnabled ? 'Turn audio off' : 'Turn audio on',
             onTap: session.toggleAudio,
           ),
         ],
