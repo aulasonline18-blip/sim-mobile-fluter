@@ -146,7 +146,12 @@ class StudentStateStore {
     if (cached != null) return cached;
     final encoded = local.readState(lessonLocalId);
     if (encoded != null && encoded.trim().isNotEmpty) {
-      final decoded = jsonDecode(encoded);
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(encoded);
+      } on FormatException {
+        decoded = null;
+      }
       if (decoded is Map) {
         final state = StudentLearningState.fromJson(JsonMap.from(decoded));
         _memory[lessonLocalId] = state;
@@ -327,12 +332,11 @@ class StudentStateStore {
               )
               .toList()
         : <CanonicalLearningEvent>[];
-    _eventLog[state.lessonLocalId] = _dedupeEvents(events);
+    final dedupedEvents = _dedupeEvents(events);
+    _eventLog[state.lessonLocalId] = dedupedEvents;
     local.writeEvents(
       state.lessonLocalId,
-      jsonEncode(
-        _eventLog[state.lessonLocalId]!.map((e) => e.toJson()).toList(),
-      ),
+      jsonEncode(dedupedEvents.map((e) => e.toJson()).toList()),
     );
     return writeState(state);
   }
@@ -352,7 +356,12 @@ class StudentStateStore {
   List<CanonicalLearningEvent> _readEvents(String lessonLocalId) {
     final encoded = local.readEvents(lessonLocalId);
     if (encoded == null || encoded.trim().isEmpty) return const [];
-    final decoded = jsonDecode(encoded);
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(encoded);
+    } on FormatException {
+      return const [];
+    }
     if (decoded is! List) return const [];
     return _dedupeEvents(
       decoded.whereType<Map>().map(
@@ -380,10 +389,11 @@ class StudentStateStore {
       ...(_eventLog[lessonLocalId] ?? _readEvents(lessonLocalId)),
       event,
     ];
-    _eventLog[lessonLocalId] = _dedupeEvents(events);
+    final dedupedEvents = _dedupeEvents(events);
+    _eventLog[lessonLocalId] = dedupedEvents;
     local.writeEvents(
       lessonLocalId,
-      jsonEncode(_eventLog[lessonLocalId]!.map((e) => e.toJson()).toList()),
+      jsonEncode(dedupedEvents.map((e) => e.toJson()).toList()),
     );
   }
 
