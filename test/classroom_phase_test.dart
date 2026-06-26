@@ -21,10 +21,12 @@ import 'package:sim_mobile/sim/state/student_state_store_adapter.dart';
 
 class FakeClassroomT02 implements T02LessonClient {
   int calls = 0;
+  final requests = <T02LessonRequest>[];
 
   @override
   Future<T02LessonMaterial> completeLesson(T02LessonRequest request) async {
     calls += 1;
+    requests.add(request);
     return T02LessonMaterial(
       explanation: 'Explicacao ${request.item} L${request.layer.value}',
       question: 'Pergunta ${request.marker ?? request.item}?',

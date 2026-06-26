@@ -1,6 +1,7 @@
 import '../lesson/dopamine_ready_window_engine.dart';
 import '../lesson/lesson_models.dart';
 import '../lesson/student_lesson_material_service.dart';
+import '../state/learning_decision_engine.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import '../state/student_lesson_executor.dart';
@@ -120,7 +121,14 @@ class LessonAnswerProgressController {
         state: savedTruthState,
         evidence: evidence,
       );
-      final view = activeLessonView(savedTruthState);
+      final postMasteryState =
+          stateService.read(lessonLocalId) ?? savedTruthState;
+      final decidedState = _applyPostMasteryDecision(
+        lessonLocalId: lessonLocalId,
+        state: postMasteryState,
+        evidence: evidence,
+      );
+      final view = activeLessonView(decidedState);
       if (view != null && !view.ended) {
         materialService.maintainLessonReadyWindow(
           lessonLocalId: lessonLocalId,
@@ -167,17 +175,127 @@ class LessonAnswerProgressController {
     );
   }
 
+  StudentLearningState _applyPostMasteryDecision({
+    required String lessonLocalId,
+    required StudentLearningState state,
+    required MasteryEvidence evidence,
+  }) {
+    final curriculum = state.curriculum;
+    final progress = state.progress;
+    if (curriculum == null || progress == null) return state;
+    final itemIdx = progress.itemIdx;
+    if (itemIdx < 0 || itemIdx >= curriculum.items.length) return state;
+    final marker = curriculum.items[itemIdx].marker;
+    final decision = decideNextActionFromState(state);
+    final applied = applyStudentDecision(
+      progress,
+      decision,
+      itemIdx: itemIdx,
+      layer: progress.layer,
+      totalItems: curriculum.items.length,
+      marker: marker,
+    );
+    final nextProgress = applied.nextProgress;
+    final nextState = state.copyWith(
+      progress: nextProgress,
+      current: LessonCurrent(
+        itemIdx: nextProgress.itemIdx,
+        marker: nextProgress.itemIdx < curriculum.items.length
+            ? curriculum.items[nextProgress.itemIdx].marker
+            : null,
+        layer: nextProgress.layer,
+        amparoLvl: nextProgress.amparoLvl,
+      ),
+      extra: {
+        ...state.extra,
+        'next_action': {
+          'action': decision.actionType.name,
+          'reason': decision.reason,
+          'confidence': decision.confidence.name,
+          'marker': marker,
+          'from_itemIdx': itemIdx,
+          'from_layer': progress.layer.value,
+          'to_itemIdx': nextProgress.itemIdx,
+          'to_layer': nextProgress.layer.value,
+          'mastery_status': evidence.status.name,
+          'needs_reinforcement': evidence.needsReinforcement,
+        },
+      },
+    );
+    final saved = stateService.write(nextState);
+    _appendCanonicalOrLegacyEvent(
+      lessonLocalId: lessonLocalId,
+      state: saved,
+      type: 'NEXT_ACTION_DECIDED',
+      payload: {
+        'action': decision.actionType.name,
+        'reason': decision.reason,
+        'confidence': decision.confidence.name,
+        'marker': marker,
+        'fromItemIdx': itemIdx,
+        'fromLayer': progress.layer.value,
+        'toItemIdx': nextProgress.itemIdx,
+        'toLayer': nextProgress.layer.value,
+        'masteryStatus': evidence.status.name,
+      },
+    );
+    if (evidence.status == MasteryStatus.mastered) {
+      _appendCanonicalOrLegacyEvent(
+        lessonLocalId: lessonLocalId,
+        state: saved,
+        type: 'ITEM_MASTERED',
+        payload: {
+          'marker': evidence.marker,
+          'status': evidence.status.name,
+          'reason': evidence.reason,
+          'score': evidence.score,
+        },
+      );
+    }
+    if (applied.applied && nextProgress.itemIdx != itemIdx) {
+      _appendCanonicalOrLegacyEvent(
+        lessonLocalId: lessonLocalId,
+        state: saved,
+        type: 'ITEM_ADVANCED',
+        payload: {
+          'fromItemIdx': itemIdx,
+          'toItemIdx': nextProgress.itemIdx,
+          'fromLayer': progress.layer.value,
+          'toLayer': nextProgress.layer.value,
+          'fromMarker': marker,
+          'toMarker': nextProgress.itemIdx < curriculum.items.length
+              ? curriculum.items[nextProgress.itemIdx].marker
+              : null,
+        },
+      );
+    }
+    return stateService.read(lessonLocalId) ?? saved;
+  }
+
   void _appendMasteryEvaluatedEvent({
     required String lessonLocalId,
     required StudentLearningState state,
     required MasteryEvidence evidence,
   }) {
-    final payload = {...evidence.toJson(), 'status': evidence.status.name};
+    _appendCanonicalOrLegacyEvent(
+      lessonLocalId: lessonLocalId,
+      state: state,
+      type: 'MASTERY_EVALUATED',
+      payload: {...evidence.toJson(), 'status': evidence.status.name},
+    );
+  }
+
+  void _appendCanonicalOrLegacyEvent({
+    required String lessonLocalId,
+    required StudentLearningState state,
+    required String type,
+    required JsonMap payload,
+  }) {
     final canonicalStore = store;
     if (canonicalStore != null) {
       canonicalStore.appendEvent(
         lessonLocalId: lessonLocalId,
-        type: 'MASTERY_EVALUATED',
+        type: type,
         payload: payload,
         source: 'lesson-answer-progress-controller',
         userId: state.userId,
@@ -187,7 +305,7 @@ class LessonAnswerProgressController {
     stateService.appendEvent(
       lessonLocalId,
       StudentLearningEvent(
-        type: 'MASTERY_EVALUATED',
+        type: type,
         ts: DateTime.now().millisecondsSinceEpoch,
         payload: payload,
       ),
@@ -211,10 +329,11 @@ class LessonAnswerProgressController {
 
     final state = stateService.read(lessonLocalId);
     final view = state == null ? null : activeLessonView(state);
-    if (view == null) {
+    if (view == null || state == null) {
       position.phase = const ClassroomPhase.doneEnd();
       return;
     }
+    final activeState = state;
     if (!view.ended &&
         view.itemIdx == position.itemIdx &&
         view.layer == position.layer) {
@@ -228,7 +347,7 @@ class LessonAnswerProgressController {
         position: position,
         idioma: idioma,
         academic: academic,
-        mode: position.isReviewAtivo ? LessonMode.reforco : LessonMode.session,
+        mode: _modeForNextMaterial(activeState, position.isReviewAtivo),
         baseItems: baseItems,
         forceRefresh: true,
       );
@@ -280,8 +399,20 @@ class LessonAnswerProgressController {
       position: position,
       idioma: idioma,
       academic: academic,
-      mode: LessonMode.session,
+      mode: _modeForNextMaterial(activeState, position.isReviewAtivo),
       baseItems: baseItems,
     );
+  }
+
+  LessonMode _modeForNextMaterial(
+    StudentLearningState state,
+    bool isReviewAtivo,
+  ) {
+    if (isReviewAtivo) return LessonMode.reforco;
+    final nextAction = state.extra['next_action'];
+    if (nextAction is Map && nextAction['action'] == 'needsReinforcement') {
+      return LessonMode.reforco;
+    }
+    return LessonMode.session;
   }
 }

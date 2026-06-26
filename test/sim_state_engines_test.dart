@@ -64,6 +64,51 @@ void main() {
     expect(decision.proposedLayer, LessonLayer.l3);
   });
 
+  test('LearningDecisionEngine uses mastery truth for reinforcement', () {
+    final state = _state().copyWith(
+      extra: const {
+        'truth': {
+          'item_consolidation_status': {'M1': 'falseMastery'},
+          'mastery_evidence': [
+            {
+              'marker_id': 'M1',
+              'status': 'falseMastery',
+              'needs_reinforcement': true,
+            },
+          ],
+        },
+      },
+    );
+
+    final decision = decideNextActionFromState(state);
+
+    expect(decision.actionType, DecisionActionType.needsReinforcement);
+    expect(decision.proposedMarker, 'M1');
+  });
+
+  test('LearningDecisionEngine uses mastered truth to advance item', () {
+    final state = _state().copyWith(
+      extra: const {
+        'truth': {
+          'item_consolidation_status': {'M1': 'mastered'},
+          'mastery_evidence': [
+            {
+              'marker_id': 'M1',
+              'status': 'mastered',
+              'needs_reinforcement': false,
+            },
+          ],
+        },
+      },
+    );
+
+    final decision = decideNextActionFromState(state);
+
+    expect(decision.actionType, DecisionActionType.advanceItem);
+    expect(decision.proposedItemIdx, 1);
+    expect(decision.proposedMarker, 'M2');
+  });
+
   test('StudentLessonExecutor applies answer without legacy fallback', () {
     final next = processAnswerWithEngine(
       _state(),
