@@ -70,7 +70,7 @@ class LabSession extends ChangeNotifier {
           canonicalStore ??
           StudentStateStore(local: MemoryStudentStateLocalStorage());
 
-  final StudentStateStore canonicalStore;
+  final StudentStateStore? canonicalStore;
 
   bool authed = false;
   bool authReady = false;
@@ -495,13 +495,9 @@ String _deriveLessonLocalId(String objetivo, String idioma) {
 }
 
 class SimMobileApp extends StatefulWidget {
-  const SimMobileApp({
-    required this.canonicalStore,
-    super.key,
-    this.initialSession,
-  });
+  const SimMobileApp({super.key, this.canonicalStore, this.initialSession});
 
-  final StudentStateStore canonicalStore;
+  final StudentStateStore? canonicalStore;
   final LabSession? initialSession;
 
   @override
