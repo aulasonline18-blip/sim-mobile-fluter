@@ -12,6 +12,8 @@ import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
 import 'sim/config/app_mode.dart';
+import 'sim/experience/student_experience_engine.dart';
+import 'sim/experience/student_experience_types.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_provider.dart';
 import 'session/auth_session.dart';
@@ -291,45 +293,95 @@ class LabSession extends ChangeNotifier {
         ? clipped
         : '$clipped\n\n$attachmentsText';
     entryForm.freeText = clipped;
-    _seedCanonicalLessonState(id: id, objective: clipped, language: language);
+    _saveProfileToState(id: id, objective: clipped, language: language);
     entryStatus = 'pedido_recebido';
     entryError = null;
     navigationState.openRoute('/cyber/curriculo');
     return true;
   }
 
-  void _seedCanonicalLessonState({
+  Future<void> launchExperience() async {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return;
+    if (entryStatus == 't00_running' ||
+        entryStatus == 't02_running' ||
+        entryStatus == 'primeira_aula_pronta') return;
+
+    entryStatus = 't00_running';
+    entryError = null;
+    notifyListeners();
+
+    try {
+      final organism = simOrganismProvider.forLesson(id);
+      final onboarding = <String, dynamic>{
+        'objetivo': freeText.trim(),
+        'free_text': freeText.trim(),
+        'idioma': stableLang ?? 'pt-BR',
+        'language': selectedLanguageCode ?? stableLang ?? 'pt-BR',
+        'stableLang': stableLang ?? 'pt-BR',
+        'STABLE_LANG': stableLang ?? 'pt-BR',
+        'ACADEMIC_LEVEL': 'incerto',
+        'academic_level': 'incerto',
+        'nivel': 'incerto',
+        if (preferredName.trim().isNotEmpty)
+          'preferred_name': preferredName.trim(),
+        if (studentProfileNotes.isNotEmpty)
+          'student_profile_notes': studentProfileNotes,
+        if (attachmentsText.isNotEmpty) 'attachments_text': attachmentsText,
+      };
+      final args = StudentExperienceArgs(
+        academic: 'incerto',
+        idioma: stableLang ?? 'pt-BR',
+        lessonLocalId: id,
+        onboarding: onboarding,
+        onStage: (stage) {
+          final next = switch (stage) {
+            StudentExperienceRouteStage.curriculum => 't00_running',
+            StudentExperienceRouteStage.lesson => 't02_running',
+            StudentExperienceRouteStage.ready => 'primeira_aula_pronta',
+            StudentExperienceRouteStage.placement => 'placement',
+            _ => entryStatus,
+          };
+          entryStatus = next;
+          notifyListeners();
+        },
+      );
+
+      final result = await organism.experienceEngine
+          .prepareStudentExperienceEntry(args);
+
+      entryStatus = 'primeira_aula_pronta';
+      notifyListeners();
+
+      await Future<void>.delayed(const Duration(milliseconds: 650));
+      navigationState.openRoute(result.destination);
+      if (result.destination == '/cyber/aula') {
+        unawaited(openAulaRuntime());
+      }
+    } on StudentExperienceEngineException catch (err) {
+      entryError = err.error.message;
+      entryStatus = 'erro';
+      notifyListeners();
+    } catch (err) {
+      entryError = err.toString();
+      entryStatus = 'erro';
+      notifyListeners();
+    }
+  }
+
+  void retryExperience() {
+    entryStatus = 'pedido_recebido';
+    entryError = null;
+    notifyListeners();
+    unawaited(launchExperience());
+  }
+
+  void _saveProfileToState({
     required String id,
     required String objective,
     required String language,
   }) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final title = objective.length > 80
-        ? '${objective.substring(0, 80)}...'
-        : objective;
     canonicalStore?.patchState(id, (state) {
-      final existingItems = state.curriculum?.items ?? const <CurriculumItem>[];
-      final items = existingItems.isNotEmpty
-          ? existingItems
-          : <CurriculumItem>[
-              CurriculumItem(
-                marker: 'MAIN_001',
-                title: title,
-                text: objective,
-                microitemForTeacher: objective,
-                extra: const {'source': 'objective_seed'},
-              ),
-            ];
-      final curriculum = existingItems.isNotEmpty
-          ? state.curriculum!
-          : StudentCurriculum(
-              topic: objective,
-              totalItems: items.length,
-              generatedAt: now,
-              provisional: true,
-              items: items,
-            );
-      final marker = items.first.marker;
       return state.copyWith(
         userId: userId,
         profile: state.profile.copyWith(
@@ -342,44 +394,16 @@ class LabSession extends ChangeNotifier {
           targetTopic: objective,
           sessionGoal: objective,
         ),
-        curriculum: curriculum,
-        current:
-            state.current ??
-            LessonCurrent(
-              itemIdx: 0,
-              marker: marker,
-              layer: LessonLayer.l1,
-              amparoLvl: 0,
-            ),
-        progress:
-            state.progress ??
-            LessonProgress(
-              itemIdx: 0,
-              layer: LessonLayer.l1,
-              erros: 0,
-              amparoLvl: 0,
-              historia: const [],
-              mainAdvances: 0,
-              concluidos: const [],
-              pendentesMarkers: const [],
-              totalItems: items.length,
-              pctAvanco: 0,
-            ),
-        extra: {
-          ...state.extra,
-          'live_flow_source': 'LabSession->SimOrganism',
-          't00_status': 'prepared_for_tc02',
-        },
       );
     });
     canonicalStore?.appendEvent(
       lessonLocalId: id,
-      type: 'LIVE_LESSON_STATE_SEEDED',
+      type: 'STUDENT_FORM_SUBMITTED',
       payload: {
         'objective_length': objective.length,
-        'provisional_curriculum': true,
+        'language': language,
       },
-      source: 'lab_session_bridge',
+      source: 'lab_session',
       userId: userId,
     );
   }
@@ -2257,100 +2281,174 @@ class MenuLine extends StatelessWidget {
   }
 }
 
-class PhaseBoundaryScreen extends StatelessWidget {
+class PhaseBoundaryScreen extends StatefulWidget {
   const PhaseBoundaryScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<PhaseBoundaryScreen> createState() => _PhaseBoundaryScreenState();
+}
+
+class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _launch());
+  }
+
+  void _launch() {
+    if (_started) return;
+    _started = true;
+    unawaited(widget.session.launchExperience());
+  }
+
+  String _stageLabel(String status) => switch (status) {
+        't00_running' => 'Montando currículo...',
+        't02_running' => 'Preparando primeira aula...',
+        'placement' => 'Preparando nivelamento...',
+        'primeira_aula_pronta' => 'Tudo pronto!',
+        'erro' => 'Algo deu errado',
+        _ => 'Processando ficha...',
+      };
+
+  double _progress(String status) => switch (status) {
+        'pedido_recebido' => 0.10,
+        't00_running' => 0.40,
+        't02_running' => 0.70,
+        'placement' => 0.85,
+        'primeira_aula_pronta' => 1.0,
+        _ => 0.05,
+      };
+
+  @override
   Widget build(BuildContext context) {
+    final status = widget.session.entryStatus;
+    final error = widget.session.entryError;
+    final isError = status == 'erro';
+    final isCredits = error?.toLowerCase().contains('crédito') == true ||
+        error?.toLowerCase().contains('credit') == true;
+
     return Scaffold(
+      backgroundColor: simDark,
       body: SafeArea(
-        child: Column(
-          children: [
-            const StepHeader(step: 4, total: 5, label: 'Preparando aula'),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: SimCard(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '/cyber/curriculo',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'SIM recebeu a ficha, interpreta o objetivo, monta o currículo e prepara a primeira aula.',
-                          style: TextStyle(
-                            color: simMuted,
-                            fontSize: 15,
-                            height: 1.45,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: session.entryStatus == 'primeira_aula_pronta'
-                                ? 1
-                                : 0.72,
-                            minHeight: 10,
-                            backgroundColor: simLight,
-                            color: simDark,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'lessonLocalId: ${session.lessonLocalId ?? ''}',
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'entry.status: ${session.entryStatus}',
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: DecoratedBox(
-                            decoration: primaryButtonDecoration(radius: 14),
-                            child: TextButton(
-                              onPressed: session.preparationDone,
-                              child: const Text(
-                                'Continuar para nivelamento',
-                                style: TextStyle(
-                                  color: simDark,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'SIM',
+                style: TextStyle(
+                  color: simLight,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 48),
+              if (!isError) ...[
+                _RobotAvatar(status: status),
+                const SizedBox(height: 32),
+                Text(
+                  _stageLabel(status),
+                  style: const TextStyle(
+                    color: simLight,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'O aluno não pode ficar preso na porta da escola.',
+                  style: TextStyle(
+                    color: simMuted,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.05, end: _progress(status)),
+                    duration: const Duration(milliseconds: 600),
+                    builder: (_, value, __) => LinearProgressIndicator(
+                      value: value,
+                      minHeight: 6,
+                      backgroundColor: simMid,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(simLight),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ] else ...[
+                const SizedBox(height: 40),
+                const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 48),
+                const SizedBox(height: 20),
+                const Text(
+                  'Não consegui preparar agora',
+                  style: TextStyle(
+                    color: simLight,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (error != null)
+                  Text(
+                    error,
+                    style: const TextStyle(
+                      color: simMuted,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                const SizedBox(height: 32),
+                if (isCredits)
+                  PrimaryWideButton(
+                    label: 'Comprar créditos',
+                    onPressed: () => widget.session.openCredits(),
+                  )
+                else
+                  PrimaryWideButton(
+                    label: 'Tentar novamente',
+                    onPressed: () {
+                      _started = false;
+                      _launch();
+                    },
+                  ),
+              ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _RobotAvatar extends StatelessWidget {
+  const _RobotAvatar({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = status == 'primeira_aula_pronta';
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: done ? simLight : simMid,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(
+        done ? Icons.school_rounded : Icons.psychology_alt_rounded,
+        color: simDark,
+        size: 36,
       ),
     );
   }
