@@ -6,8 +6,6 @@ class LessonUiState extends ChangeNotifier {
   String? entryError;
   bool placementStarted = false;
   bool placementDone = false;
-  String selectedAnswer = '';
-  String aulaMessage = '';
   bool doubtOpen = false;
   bool audioEnabled = true;
   bool audioPlaying = false;
@@ -38,19 +36,7 @@ class LessonUiState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void chooseAulaAnswer(String letter) {
-    selectedAnswer = letter;
-    aulaMessage = letter == 'A'
-        ? 'Resposta registrada. SIM preparou o próximo passo.'
-        : letter == 'B'
-        ? 'Resposta registrada. SIM marcou revisão.'
-        : 'Resposta registrada. SIM abriu caminho de recuperação.';
-    notifyListeners();
-  }
-
   void advanceAulaVisual() {
-    selectedAnswer = '';
-    aulaMessage = '';
     doubtOpen = false;
     imageStatus = 'idle';
     imageError = null;

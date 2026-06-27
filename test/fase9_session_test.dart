@@ -32,16 +32,14 @@ void main() {
     expect(nav.returnTo, '/cyber/aula');
   });
 
-  test('LessonUiState mantém estado visual legado de aula isolado', () {
+  test('LessonUiState.toggleDoubt alterna e advanceAulaVisual fecha dúvida', () {
     final ui = LessonUiState();
 
-    ui.chooseAulaAnswer('B');
-    expect(ui.selectedAnswer, 'B');
-    expect(ui.aulaMessage, contains('revisão'));
+    ui.toggleDoubt();
+    expect(ui.doubtOpen, isTrue);
 
     ui.advanceAulaVisual();
-    expect(ui.aulaStep, 1);
-    expect(ui.selectedAnswer, isEmpty);
-    expect(ui.aulaMessage, isEmpty);
+    expect(ui.doubtOpen, isFalse);
+    expect(ui.imageStatus, 'idle');
   });
 }
