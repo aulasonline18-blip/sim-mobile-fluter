@@ -253,4 +253,11 @@ class SimOrganism {
       accountDeletionController: accountDeletionController,
     );
   }
+
+  static SimOrganism production({required String lessonLocalId}) {
+    throw UnimplementedError(
+      'SimOrganism.production() requer clients reais de servidor. '
+      'Use --dart-define=FLUTTER_APP_MODE=production apenas quando TC-02 estiver instalado.',
+    );
+  }
 }

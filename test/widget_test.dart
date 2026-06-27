@@ -85,7 +85,7 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
-  testWidgets('Preenchimento shows doubt review and recovery rooms in aula', (
+  testWidgets('Preenchimento shows doubt and qualifier flow in aula', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(480, 1200));
@@ -93,22 +93,23 @@ void main() {
       ..authed = true
       ..authReady = true
       ..credits = 3
+      ..selectedLanguageCode = 'pt'
       ..stableLang = 'Portuguese'
-      ..freeText = 'Frações equivalentes'
-      ..route = '/cyber/aula';
+      ..freeText = 'Fracoes equivalentes explicadas com exemplos simples.';
+    expect(session.saveObjectiveEntry(), isTrue);
+    session.route = '/cyber/aula';
+    await session.openAulaRuntime();
     await tester.pumpWidget(SimMobileApp(initialSession: session));
 
     await tester.tap(find.byIcon(Icons.help_outline));
     await tester.pumpAndSettle();
-    expect(find.text('Dúvida'), findsOneWidget);
-    await tester.tap(find.textContaining('B. Entendi'));
+    expect(find.text('Duvida'), findsOneWidget);
+    await tester.tap(find.textContaining('B.'));
     await tester.pumpAndSettle();
-    expect(find.text('Revisão'), findsOneWidget);
-    await tester.tap(find.text('Avançar'));
+    expect(find.text('Como ficou este ponto para voce?'), findsOneWidget);
+    await tester.tap(find.textContaining('2. Acho que sim'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('C. Ainda'));
-    await tester.pumpAndSettle();
-    expect(find.text('Recuperação'), findsOneWidget);
+    expect(find.text('Avancar'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });

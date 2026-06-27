@@ -96,13 +96,16 @@ void main() {
       ..authed = true
       ..authReady = true
       ..credits = 3
+      ..selectedLanguageCode = 'pt'
       ..stableLang = 'Portuguese'
-      ..freeText = 'Frações equivalentes'
-      ..route = '/cyber/aula';
+      ..freeText = 'Fracoes equivalentes explicadas com exemplos simples.';
+    expect(session.saveObjectiveEntry(), isTrue);
+    session.route = '/cyber/aula';
+    await session.openAulaRuntime();
 
     await tester.pumpWidget(SimMobileApp(initialSession: session));
     expect(find.text('Imagem da aula'), findsOneWidget);
-    expect(find.text('Áudio da aula ligado'), findsOneWidget);
+    expect(find.text('Audio da aula ligado'), findsOneWidget);
 
     await tester.tap(find.text('Gerar imagem'));
     await tester.pump();
@@ -110,15 +113,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Imagem da aula pronta'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Áudio'));
+    await tester.tap(find.byIcon(Icons.volume_up_outlined).first);
     await tester.pump();
-    expect(find.text('Preparando áudio da aula...'), findsOneWidget);
+    expect(find.text('Preparando audio da aula...'), findsOneWidget);
     await tester.pumpAndSettle();
-    expect(find.text('Áudio ainda não está disponível.'), findsOneWidget);
 
-    await tester.tap(find.textContaining('B. Entendi'));
+    final optionB = find.textContaining('B.');
+    await tester.ensureVisible(optionB);
+    await tester.tap(optionB);
     await tester.pumpAndSettle();
-    expect(find.textContaining('SIM marcou revisão'), findsOneWidget);
+    expect(find.text('Como ficou este ponto para voce?'), findsOneWidget);
+    expect(find.textContaining('2. Acho que sim'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });

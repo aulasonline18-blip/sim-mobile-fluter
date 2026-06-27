@@ -9,6 +9,11 @@ import 'sim/cloud/supabase_student_state_cloud_storage.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
+import 'sim/classroom/classroom_models.dart';
+import 'sim/classroom/lesson_runtime_engine.dart';
+import 'sim/config/app_mode.dart';
+import 'sim/organism/sim_organism.dart';
+import 'sim/organism/sim_organism_provider.dart';
 import 'session/auth_session.dart';
 import 'session/entry_form_state.dart';
 import 'session/lesson_ui_state.dart';
@@ -69,16 +74,21 @@ const objectiveRequiredWithAttachmentMessage =
     'Você anexou um arquivo. Agora escreva o que deseja estudar com ele.';
 
 class LabSession extends ChangeNotifier {
-  LabSession({StudentStateStore? canonicalStore, this._attachmentClient})
-    : canonicalStore =
-          canonicalStore ??
-          StudentStateStore(local: MemoryStudentStateLocalStorage()) {
+  LabSession({
+    StudentStateStore? canonicalStore,
+    this._attachmentClient,
+    AppMode? appMode,
+  }) : appMode = appMode ?? AppModeConfig.current,
+       canonicalStore =
+           canonicalStore ??
+           StudentStateStore(local: MemoryStudentStateLocalStorage()) {
     entryForm.addListener(_notifyFromChild);
     authSession.addListener(_notifyFromChild);
     navigationState.addListener(_notifyFromChild);
     lessonUiState.addListener(_notifyFromChild);
   }
 
+  final AppMode appMode;
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
 
@@ -93,10 +103,35 @@ class LabSession extends ChangeNotifier {
     onAuthenticated: _hydrateActiveLessonFromCloud,
   );
 
+  late final SimOrganismProvider simOrganismProvider = SimOrganismProvider(
+    mode: appMode,
+    canonicalStore: canonicalStore!,
+  );
+  SimOrganism? _activeOrganism;
+  LessonRuntimeSnapshot? aulaSnapshot;
+  bool aulaRuntimeLoading = false;
+  String? aulaRuntimeError;
+
   final AudioPreference _audioPreference = AudioPreference();
   LessonAudioController? _lessonAudioController;
 
   void _notifyFromChild() => notifyListeners();
+
+  StudentLearningState? get _activeCanonicalState {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return null;
+    return canonicalStore?.readState(id);
+  }
+
+  LessonLayer get currentAulaLayer {
+    final state = _activeCanonicalState;
+    return state?.current?.layer ?? state?.progress?.layer ?? LessonLayer.l1;
+  }
+
+  int get currentAulaItemNumber {
+    final state = _activeCanonicalState;
+    return (state?.current?.itemIdx ?? state?.progress?.itemIdx ?? 0) + 1;
+  }
 
   bool get authed => authSession.authed;
   set authed(bool value) => authSession.authed = value;
@@ -242,18 +277,103 @@ class LabSession extends ChangeNotifier {
         : freeTrim;
     entryForm.attachmentsText = entryForm.buildAttachmentsText();
     final language = stableLang ?? 'English';
-    lessonLocalId = _deriveLessonLocalId(
-      clipped,
-      selectedLanguageCode ?? language,
-    );
+    final id = _deriveLessonLocalId(clipped, selectedLanguageCode ?? language);
+    lessonLocalId = id;
     entryForm.studentProfileNotes = attachmentsText.isEmpty
         ? clipped
         : '$clipped\n\n$attachmentsText';
     entryForm.freeText = clipped;
+    _seedCanonicalLessonState(id: id, objective: clipped, language: language);
     entryStatus = 'pedido_recebido';
     entryError = null;
     navigationState.openRoute('/cyber/curriculo');
     return true;
+  }
+
+  void _seedCanonicalLessonState({
+    required String id,
+    required String objective,
+    required String language,
+  }) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final title = objective.length > 80
+        ? '${objective.substring(0, 80)}...'
+        : objective;
+    canonicalStore?.patchState(id, (state) {
+      final existingItems = state.curriculum?.items ?? const <CurriculumItem>[];
+      final items = existingItems.isNotEmpty
+          ? existingItems
+          : <CurriculumItem>[
+              CurriculumItem(
+                marker: 'MAIN_001',
+                title: title,
+                text: objective,
+                microitemForTeacher: objective,
+                extra: const {'source': 'objective_seed'},
+              ),
+            ];
+      final curriculum = existingItems.isNotEmpty
+          ? state.curriculum!
+          : StudentCurriculum(
+              topic: objective,
+              totalItems: items.length,
+              generatedAt: now,
+              provisional: true,
+              items: items,
+            );
+      final marker = items.first.marker;
+      return state.copyWith(
+        userId: userId,
+        profile: state.profile.copyWith(
+          preferredName: preferredName.trim().isEmpty
+              ? state.profile.preferredName
+              : preferredName.trim(),
+          language: selectedLanguageCode ?? language,
+          stableLang: stableLang ?? language,
+          objetivo: objective,
+          targetTopic: objective,
+          sessionGoal: objective,
+        ),
+        curriculum: curriculum,
+        current:
+            state.current ??
+            LessonCurrent(
+              itemIdx: 0,
+              marker: marker,
+              layer: LessonLayer.l1,
+              amparoLvl: 0,
+            ),
+        progress:
+            state.progress ??
+            LessonProgress(
+              itemIdx: 0,
+              layer: LessonLayer.l1,
+              erros: 0,
+              amparoLvl: 0,
+              historia: const [],
+              mainAdvances: 0,
+              concluidos: const [],
+              pendentesMarkers: const [],
+              totalItems: items.length,
+              pctAvanco: 0,
+            ),
+        extra: {
+          ...state.extra,
+          'live_flow_source': 'LabSession->SimOrganism',
+          't00_status': 'prepared_for_tc02',
+        },
+      );
+    });
+    canonicalStore?.appendEvent(
+      lessonLocalId: id,
+      type: 'LIVE_LESSON_STATE_SEEDED',
+      payload: {
+        'objective_length': objective.length,
+        'provisional_curriculum': true,
+      },
+      source: 'lab_session_bridge',
+      userId: userId,
+    );
   }
 
   void openCredits() {
@@ -324,20 +444,44 @@ class LabSession extends ChangeNotifier {
   }
 
   LessonContent _currentLessonContentForAudio() {
-    final topic = freeText.trim().isEmpty ? 'Aula SIM' : freeText.trim();
-    return LessonContent(
-      explanation:
-          'Explicação da aula mínima em laboratório. Aqui entra o conteúdo T02 real quando o servidor estiver conectado.',
-      question:
-          'Qual alternativa mostra que você entendeu este primeiro ponto?',
-      options: const {
-        AnswerLetter.A: 'Consigo explicar com minhas palavras.',
-        AnswerLetter.B: 'Entendi uma parte, mas preciso revisar.',
-        AnswerLetter.C: 'Ainda estou perdido e preciso de recuperação.',
-      },
-      correctAnswer: AnswerLetter.A,
-      whyCorrect: topic,
-    );
+    final content = aulaSnapshot?.conteudo;
+    if (content == null) {
+      throw StateError('Conteudo de aula ainda nao esta pronto para audio.');
+    }
+    return content;
+  }
+
+  SimOrganism _organismForActiveLesson() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) {
+      throw StateError('lessonLocalId ausente para abrir organismo SIM.');
+    }
+    final organism = simOrganismProvider.forLesson(id);
+    _activeOrganism = organism;
+    return organism;
+  }
+
+  Future<void> openAulaRuntime() async {
+    if (aulaRuntimeLoading) return;
+    aulaRuntimeLoading = true;
+    aulaRuntimeError = null;
+    notifyListeners();
+    try {
+      final organism = _organismForActiveLesson();
+      aulaSnapshot = await organism.lessonRuntimeEngine.open(
+        lessonLocalId: organism.lessonLocalId,
+        authReady: authReady,
+        authed: authed,
+      );
+      if (aulaSnapshot?.hasCurriculum != true) {
+        aulaRuntimeError = 'Aula sem curriculo no Estado do aluno.';
+      }
+    } catch (error) {
+      aulaRuntimeError = error.toString();
+    } finally {
+      aulaRuntimeLoading = false;
+      notifyListeners();
+    }
   }
 
   void preparationDone() {
@@ -349,6 +493,7 @@ class LabSession extends ChangeNotifier {
   void skipPlacement() {
     lessonUiState.skipPlacement();
     navigationState.openRoute('/cyber/aula');
+    unawaited(openAulaRuntime());
   }
 
   void startPlacement() => lessonUiState.startPlacement();
@@ -356,10 +501,33 @@ class LabSession extends ChangeNotifier {
   void finishPlacement() {
     lessonUiState.finishPlacement();
     navigationState.openRoute('/cyber/aula');
+    unawaited(openAulaRuntime());
   }
 
-  void chooseAulaAnswer(String letter) =>
-      lessonUiState.chooseAulaAnswer(letter);
+  void chooseAulaAnswer(String letter) {
+    final organism = _activeOrganism ?? _organismForActiveLesson();
+    final answer = AnswerLetter.values.firstWhere(
+      (value) => value.name == letter,
+      orElse: () => AnswerLetter.A,
+    );
+    organism.lessonRuntimeEngine.select(answer);
+    aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+    notifyListeners();
+  }
+
+  void submitAulaSignal(int value) {
+    final organism = _activeOrganism ?? _organismForActiveLesson();
+    final signal = switch (value) {
+      1 => DecisionSignal.one,
+      2 => DecisionSignal.two,
+      3 => DecisionSignal.three,
+      _ => DecisionSignal.one,
+    };
+    organism.lessonRuntimeEngine.signal(signal);
+    aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+    _persistActiveLessonToCloud();
+    notifyListeners();
+  }
 
   void setDeleteConfirmation(String value) {
     lessonUiState.setDeleteConfirmation(value);
@@ -367,18 +535,20 @@ class LabSession extends ChangeNotifier {
 
   void requestAccountDeletion() => lessonUiState.requestAccountDeletion();
 
-  void advanceAula() {
-    lessonUiState.advanceAulaVisual();
-    final id = lessonLocalId;
-    if (id != null && id.trim().isNotEmpty) {
-      canonicalStore?.appendEvent(
-        lessonLocalId: id,
-        type: 'ITEM_ADVANCED',
-        payload: {'aula_step': aulaStep},
-        source: 'lab_session',
-        userId: userId,
-      );
+  Future<void> advanceAula() async {
+    final organism = _activeOrganism ?? _organismForActiveLesson();
+    aulaRuntimeLoading = true;
+    aulaRuntimeError = null;
+    notifyListeners();
+    try {
+      await organism.lessonRuntimeEngine.advance();
+      aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
       _persistActiveLessonToCloud();
+    } catch (error) {
+      aulaRuntimeError = error.toString();
+    } finally {
+      aulaRuntimeLoading = false;
+      notifyListeners();
     }
   }
 
@@ -407,10 +577,11 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
     await Future<void>.delayed(Duration.zero);
     try {
+      final snapshot = aulaSnapshot;
       final started = await _audioControllerFor(id).playConteudo(
         _currentLessonContentForAudio(),
-        'item-${aulaStep + 1}',
-        LessonLayer.l1,
+        snapshot?.itemMarker ?? 'item-1',
+        currentAulaLayer,
         language: stableLang,
       );
       audioPlaying = started;
@@ -467,10 +638,16 @@ String _deriveLessonLocalId(String objetivo, String idioma) {
 }
 
 class SimMobileApp extends StatefulWidget {
-  const SimMobileApp({super.key, this.canonicalStore, this.initialSession});
+  const SimMobileApp({
+    super.key,
+    this.canonicalStore,
+    this.initialSession,
+    this.appMode,
+  });
 
   final StudentStateStore? canonicalStore;
   final LabSession? initialSession;
+  final AppMode? appMode;
 
   @override
   State<SimMobileApp> createState() => _SimMobileAppState();
@@ -479,7 +656,10 @@ class SimMobileApp extends StatefulWidget {
 class _SimMobileAppState extends State<SimMobileApp> {
   late final LabSession session =
       widget.initialSession ??
-      LabSession(canonicalStore: widget.canonicalStore);
+      LabSession(
+        canonicalStore: widget.canonicalStore,
+        appMode: widget.appMode,
+      );
 
   @override
   void initState() {
@@ -2257,9 +2437,16 @@ class AulaLabScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topic = session.freeText.trim().isEmpty
-        ? 'Aula SIM'
-        : session.freeText.trim();
+    final snapshot = session.aulaSnapshot;
+    final content = snapshot?.conteudo;
+    final phase = snapshot?.phase;
+    final selected = phase?.letter;
+    final layer = session.currentAulaLayer;
+    final itemText = snapshot?.itemText ?? session.freeText.trim();
+    final isExpanded = phase?.type == ClassroomPhaseType.expandida;
+    final isProcessing = phase?.type == ClassroomPhaseType.processando;
+    final isCompleted = phase?.type == ClassroomPhaseType.concluido;
+    final isEngineError = phase?.type == ClassroomPhaseType.erroEngine;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -2275,7 +2462,7 @@ class AulaLabScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Item ${session.aulaStep + 1} · Camada 1',
+                            'Item ${session.currentAulaItemNumber} - Camada ${layer.value}',
                             style: const TextStyle(
                               color: simMuted,
                               fontSize: 12,
@@ -2284,7 +2471,7 @@ class AulaLabScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            topic,
+                            itemText.isEmpty ? 'Aula SIM' : itemText,
                             style: const TextStyle(
                               color: simDark,
                               fontSize: 22,
@@ -2293,117 +2480,187 @@ class AulaLabScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          const Text(
-                            'Explicação da aula mínima em laboratório. Aqui entra o conteúdo T02 real quando o servidor estiver conectado.',
-                            style: TextStyle(
-                              color: simMuted,
-                              fontSize: 15,
-                              height: 1.45,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          LessonImagePanel(session: session),
-                          if (session.audioError != null) ...[
-                            const SizedBox(height: 10),
-                            StatusLine(
-                              icon: Icons.volume_off_outlined,
-                              text: session.audioError!,
-                            ),
-                          ],
-                          if (session.audioLoading) ...[
-                            const SizedBox(height: 10),
+                          if (session.aulaRuntimeLoading ||
+                              content == null) ...[
                             const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando áudio da aula...',
+                              icon: Icons.auto_awesome_outlined,
+                              text: 'Preparando sua aula...',
                               loading: true,
                             ),
-                          ],
-                          const SizedBox(height: 10),
-                          StatusLine(
-                            icon: session.audioEnabled
-                                ? Icons.volume_up_outlined
-                                : Icons.volume_off_outlined,
-                            text: session.audioLoading
-                                ? 'Áudio da aula ligado'
-                                : session.audioPlaying
-                                ? 'Áudio da aula tocando'
-                                : session.audioEnabled
-                                ? 'Áudio da aula ligado'
-                                : 'Áudio da aula pausado',
-                          ),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Pergunta',
-                            style: TextStyle(
-                              color: simDark,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Qual alternativa mostra que você entendeu este primeiro ponto?',
-                            style: TextStyle(
-                              color: simDark,
-                              fontSize: 15,
-                              height: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          AnswerButton(
-                            label: 'A',
-                            text: 'Consigo explicar com minhas palavras.',
-                            active: session.selectedAnswer == 'A',
-                            onTap: () => session.chooseAulaAnswer('A'),
-                          ),
-                          AnswerButton(
-                            label: 'B',
-                            text: 'Entendi uma parte, mas preciso revisar.',
-                            active: session.selectedAnswer == 'B',
-                            onTap: () => session.chooseAulaAnswer('B'),
-                          ),
-                          AnswerButton(
-                            label: 'C',
-                            text:
-                                'Ainda estou perdido e preciso de recuperação.',
-                            active: session.selectedAnswer == 'C',
-                            onTap: () => session.chooseAulaAnswer('C'),
-                          ),
-                          if (session.aulaMessage.isNotEmpty) ...[
-                            const SizedBox(height: 14),
+                            if (session.aulaRuntimeError != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                session.aulaRuntimeError!,
+                                style: const TextStyle(
+                                  color: simDark,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SecondaryWideButton(
+                                label: 'Tentar novamente',
+                                onTap: () =>
+                                    unawaited(session.openAulaRuntime()),
+                              ),
+                            ],
+                          ] else ...[
                             Text(
-                              session.aulaMessage,
+                              content.explanation,
+                              style: const TextStyle(
+                                color: simMuted,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            LessonImagePanel(session: session),
+                            if (session.audioError != null) ...[
+                              const SizedBox(height: 10),
+                              StatusLine(
+                                icon: Icons.volume_off_outlined,
+                                text: session.audioError!,
+                              ),
+                            ],
+                            if (session.audioLoading) ...[
+                              const SizedBox(height: 10),
+                              const StatusLine(
+                                icon: Icons.volume_up_outlined,
+                                text: 'Preparando audio da aula...',
+                                loading: true,
+                              ),
+                            ],
+                            const SizedBox(height: 10),
+                            StatusLine(
+                              icon: session.audioEnabled
+                                  ? Icons.volume_up_outlined
+                                  : Icons.volume_off_outlined,
+                              text: session.audioLoading
+                                  ? 'Audio da aula ligado'
+                                  : session.audioPlaying
+                                  ? 'Audio da aula tocando'
+                                  : session.audioEnabled
+                                  ? 'Audio da aula ligado'
+                                  : 'Audio da aula pausado',
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Pergunta',
+                              style: TextStyle(
+                                color: simDark,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              content.question,
                               style: const TextStyle(
                                 color: simDark,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                height: 1.4,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            PrimaryWideButton(
-                              label: 'Avançar',
-                              onTap: session.advanceAula,
+                            AnswerButton(
+                              label: 'A',
+                              text: content.options[AnswerLetter.A] ?? '',
+                              active: selected == AnswerLetter.A,
+                              onTap: isCompleted
+                                  ? () {}
+                                  : () => session.chooseAulaAnswer('A'),
                             ),
+                            AnswerButton(
+                              label: 'B',
+                              text: content.options[AnswerLetter.B] ?? '',
+                              active: selected == AnswerLetter.B,
+                              onTap: isCompleted
+                                  ? () {}
+                                  : () => session.chooseAulaAnswer('B'),
+                            ),
+                            AnswerButton(
+                              label: 'C',
+                              text: content.options[AnswerLetter.C] ?? '',
+                              active: selected == AnswerLetter.C,
+                              onTap: isCompleted
+                                  ? () {}
+                                  : () => session.chooseAulaAnswer('C'),
+                            ),
+                            if (isExpanded) ...[
+                              const SizedBox(height: 14),
+                              const Text(
+                                'Como ficou este ponto para voce?',
+                                style: TextStyle(
+                                  color: simDark,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              AnswerButton(
+                                label: '1',
+                                text: 'Tenho certeza.',
+                                active: false,
+                                onTap: () => session.submitAulaSignal(1),
+                              ),
+                              AnswerButton(
+                                label: '2',
+                                text: 'Acho que sim, mas quero cuidado.',
+                                active: false,
+                                onTap: () => session.submitAulaSignal(2),
+                              ),
+                              AnswerButton(
+                                label: '3',
+                                text: 'Estou inseguro.',
+                                active: false,
+                                onTap: () => session.submitAulaSignal(3),
+                              ),
+                            ],
+                            if (isProcessing) ...[
+                              const SizedBox(height: 14),
+                              const StatusLine(
+                                icon: Icons.auto_awesome_outlined,
+                                text: 'Registrando sua resposta...',
+                                loading: true,
+                              ),
+                            ],
+                            if (isCompleted && phase?.message != null) ...[
+                              const SizedBox(height: 14),
+                              Text(
+                                phase!.message!,
+                                style: const TextStyle(
+                                  color: simDark,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              PrimaryWideButton(
+                                label: 'Avancar',
+                                onTap: () => unawaited(session.advanceAula()),
+                              ),
+                            ],
+                            if (isEngineError && phase?.message != null) ...[
+                              const SizedBox(height: 14),
+                              Text(
+                                phase!.message!,
+                                style: const TextStyle(
+                                  color: simDark,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SecondaryWideButton(
+                                label: 'Tentar novamente',
+                                onTap: () =>
+                                    unawaited(session.openAulaRuntime()),
+                              ),
+                            ],
                           ],
                         ],
                       ),
                     ),
-                    if (session.selectedAnswer == 'B') ...[
-                      const SizedBox(height: 14),
-                      const AuxRoomCard(
-                        title: 'Revisão',
-                        body:
-                            'SIM marcou este ponto para revisão antes de seguir. A revisão nasce da verdade pedagógica registrada no estado.',
-                      ),
-                    ],
-                    if (session.selectedAnswer == 'C') ...[
-                      const SizedBox(height: 14),
-                      const AuxRoomCard(
-                        title: 'Recuperação',
-                        body:
-                            'SIM abriu recuperação para reconstruir o ponto que ainda travou. A recuperação preserva o caminho do aluno.',
-                      ),
-                    ],
                     const SizedBox(height: 14),
                     if (session.doubtOpen)
                       SimCard(
@@ -2411,7 +2668,7 @@ class AulaLabScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
                             Text(
-                              'Dúvida',
+                              'Duvida',
                               style: TextStyle(
                                 color: simDark,
                                 fontSize: 18,
@@ -2420,7 +2677,7 @@ class AulaLabScreen extends StatelessWidget {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Sala de dúvida aberta. No app real, esta pergunta chama o T02 com o adendo de dúvida no servidor.',
+                              'Sala de duvida aberta. No app real, esta pergunta chama o T02 com o adendo de duvida no servidor.',
                               style: TextStyle(
                                 color: simMuted,
                                 fontSize: 14,
