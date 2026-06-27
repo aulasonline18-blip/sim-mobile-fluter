@@ -186,9 +186,6 @@ class LabSession extends ChangeNotifier {
   set entryError(String? value) => lessonUiState.entryError = value;
   bool get placementStarted => lessonUiState.placementStarted;
   bool get placementDone => lessonUiState.placementDone;
-  int get aulaStep => lessonUiState.aulaStep;
-  String get selectedAnswer => lessonUiState.selectedAnswer;
-  String get aulaMessage => lessonUiState.aulaMessage;
   bool get doubtOpen => lessonUiState.doubtOpen;
   bool get audioEnabled => lessonUiState.audioEnabled;
   set audioEnabled(bool value) => lessonUiState.audioEnabled = value;
@@ -2413,12 +2410,12 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                 if (isCredits)
                   PrimaryWideButton(
                     label: 'Comprar créditos',
-                    onPressed: () => widget.session.openCredits(),
+                    onTap: () => widget.session.openCredits(),
                   )
                 else
                   PrimaryWideButton(
                     label: 'Tentar novamente',
-                    onPressed: () {
+                    onTap: () {
                       _started = false;
                       _launch();
                     },
@@ -3471,7 +3468,7 @@ class FatherLabScreen extends StatelessWidget {
     return SimpleLabPage(
       title: 'Painel do Pai',
       body:
-          'Resumo vivo: idioma ${session.stableLang ?? '-'}, objetivo ${session.freeText.isEmpty ? '-' : session.freeText}, avanço ${session.aulaStep}.',
+          'Resumo vivo: idioma ${session.stableLang ?? '-'}, objetivo ${session.freeText.isEmpty ? '-' : session.freeText}, item ${session.currentAulaItemNumber}, camada ${session.currentAulaLayer.value}.',
       primary: 'Voltar',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,

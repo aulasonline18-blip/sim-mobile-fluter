@@ -6,7 +6,6 @@ class LessonUiState extends ChangeNotifier {
   String? entryError;
   bool placementStarted = false;
   bool placementDone = false;
-  int aulaStep = 0;
   String selectedAnswer = '';
   String aulaMessage = '';
   bool doubtOpen = false;
@@ -50,7 +49,6 @@ class LessonUiState extends ChangeNotifier {
   }
 
   void advanceAulaVisual() {
-    aulaStep += 1;
     selectedAnswer = '';
     aulaMessage = '';
     doubtOpen = false;
