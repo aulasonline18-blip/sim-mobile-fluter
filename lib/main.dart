@@ -12,7 +12,6 @@ import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
 import 'sim/config/app_mode.dart';
-import 'sim/experience/student_experience_engine.dart';
 import 'sim/experience/student_experience_types.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_provider.dart';
@@ -87,6 +86,7 @@ class LabSession extends ChangeNotifier {
     AppMode? appMode,
     SharedPreferences? prefs,
   }) : appMode = appMode ?? AppModeConfig.current,
+       // ignore: prefer_initializing_formals — param nomeado 'prefs' não pode ser 'this._prefs'
        _prefs = prefs,
        canonicalStore =
            canonicalStore ??
@@ -304,7 +304,9 @@ class LabSession extends ChangeNotifier {
     if (id == null || id.trim().isEmpty) return;
     if (entryStatus == 't00_running' ||
         entryStatus == 't02_running' ||
-        entryStatus == 'primeira_aula_pronta') return;
+        entryStatus == 'primeira_aula_pronta') {
+      return;
+    }
 
     entryStatus = 't00_running';
     entryError = null;
@@ -2375,7 +2377,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.05, end: _progress(status)),
                     duration: const Duration(milliseconds: 600),
-                    builder: (_, value, __) => LinearProgressIndicator(
+                    builder: (context, value, child) => LinearProgressIndicator(
                       value: value,
                       minHeight: 6,
                       backgroundColor: simMid,
