@@ -101,6 +101,7 @@ void main() {
       ..freeText = 'Fracoes equivalentes explicadas com exemplos simples.';
     expect(session.saveObjectiveEntry(), isTrue);
     session.route = '/cyber/aula';
+    await session.launchExperience();
     await session.openAulaRuntime();
 
     await tester.pumpWidget(SimMobileApp(initialSession: session));

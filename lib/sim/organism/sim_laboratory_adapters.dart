@@ -25,7 +25,7 @@ class LaboratoryT00Client implements T00BootstrapClient {
     yield T00BootstrapChunk(
       type: 't00_item_partial',
       payload: {
-        'item': {'marker': 'T00:1', 'text': topic, 'title': topic},
+        'item': {'marker': 'MAIN_001', 'text': topic, 'title': topic},
       },
     );
   }

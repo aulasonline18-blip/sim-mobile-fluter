@@ -34,6 +34,7 @@ void main() {
       );
 
       expect(session.saveObjectiveEntry(), isTrue);
+      await session.launchExperience();
       await session.openAulaRuntime();
 
       expect(session.aulaSnapshot?.conteudo, isNotNull);

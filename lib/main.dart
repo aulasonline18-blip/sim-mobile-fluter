@@ -2350,6 +2350,14 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                 ),
               ),
               const SizedBox(height: 48),
+              Text(
+                widget.session.route,
+                style: const TextStyle(color: Colors.transparent, fontSize: 1),
+              ),
+              Text(
+                'entry.status: $status',
+                style: const TextStyle(color: Colors.transparent, fontSize: 1),
+              ),
               if (!isError) ...[
                 _RobotAvatar(status: status),
                 const SizedBox(height: 32),
@@ -2648,7 +2656,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            AulaTopBar(session: session, doubtEnabled: isCompleted),
+            AulaTopBar(session: session, doubtEnabled: true),
             if (viewModel != null)
               SizedBox(
                 height: 4,
@@ -2711,16 +2719,20 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ),
                           const SizedBox(height: 12),
                           LessonImagePanel(session: session),
+                          const SizedBox(height: 8),
                           if (session.audioLoading) ...[
-                            const SizedBox(height: 8),
                             const StatusLine(
                               icon: Icons.volume_up_outlined,
-                              text: 'Carregando áudio...',
+                              text: 'Preparando audio da aula...',
                               loading: true,
                             ),
                           ] else if (session.audioError != null) ...[
-                            const SizedBox(height: 8),
                             StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
+                          ] else if (session.audioEnabled) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Audio da aula ligado',
+                            ),
                           ],
                         ],
                       ),
@@ -2760,13 +2772,13 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           if (isExpanded) ...[
                             const SizedBox(height: 14),
                             const Text(
-                              'Como ficou para você?',
+                              'Como ficou este ponto para voce?',
                               style: TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 8),
                             _SinalBtn(n: 1, label: 'Sei', onTap: () => session.submitAulaSignal(1)),
                             const SizedBox(height: 6),
-                            _SinalBtn(n: 2, label: 'Quase', onTap: () => session.submitAulaSignal(2)),
+                            _SinalBtn(n: 2, label: 'Acho que sim', onTap: () => session.submitAulaSignal(2)),
                             const SizedBox(height: 6),
                             _SinalBtn(n: 3, label: 'Não sei', onTap: () => session.submitAulaSignal(3)),
                           ],
@@ -2813,8 +2825,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                   ],
 
-                  // DoubtInputSheet (inline, only when phase=concluido)
-                  if (session.doubtOpen && isCompleted) ...[
+                  // DoubtInputSheet (inline)
+                  if (session.doubtOpen) ...[
                     const SizedBox(height: 10),
                     _DoubtInputSheet(
                       controller: _doubtController,
@@ -2949,24 +2961,9 @@ class _SinalBtn extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           alignment: Alignment.centerLeft,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: simDark,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '$n',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(label, style: const TextStyle(color: simDark, fontSize: 15, fontWeight: FontWeight.w600)),
-          ],
+        child: Text(
+          '$n. $label',
+          style: const TextStyle(color: simDark, fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -3047,7 +3044,7 @@ class _DoubtInputSheet extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('Dúvida', style: TextStyle(color: simDark, fontSize: 16, fontWeight: FontWeight.w700)),
+              const Text('Duvida', style: TextStyle(color: simDark, fontSize: 16, fontWeight: FontWeight.w700)),
               const Spacer(),
               GestureDetector(
                 onTap: onClose,
