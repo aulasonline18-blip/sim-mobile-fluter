@@ -31,7 +31,10 @@ const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
 const simSupabaseAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
-const simApiBaseUrl = 'http://167.179.109.137:3000';
+const simApiBaseUrl = String.fromEnvironment(
+  'SIM_SERVER_URL',
+  defaultValue: 'http://167.179.109.137:3000',
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +55,7 @@ Future<void> main() async {
     local: stateStorage,
     cloud: cloudStorage,
   );
-  runApp(SimMobileApp(canonicalStore: canonicalStore));
+  runApp(SimMobileApp(canonicalStore: canonicalStore, prefs: prefs));
 }
 
 const simDark = Color(0xFF111827);
@@ -78,7 +81,9 @@ class LabSession extends ChangeNotifier {
     StudentStateStore? canonicalStore,
     this._attachmentClient,
     AppMode? appMode,
+    SharedPreferences? prefs,
   }) : appMode = appMode ?? AppModeConfig.current,
+       _prefs = prefs,
        canonicalStore =
            canonicalStore ??
            StudentStateStore(local: MemoryStudentStateLocalStorage()) {
@@ -89,6 +94,7 @@ class LabSession extends ChangeNotifier {
   }
 
   final AppMode appMode;
+  final SharedPreferences? _prefs;
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
 
@@ -106,6 +112,8 @@ class LabSession extends ChangeNotifier {
   late final SimOrganismProvider simOrganismProvider = SimOrganismProvider(
     mode: appMode,
     canonicalStore: canonicalStore!,
+    aiConfig: _serverConfig(),
+    prefs: _prefs,
   );
   SimOrganism? _activeOrganism;
   LessonRuntimeSnapshot? aulaSnapshot;
@@ -411,6 +419,7 @@ class LabSession extends ChangeNotifier {
   SimAiServerConfig _serverConfig() {
     return SimAiServerConfig(
       baseUrl: simApiBaseUrl,
+      t02Path: '/api/complete-lesson',
       accessTokenProvider: () async =>
           _supabaseClientOrNull()?.auth.currentSession?.accessToken,
     );
@@ -643,11 +652,13 @@ class SimMobileApp extends StatefulWidget {
     this.canonicalStore,
     this.initialSession,
     this.appMode,
+    this.prefs,
   });
 
   final StudentStateStore? canonicalStore;
   final LabSession? initialSession;
   final AppMode? appMode;
+  final SharedPreferences? prefs;
 
   @override
   State<SimMobileApp> createState() => _SimMobileAppState();
@@ -659,6 +670,7 @@ class _SimMobileAppState extends State<SimMobileApp> {
       LabSession(
         canonicalStore: widget.canonicalStore,
         appMode: widget.appMode,
+        prefs: widget.prefs,
       );
 
   @override

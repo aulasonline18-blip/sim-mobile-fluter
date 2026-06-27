@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../external_ai/sim_ai_server_config.dart';
 import '../external_ai/sim_http_transport.dart';
 import '../state/student_learning_state.dart';
+import 'account_deletion.dart';
 import 'credits_functions.dart';
 import 'payments_functions.dart';
 
@@ -154,5 +155,36 @@ class SimServerCreditsClient implements CreditsFunctions {
     }
     final decoded = jsonDecode(response.body);
     return decoded is Map ? JsonMap.from(decoded) : <String, dynamic>{};
+  }
+}
+
+class SimServerAccountDeletionGateway implements AccountDeletionGateway {
+  SimServerAccountDeletionGateway({
+    required this.config,
+    SimHttpTransport? transport,
+    this.path = '/api/account/request-deletion',
+    this.timeout = const Duration(seconds: 30),
+  }) : transport = transport ?? DartIoSimHttpTransport();
+
+  final SimAiServerConfig config;
+  final SimHttpTransport transport;
+  final String path;
+  final Duration timeout;
+
+  @override
+  Future<void> requestAccountDeletion(AccountDeletionRequest request) async {
+    final response = await transport.postJson(
+      config.uri(path),
+      headers: await config.jsonHeaders(),
+      body: {
+        'userId': request.userId,
+        if (request.emailSnapshot != null) 'email': request.emailSnapshot,
+        'reason': request.reason,
+      },
+      timeout: timeout,
+    );
+    if (!response.ok) {
+      throw SimExternalAiException(response.body, statusCode: response.statusCode);
+    }
   }
 }
