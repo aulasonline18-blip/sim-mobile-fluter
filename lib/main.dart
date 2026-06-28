@@ -2764,6 +2764,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   int _lastHistoryLen = 0;
   bool _lastHasContent = false;
   bool _doubtSheetOpen = false;
+  String? _theoryDoneKey;
 
   @override
   void initState() {
@@ -2848,6 +2849,13 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       _lastHasContent = hasContent;
       _scrollToBottom();
     }
+
+    // Gate question display until typewriter finishes (visualTheoryReady).
+    // _theoryDoneKey is set by SimTypewriter.onDone and cleared to null when a
+    // new explanation arrives (SimTypewriter restarts itself via didUpdateWidget,
+    // so _theoryDoneKey becomes stale automatically).
+    final explanationKey = content?.explanation;
+    final theoryReady = explanationKey != null && _theoryDoneKey == explanationKey;
 
     if (isDone) {
       return _LessonDoneScreen(session: session);
@@ -3006,6 +3014,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               height: 1.45,
                             ),
                             onTick: _scrollToBottom,
+                            onDone: () => setState(() => _theoryDoneKey = content.explanation),
                           ),
                           const SizedBox(height: 12),
                           LessonImagePanel(session: session),
@@ -3082,7 +3091,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // AUL-4: DESAFIO divider
+                    // AUL-4: DESAFIO divider + question — gated on typewriter completion
+                    if (theoryReady) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -3151,6 +3161,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ],
                       ),
                     ),
+                    ], // end if (theoryReady)
 
                     // FeedbackBox + Dúvida button + Próximo
                     if (isCompleted && feedbackKey != null) ...[
@@ -3201,17 +3212,34 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         onNext: () => unawaited(session.advanceAula()),
                       ),
                     ],
-                  ] else if (isEngineError && phase?.message != null) ...[
+                  ] else if (isEngineError) ...[
                     const SizedBox(height: 12),
-                    SimCard(
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: simWarn),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(phase!.message!, style: const TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 12),
-                          SecondaryWideButton(
-                            label: 'Tentar novamente',
+                          Text(t('aula_gen_fail'), style: const TextStyle(color: simWarn, fontSize: 15, fontWeight: FontWeight.w700)),
+                          if (phase?.message != null) ...[
+                            const SizedBox(height: 8),
+                            Text(phase!.message!, style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4)),
+                          ],
+                          const SizedBox(height: 16),
+                          GestureDetector(
                             onTap: () => unawaited(session.openAulaRuntime()),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: simDark,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(t('aula_try_again_2'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                            ),
                           ),
                         ],
                       ),
