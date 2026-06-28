@@ -210,7 +210,15 @@ class LessonAnswerProgressController {
     final itemIdx = progress.itemIdx;
     if (itemIdx < 0 || itemIdx >= curriculum.items.length) return state;
     final marker = curriculum.items[itemIdx].marker;
-    final decision = decideNextActionFromState(state);
+    final stateForDecision = evidence.status == MasteryStatus.mastered &&
+            !(progress.concluidos.contains(marker))
+        ? state.copyWith(
+            progress: progress.copyWith(
+              concluidos: [...progress.concluidos, marker],
+            ),
+          )
+        : state;
+    final decision = decideNextActionFromState(stateForDecision);
     final applied = applyStudentDecision(
       progress,
       decision,
