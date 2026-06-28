@@ -42,7 +42,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: simSupabaseUrl,
-    publishableKey: simSupabaseAnonKey,
+    anonKey: simSupabaseAnonKey,
   );
   final prefs = await SharedPreferences.getInstance();
   final stateStorage = SharedPrefsStudentStateLocalStorage(prefs);
