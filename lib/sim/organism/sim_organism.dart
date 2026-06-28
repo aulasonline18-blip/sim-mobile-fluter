@@ -116,7 +116,10 @@ class SimOrganism {
   }) {
     final sessionProvider = const SupabaseFlutterSessionProvider();
 
-    final localStorage = SharedPrefsStudentStateLocalStorage(prefs);
+    final localStorage = SharedPrefsStudentStateLocalStorage(
+      prefs,
+      activeLessonLocalId: lessonLocalId,
+    );
     final activeStore =
         canonicalStore ?? StudentStateStore(local: localStorage);
     final stateAdapter = StudentStateStoreAdapter(activeStore);
