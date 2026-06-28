@@ -5134,19 +5134,441 @@ class AnswerButton extends StatelessWidget {
 }
 
 void showAulaMenu(BuildContext context, LabSession session) {
-  _showSimDrawer(context, session: session, body: (ctx) {
-    void close() => Navigator.of(ctx).pop();
+  showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'menu',
+    barrierColor: Colors.black.withOpacity(0.5),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (ctx, anim1, anim2) {
+      final sw = MediaQuery.of(ctx).size.width;
+      final drawerW = (sw * 0.88).clamp(0.0, 360.0);
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: AnimatedBuilder(
+          animation: anim1,
+          builder: (_, child) => Transform.translate(
+            offset: Offset(-drawerW * (1 - anim1.value), 0),
+            child: child,
+          ),
+          child: Material(
+            color: const Color(0xFFF0F0F0),
+            child: SizedBox(
+              width: drawerW,
+              height: double.infinity,
+              child: SafeArea(
+                child: _AulaDrawerContent(session: session, onClose: () => Navigator.of(ctx).pop()),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (ctx, anim1, anim2, child) => child,
+  );
+}
+
+class _AulaDrawerContent extends StatefulWidget {
+  const _AulaDrawerContent({required this.session, required this.onClose});
+  final LabSession session;
+  final VoidCallback onClose;
+  @override
+  State<_AulaDrawerContent> createState() => _AulaDrawerContentState();
+}
+
+class _AulaDrawerContentState extends State<_AulaDrawerContent> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String? _feedback;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _flash(String msg) {
+    setState(() => _feedback = msg);
+    Future.delayed(const Duration(milliseconds: 2200), () {
+      if (mounted) setState(() => _feedback = null);
+    });
+  }
+
+  void _handleNovaAula() {
+    widget.onClose();
+    widget.session.goPortal();
+  }
+
+  Future<void> _handleLogout() async {
+    widget.onClose();
+    widget.session.logout();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const panelBg = Color(0xFFF0F0F0);
+    const footerBg = Color(0xFFE7E7E7);
+    const border = Color(0xFFD4D4D4);
+    const text = Color(0xFF1A1A1A);
+    const muted = Color(0xFF5A5A5A);
+
+    final session = widget.session;
+    final lessonId = session.lessonLocalId;
+    final state = lessonId != null ? session.canonicalStore?.readState(lessonId) : null;
+    final total = state?.curriculum?.totalItems ?? 0;
+    final advances = state?.progress?.itemIdx ?? 0;
+    final pct = total > 0 ? ((advances / total) * 100).round() : 0;
+    final lessonName = state?.curriculum?.topic ?? lessonId ?? '';
+
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        MenuLine(label: t('recarregar_creditos'), onTap: () { close(); session.openCredits(); }),
-        MenuLine(label: 'Painel do Pai',          onTap: () { close(); session.openSupport('/pai'); }),
-        MenuLine(label: 'Privacidade',            onTap: () { close(); session.openSupport('/privacidade'); }),
-        MenuLine(label: 'Termos',                 onTap: () { close(); session.openSupport('/termos'); }),
-        MenuLine(label: 'Solicitar exclusão da conta', onTap: () { close(); session.openSupport('/conta/deletar'); }),
+        // Header
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          decoration: BoxDecoration(
+            color: panelBg,
+            border: const Border(bottom: BorderSide(color: border, width: 1)),
+          ),
+          child: Row(
+            children: [
+              Text(
+                t('menu').toUpperCase(),
+                style: TextStyle(
+                  fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                  fontSize: 11,
+                  letterSpacing: 0.22 * 11,
+                  color: muted,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: widget.onClose,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    '✕',
+                    style: TextStyle(color: text, fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Top: Nova Aula + Recarregar
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: border, width: 1)),
+          ),
+          child: Column(
+            children: [
+              // Nova Aula button (gradient-like: dark bg)
+              GestureDetector(
+                onTap: _handleNovaAula,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: simDark,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x2E111827), blurRadius: 12, offset: Offset(0, 4)),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('＋', style: TextStyle(color: Colors.white, fontSize: 18)),
+                      const SizedBox(width: 12),
+                      Text(
+                        t('nova_aula'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Recarregar créditos
+              GestureDetector(
+                onTap: () { widget.onClose(); session.openCredits(); },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('⚡', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          t('recarregar_creditos'),
+                          style: const TextStyle(
+                            color: text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'TOP UP',
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                          fontSize: 10,
+                          color: muted,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Middle: History / lesson list
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t('historico').toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                    fontSize: 10,
+                    letterSpacing: 0.22 * 10,
+                    color: muted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (lessonName.isEmpty)
+                  Text(
+                    t('historico_vazio'),
+                    style: const TextStyle(color: muted, fontSize: 12),
+                  )
+                else ...[
+                  // Search field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: border),
+                    ),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (_) => setState(() {}),
+                      style: const TextStyle(color: text, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: t('drawer_search_placeholder'),
+                        hintStyle: const TextStyle(color: muted, fontSize: 14),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Current lesson item
+                  if (_matchSearch(lessonName))
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: border),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  lessonName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: text,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  '$pct% · $advances/$total',
+                                  style: TextStyle(
+                                    fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                    fontSize: 10,
+                                    color: muted,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        // Footer
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          decoration: const BoxDecoration(
+            color: footerBg,
+            border: Border(top: BorderSide(color: border, width: 1)),
+          ),
+          child: Column(
+            children: [
+              // Status line
+              if (total > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        t('drawer_progress'),
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                          fontSize: 11,
+                          color: muted,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$advances/$total',
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                          fontSize: 11,
+                          color: text,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              // Export / Import / Status
+              Row(
+                children: [
+                  _DrawerFooterBtn(label: '⤓ ${t("exportar")}', onTap: () => _flash('Em breve')),
+                  const SizedBox(width: 6),
+                  _DrawerFooterBtn(label: '⤒ ${t("importar")}', onTap: () => _flash('Em breve')),
+                  const SizedBox(width: 6),
+                  _DrawerFooterBtn(label: 'ⓘ ${t("status")}',  onTap: () => _flash('Em breve')),
+                ],
+              ),
+              if (_feedback != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _feedback!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: simDark, fontSize: 11),
+                ),
+              ],
+              const SizedBox(height: 8),
+              // Logout button
+              GestureDetector(
+                onTap: _handleLogout,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: border),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.logout, size: 16, color: text),
+                      const SizedBox(width: 8),
+                      Text(
+                        t('logout'),
+                        style: const TextStyle(
+                          color: text,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () { widget.onClose(); session.openSupport('/conta/deletar'); },
+                child: Text(
+                  'Solicitar exclusão da conta',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: muted,
+                    fontSize: 11,
+                    decoration: TextDecoration.underline,
+                    decorationColor: muted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
-  });
+  }
+
+  bool _matchSearch(String name) {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    return name.toLowerCase().contains(q);
+  }
+}
+
+class _DrawerFooterBtn extends StatelessWidget {
+  const _DrawerFooterBtn({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFD4D4D4)),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // DR-1..DR-6: Left-side panel drawer (88vw max 360, bg #F0F0F0)
