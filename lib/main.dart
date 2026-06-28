@@ -2869,13 +2869,27 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (viewModel != null) ...[
+                          // AUL-4: TEORIA section label
+                          Row(children: [
                             Text(
-                              _headerLabelText(viewModel.headerLabel),
-                              style: const TextStyle(color: simMuted, fontSize: 12),
+                              t('aula_theory'),
+                              style: TextStyle(
+                                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: simMuted,
+                                letterSpacing: 1.2,
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                          ],
+                            if (viewModel != null) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '· ${_headerLabelText(viewModel.headerLabel)}',
+                                style: const TextStyle(color: simMuted, fontSize: 11),
+                              ),
+                            ],
+                          ]),
+                          const SizedBox(height: 8),
                           SimTypewriter(
                             text: content.explanation,
                             style: const TextStyle(
@@ -2907,6 +2921,29 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                     const SizedBox(height: 10),
 
+                    // AUL-4: DESAFIO divider
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          const Expanded(child: Divider(color: simBorder)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              t('aula_challenge'),
+                              style: TextStyle(
+                                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: simMuted,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          const Expanded(child: Divider(color: simBorder)),
+                        ],
+                      ),
+                    ),
                     // Active question block
                     SimCard(
                       child: Column(
