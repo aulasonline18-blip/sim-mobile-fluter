@@ -4,11 +4,13 @@ class SimAiServerConfig {
   const SimAiServerConfig({
     required this.baseUrl,
     this.accessTokenProvider,
+    this.t00Path,
     this.t02Path,
   });
 
   final String baseUrl;
   final SimAccessTokenProvider? accessTokenProvider;
+  final String? t00Path;
   final String? t02Path;
 
   Uri uri(String path) {

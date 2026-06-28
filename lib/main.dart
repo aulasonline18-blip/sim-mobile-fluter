@@ -121,6 +121,10 @@ class LabSession extends ChangeNotifier {
   bool aulaRuntimeLoading = false;
   String? aulaRuntimeError;
 
+  // Flag para distinguir "ainda não carregou créditos" de "créditos = 0".
+  // Enquanto false, não bloqueamos localmente (o servidor rejeita com 402 se necessário).
+  bool _creditsLoaded = false;
+
   final AudioPreference _audioPreference = AudioPreference();
   LessonAudioController? _lessonAudioController;
 
@@ -260,10 +264,13 @@ class LabSession extends ChangeNotifier {
 
   void start() {
     if (!authed) {
+      debugPrint('[SIM] BLOCKED reason=not_authed');
       goLogin(target: '/');
       return;
     }
-    if (credits <= 0) {
+    // Só bloquear por crédito se já carregamos do servidor e confirmamos saldo zero.
+    if (_creditsLoaded && credits <= 0) {
+      debugPrint('[SIM] BLOCKED reason=credits_zero');
       openCredits();
       return;
     }
@@ -327,6 +334,7 @@ class LabSession extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('[SIM] T00_STARTED lessonLocalId=$id');
       final organism = simOrganismProvider.forLesson(id);
       final onboarding = <String, dynamic>{
         'objetivo': freeText.trim(),
@@ -338,6 +346,8 @@ class LabSession extends ChangeNotifier {
         'ACADEMIC_LEVEL': 'incerto',
         'academic_level': 'incerto',
         'nivel': 'incerto',
+        'target_topic': freeText.trim(),
+        'TARGET_TOPIC': freeText.trim(),
         if (preferredName.trim().isNotEmpty)
           'preferred_name': preferredName.trim(),
         if (studentProfileNotes.isNotEmpty)
@@ -369,15 +379,18 @@ class LabSession extends ChangeNotifier {
       notifyListeners();
 
       await Future<void>.delayed(const Duration(milliseconds: 650));
+      debugPrint('[SIM] CLASSROOM_OPENED route=${result.destination}');
       navigationState.openRoute(result.destination);
       if (result.destination == '/cyber/aula') {
         unawaited(openAulaRuntime());
       }
     } on StudentExperienceEngineException catch (err) {
+      debugPrint('[SIM] BLOCKED reason=${err.error.message}');
       entryError = err.error.message;
       entryStatus = 'erro';
       notifyListeners();
     } catch (err) {
+      debugPrint('[SIM] BLOCKED reason=${err.toString()}');
       entryError = err.toString();
       entryStatus = 'erro';
       notifyListeners();
@@ -444,14 +457,19 @@ class LabSession extends ChangeNotifier {
 
   void _loadCreditsFromServer() {
     authSession.credits = 1; // otimista enquanto busca do servidor
+    _creditsLoaded = false;
     unawaited(
       SimServerCreditsClient(config: _serverConfig())
           .getMyCredits()
           .then((snapshot) {
             authSession.credits = snapshot.balance;
+            _creditsLoaded = true;
             notifyListeners();
           })
-          .catchError((_) {}),
+          .catchError((_) {
+            // Em caso de erro de rede, assumimos que há créditos para não bloquear.
+            _creditsLoaded = false;
+          }),
     );
   }
 
@@ -476,6 +494,7 @@ class LabSession extends ChangeNotifier {
   SimAiServerConfig _serverConfig() {
     return SimAiServerConfig(
       baseUrl: simApiBaseUrl,
+      t00Path: '/api/bootstrap-t00',
       t02Path: '/api/complete-lesson',
       accessTokenProvider: () async =>
           _supabaseClientOrNull()?.auth.currentSession?.accessToken,

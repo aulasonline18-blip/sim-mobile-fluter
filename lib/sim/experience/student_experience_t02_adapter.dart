@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../lesson/dopamine_ready_window_engine.dart';
 import '../lesson/lesson_models.dart';
 import '../lesson/student_lesson_material_service.dart';
@@ -31,6 +33,7 @@ class StudentExperienceT02Adapter {
       startMarker: first.marker,
       startItemIndex: first.itemIndex,
     );
+    debugPrint('[SIM] T02_FIRST_LESSON_STARTED marker=${first.marker}');
     publishStudentExperienceEvent(
       service,
       args.lessonLocalId,
@@ -41,6 +44,18 @@ class StudentExperienceT02Adapter {
       },
     );
 
+    // Mesclar ficha_for_next do perfil no envelope pedagógico.
+    // persistT00ProfileEvent escreve ficha_for_next diretamente no state.profile,
+    // então lemos dali para garantir que os campos cheguem ao T02.
+    final stateProfile = service.read(args.lessonLocalId)?.profile.toJson() ?? {};
+    final mergedOnboarding = <String, dynamic>{
+      ...stateProfile,
+      ...args.onboarding,
+      // Garantir que guidance_for_T02 do perfil não seja sobrescrito pelo onboarding vazio
+      if (stateProfile['guidance_for_T02'] != null &&
+          args.onboarding['guidance_for_T02'] == null)
+        'guidance_for_T02': stateProfile['guidance_for_T02'],
+    };
     final params = CompleteLessonParams(
       lessonLocalId: args.lessonLocalId,
       item: itemText(first.item),
@@ -51,7 +66,7 @@ class StudentExperienceT02Adapter {
       errCount: 0,
       history: const [],
       marker: first.marker,
-      pedagogicalEnvelope: _pedagogicalEnvelope(args.onboarding),
+      pedagogicalEnvelope: _pedagogicalEnvelope(mergedOnboarding),
     );
 
     updateLiveEntryState(
@@ -128,6 +143,7 @@ class StudentExperienceT02Adapter {
       startMarker: first.marker,
       startItemIndex: first.itemIndex,
     );
+    debugPrint('[SIM] T02_FIRST_MINIMUM_LESSON_READY marker=${first.marker}');
     publishStudentExperienceEvent(
       service,
       args.lessonLocalId,
