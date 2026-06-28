@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -29,6 +30,8 @@ import 'sim/media/student_lesson_media_service.dart';
 import 'sim/state/shared_prefs_state_storage.dart';
 import 'sim/state/student_learning_state.dart';
 import 'sim/state/student_state_store.dart';
+import 'sim/ui/sim_i18n.dart';
+import 'sim/ui/widgets/cyber_step_shell.dart';
 
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 const simSupabaseAnonKey =
@@ -58,13 +61,54 @@ Future<void> main() async {
   runApp(SimMobileApp(canonicalStore: canonicalStore, prefs: prefs));
 }
 
-const simDark = Color(0xFF111827);
-const simMid = Color(0xFF374151);
-const simLight = Color(0xFFF3F4F6);
-const simMuted = Color(0xFF6B7280);
-const simBorder = Color(0xFFD1D5DB);
-const simSuccess = Color(0xFF10B981);
-const simWarn = Color(0xFFEF4444);
+// §1 tokens globais — hex exatos do SIM Web (src/styles.css :root)
+const simDark = Color(0xFF111827);      // foreground / primary
+const simMid = Color(0xFF374151);       // success / primary_glow
+const simLight = Color(0xFFF3F4F6);    // secondary / muted / accent
+const simCard = Color(0xFFF9FAFB);     // card background
+const simMuted = Color(0xFF6B7280);    // muted_foreground / warn
+const simBorder = Color(0xFFD1D5DB);   // border / input
+const simDestructive = Color(0xFF000000);   // destructive (preto)
+const simDestructiveFg = Color(0xFFFFFFFF); // destructive_fg
+const simSuccess = Color(0xFF374151);  // success = #374151 (cinza-escuro)
+const simWarn = Color(0xFF6B7280);     // warn = #6B7280 (cinza-médio)
+
+// gradient_primary: LinearGradient 135° #FFFFFF → #F3F4F6 ("papel premium")
+const simGradientPrimary = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFFFFFFF), Color(0xFFF3F4F6)],
+);
+// gradient_bg: LinearGradient 180° #FFFFFF → #F3F4F6
+const simGradientBg = LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: [Color(0xFFFFFFFF), Color(0xFFF3F4F6)],
+);
+
+// shadow helpers
+const simShadowGlow = [
+  BoxShadow(
+    color: Color(0xFFFFFFFF),
+    offset: Offset(0, 1),
+    blurRadius: 0,
+  ),
+  BoxShadow(
+    color: Color(0x2E111827),
+    offset: Offset(0, 6),
+    blurRadius: 18,
+    spreadRadius: -10,
+  ),
+];
+const simShadowFloat = [
+  BoxShadow(
+    color: Color(0x40111827),
+    offset: Offset(0, 10),
+    blurRadius: 30,
+    spreadRadius: -18,
+  ),
+];
+
 const maxFreeText = 1500;
 const maxAttachments = 3;
 const maxAttachmentBytes = 10 * 1024 * 1024;
@@ -793,7 +837,7 @@ class _SimMobileAppState extends State<SimMobileApp> {
       title: 'SIM',
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Roboto',
+        textTheme: GoogleFonts.interTextTheme(),
         scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(
           seedColor: simDark,
@@ -867,7 +911,7 @@ class PortalScreen extends StatelessWidget {
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
-                        fontFamily: 'monospace',
+                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -887,7 +931,7 @@ class PortalScreen extends StatelessWidget {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: 'monospace',
+                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                           ),
                         ),
                       ),
@@ -1041,6 +1085,7 @@ class PortalHeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          // §3.3(b) título SIM
           const Text(
             'SIM',
             style: TextStyle(
@@ -1048,58 +1093,75 @@ class PortalHeroCard extends StatelessWidget {
               fontSize: 68,
               height: 1,
               fontWeight: FontWeight.w900,
+              letterSpacing: -1.36, // -0.02em de 68px
             ),
           ),
+          // §3.3(c) tagline
           const SizedBox(height: 12),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(width: 32, child: Divider(color: simMid, thickness: 1)),
-              SizedBox(width: 12),
+              const SizedBox(
+                width: 32,
+                child: Divider(color: simMid, thickness: 1),
+              ),
+              const SizedBox(width: 12),
               Flexible(
                 child: Text(
-                  'Smart Intelligence Mentor',
+                  t('portal_tagline'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: simDark,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
-              SizedBox(width: 12),
-              SizedBox(width: 32, child: Divider(color: simMid, thickness: 1)),
+              const SizedBox(width: 12),
+              const SizedBox(
+                width: 32,
+                child: Divider(color: simMid, thickness: 1),
+              ),
             ],
           ),
+          // §3.3(d) parágrafo institucional
           const SizedBox(height: 24),
-          const Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: 'Guided artificial intelligence for '),
-                TextSpan(
-                  text: 'real learning',
-                  style: TextStyle(color: simDark, fontWeight: FontWeight.w700),
-                ),
-                TextSpan(text: ' - '),
-                TextSpan(
-                  text: 'adapted to the learner',
-                  style: TextStyle(color: simDark, fontWeight: FontWeight.w700),
-                ),
-                TextSpan(
-                  text:
-                      ', supervised by the system, and built to turn effort into ',
-                ),
-                TextSpan(
-                  text: 'real progress',
-                  style: TextStyle(color: simDark, fontWeight: FontWeight.w700),
-                ),
-                TextSpan(text: '.'),
-              ],
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 34 * 9.5),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '${t('portal_statement_p1')} '),
+                  TextSpan(
+                    text: t('portal_statement_real_learning'),
+                    style: const TextStyle(
+                      color: simDark,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(text: '${t('portal_statement_p2')}'),
+                  TextSpan(text: '${t('portal_statement_p3')} '),
+                  TextSpan(
+                    text: t('portal_statement_real_progress'),
+                    style: const TextStyle(
+                      color: simDark,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const TextSpan(text: '.'),
+                ],
+              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: simMuted,
+                fontSize: 15.5,
+                height: 1.55,
+              ),
             ),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: simMuted, fontSize: 15.5, height: 1.55),
           ),
-          const SizedBox(height: 30),
+          // §3.3(e) botão principal
+          const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
             height: 64,
@@ -1113,25 +1175,31 @@ class PortalHeroCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Positioned(
-                      left: 14,
-                      child: Icon(Icons.play_arrow, size: 22, color: simDark),
+                    // Mini círculo branco 36×36 com ícone Play
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: simBorder),
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow,
+                        size: 16,
+                        color: simDark,
+                      ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 44),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          session.authed ? 'Start' : 'Sign in to start',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: simDark,
-                          ),
-                        ),
+                    const SizedBox(width: 12),
+                    Text(
+                      session.authed ? t('portal_btn_start') : t('portal_btn_signin'),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: simDark,
                       ),
                     ),
                   ],
@@ -1181,8 +1249,8 @@ class HelpCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Help improve SIM.',
-                      style: TextStyle(
+                      t('portal_help_title'),
+                      style: const TextStyle(
                         color: simDark,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -1190,8 +1258,8 @@ class HelpCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Send suggestions, report difficulties, and talk directly to the developer.',
-                      style: TextStyle(
+                      t('portal_help_body'),
+                      style: const TextStyle(
                         color: simMuted,
                         fontSize: 13.5,
                         height: 1.5,
@@ -1231,7 +1299,7 @@ class HelpCard extends StatelessWidget {
               style: const TextStyle(
                 color: simMuted,
                 fontSize: 11,
-                fontFamily: 'monospace',
+                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
               ),
             ),
           ],
@@ -1385,6 +1453,7 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 448),
               child: Column(
                 children: [
+                  // §4.1 Logo
                   Container(
                     width: 64,
                     height: 64,
@@ -1392,6 +1461,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: simBorder),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x52111827),
+                          blurRadius: 24,
+                          spreadRadius: -18,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
                     child: const Text(
@@ -1413,19 +1490,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Sign in',
+                  Text(
+                    signup ? 'CREATE ACCOUNT' : 'SIGN IN',
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 12,
-                      fontFamily: 'monospace',
-                      letterSpacing: 3,
+                      fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                      letterSpacing: 0.25 * 12,
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // §4.2 Glass card — bg card #F9FAFB, border, radius 18
                   Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: glassDecoration(radius: 18),
+                    decoration: BoxDecoration(
+                      color: simCard,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: simBorder),
+                      boxShadow: simShadowGlow,
+                    ),
                     child: Column(
                       children: [
                         SizedBox(
@@ -1470,7 +1553,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   color: simMuted,
                                   fontSize: 12,
-                                  fontFamily: 'monospace',
+                                  fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1541,7 +1624,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: const TextStyle(
                               color: simMuted,
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                               decoration: TextDecoration.underline,
                             ),
                           ),
@@ -1553,7 +1636,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(
                               error!,
                               style: const TextStyle(
-                                color: Colors.red,
+                                color: Color(0xFFE53E3E),
                                 fontSize: 14,
                               ),
                             ),
@@ -1570,7 +1653,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
-                        fontFamily: 'monospace',
+                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                       ),
                     ),
                   ),
@@ -1585,7 +1668,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: 'monospace',
+                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                           ),
                         ),
                       ),
@@ -1597,7 +1680,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: 'monospace',
+                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                           ),
                         ),
                       ),
@@ -1609,7 +1692,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 11,
-                      fontFamily: 'monospace',
+                      fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                     ),
                   ),
                 ],
@@ -1647,80 +1730,80 @@ class GoogleMark extends StatelessWidget {
   }
 }
 
-class IdiomaScreen extends StatelessWidget {
+class IdiomaScreen extends StatefulWidget {
   const IdiomaScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<IdiomaScreen> createState() => _IdiomaScreenState();
+}
+
+class _IdiomaScreenState extends State<IdiomaScreen> {
+  void _pick(String code, String name) {
+    if (code == 'other') {
+      widget.session.chooseLanguage(code, widget.session.otherLanguage.trim());
+    } else {
+      widget.session.chooseLanguage(code, name);
+      Future.delayed(const Duration(milliseconds: 160), () {
+        if (mounted) {
+          // navigation is handled by session state change — just trigger it
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const StepHeader(step: 1, total: 5, label: 'Step 1 of 5'),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 576),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Choose your language',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 30,
-                          height: 1.1,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'SIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.',
-                        style: TextStyle(
-                          color: simMuted,
-                          fontSize: 18,
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      for (final language in supportedLangs) ...[
-                        LanguageButton(
-                          language: language,
-                          active: session.selectedLanguageCode == language.code,
-                          onTap: () => session.chooseLanguage(
-                            language.code,
-                            language.name,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      LanguageButton(
-                        language: const SupportedLang(
-                          code: 'other',
-                          name: 'Other language',
-                          native: '',
-                          flag: '🌐',
-                        ),
-                        active: session.selectedLanguageCode == 'other',
-                        onTap: () => session.chooseLanguage(
-                          'other',
-                          session.otherLanguage.trim(),
-                        ),
-                      ),
-                      if (session.selectedLanguageCode == 'other') ...[
-                        const SizedBox(height: 20),
-                        OtherLanguageBox(session: session),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+    final session = widget.session;
+    return CyberStepShell(
+      step: 1,
+      total: 5,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Choose your language',
+            style: TextStyle(
+              color: simDark,
+              fontSize: 30,
+              height: 1.1,
+              fontWeight: FontWeight.w700,
             ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'SIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.',
+            style: TextStyle(
+              color: simMuted,
+              fontSize: 18,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 28),
+          for (final language in supportedLangs) ...[
+            LanguageButton(
+              language: language,
+              active: session.selectedLanguageCode == language.code,
+              onTap: () => _pick(language.code, language.name),
+            ),
+            const SizedBox(height: 12),
           ],
-        ),
+          LanguageButton(
+            language: const SupportedLang(
+              code: 'other',
+              name: 'Other language',
+              native: '',
+              flag: '🌐',
+            ),
+            active: session.selectedLanguageCode == 'other',
+            onTap: () => _pick('other', session.otherLanguage.trim()),
+          ),
+          if (session.selectedLanguageCode == 'other') ...[
+            const SizedBox(height: 20),
+            OtherLanguageBox(session: session),
+          ],
+        ],
       ),
     );
   }
@@ -2008,7 +2091,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                       style: const TextStyle(
                                         color: simMuted,
                                         fontSize: 12,
-                                        fontFamily: 'monospace',
+                                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                                       ),
                                     ),
                                   ),
@@ -3880,9 +3963,12 @@ class LanguageButton extends StatelessWidget {
       height: 64,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: active ? simLight : Colors.white,
+          gradient: active ? simGradientPrimary : null,
+          color: active ? null : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: simBorder),
+          border: Border.all(
+            color: active ? simDark : simBorder,
+          ),
           boxShadow: active
               ? const [
                   BoxShadow(
@@ -4118,8 +4204,16 @@ class RoundIconButton extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: simBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2E243447),
+                blurRadius: 14,
+                spreadRadius: -6,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
-          child: Icon(icon, color: simDark, size: 22),
+          child: Icon(icon, color: simDark, size: 20),
         ),
       ),
     );
@@ -4160,23 +4254,82 @@ class CreditsPill extends StatelessWidget {
   }
 }
 
+// §3.1 BackgroundDecor — gradiente vertical + anéis radiais laterais
 class BackgroundDecor extends StatelessWidget {
   const BackgroundDecor({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.white, simLight, Colors.white],
-          stops: [0, 0.6, 1],
+    return Stack(
+      children: [
+        // Camada 0: gradiente 180deg #FFFFFF 0% → #F3F4F6 60% → #FFFFFF 100%
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Color(0xFFF3F4F6), Colors.white],
+              stops: [0, 0.6, 1],
+            ),
+          ),
+          child: SizedBox.expand(),
         ),
-      ),
-      child: SizedBox.expand(),
+        // Camada 1: anéis radiais esquerda (top 25%, left -6px, 160×420)
+        Positioned(
+          top: MediaQuery.of(context).size.height * 0.25,
+          left: -6,
+          child: Opacity(
+            opacity: 0.4,
+            child: _RadialRings(width: 160, height: 420),
+          ),
+        ),
+        // Camada 2: anéis radiais direita (bottom 40px, 160×380)
+        Positioned(
+          bottom: 40,
+          right: 0,
+          child: Opacity(
+            opacity: 0.4,
+            child: _RadialRings(width: 160, height: 380),
+          ),
+        ),
+      ],
     );
   }
+}
+
+class _RadialRings extends StatelessWidget {
+  const _RadialRings({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(width, height),
+      painter: _RadialRingsPainter(),
+    );
+  }
+}
+
+class _RadialRingsPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x14111827) // rgba(17,24,39,0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    double r = 19;
+    while (r < size.width * 1.5) {
+      canvas.drawCircle(Offset(cx, cy), r, paint);
+      r += 19;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RadialRingsPainter oldDelegate) => false;
 }
 
 BoxDecoration glassDecoration({required double radius}) {
