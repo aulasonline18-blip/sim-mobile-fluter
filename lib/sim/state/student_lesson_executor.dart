@@ -1,3 +1,4 @@
+// MIRROR OF: src/sim/state/studentLessonExecutor.ts (Web, source of truth)
 import 'learning_decision_engine.dart';
 import 'student_learning_state.dart';
 
@@ -194,6 +195,18 @@ StudentLearningState processAnswerWithEngine(
     },
   );
 
+  // MAX_ATTEMPTS=300, MAX_EVENTS=500 — mirror Web writeStudentLearningStateInternal caps
+  const _maxAttempts = 300;
+  const _maxEvents = 500;
+  final rawAttempts = [...state.attempts, attempt];
+  final cappedAttempts = rawAttempts.length > _maxAttempts
+      ? rawAttempts.sublist(rawAttempts.length - _maxAttempts)
+      : rawAttempts;
+  final rawEvents = [...state.events, event];
+  final cappedEvents = rawEvents.length > _maxEvents
+      ? rawEvents.sublist(rawEvents.length - _maxEvents)
+      : rawEvents;
+
   return state.copyWith(
     updatedAt: ts,
     progress: applied.nextProgress,
@@ -205,10 +218,7 @@ StudentLearningState processAnswerWithEngine(
       layer: applied.nextProgress.layer,
       amparoLvl: applied.nextProgress.amparoLvl,
     ),
-    attempts: [...state.attempts, attempt],
-    events: [
-      ...state.events,
-      event,
-    ],
+    attempts: cappedAttempts,
+    events: cappedEvents,
   );
 }

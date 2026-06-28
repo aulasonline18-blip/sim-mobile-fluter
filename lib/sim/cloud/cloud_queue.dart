@@ -1,3 +1,4 @@
+// MIRROR OF: src/sim/state/cloudQueue.ts (Web, source of truth)
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -88,6 +89,7 @@ class CloudQueue with WidgetsBindingObserver {
   final int Function()? now;
   bool draining = false;
   final Map<String, Timer> _retryTimers = {};
+  final Set<String> _flushingIds = {};
 
   int get _now => now?.call() ?? DateTime.now().millisecondsSinceEpoch;
 
@@ -122,17 +124,19 @@ class CloudQueue with WidgetsBindingObserver {
   }
 
   Future<void> flushOne(String lessonLocalId, {bool force = false}) async {
+    if (_flushingIds.contains(lessonLocalId)) return;
     final entry = storage.readQueue()[lessonLocalId];
     if (entry == null) return;
     if (!force && entry.nextRetryAt > _now) return;
-    final session = await sessionProvider.currentSession();
-    if (session == null) return;
-    final snap = stateService.read(lessonLocalId);
-    if (snap == null) {
-      _scheduleRetry(entry);
-      return;
-    }
+    _flushingIds.add(lessonLocalId);
     try {
+      final session = await sessionProvider.currentSession();
+      if (session == null) return;
+      final snap = stateService.read(lessonLocalId);
+      if (snap == null) {
+        _scheduleRetry(entry);
+        return;
+      }
       if (entry.operation == StudentLearningSyncOperation.tombstone ||
           snap.extra['deletedAt'] != null) {
         await cloudFunctions.deleteStudentStateByLesson(lessonLocalId, session);
@@ -164,6 +168,8 @@ class CloudQueue with WidgetsBindingObserver {
       _remove(lessonLocalId);
     } catch (_) {
       _scheduleRetry(entry);
+    } finally {
+      _flushingIds.remove(lessonLocalId);
     }
   }
 

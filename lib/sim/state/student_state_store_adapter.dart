@@ -12,6 +12,21 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
 
   final StudentStateStore _store;
   void Function(String lessonLocalId)? onWrite;
+  final List<void Function(String)> _writeListeners = [];
+
+  @override
+  void Function() subscribe(void Function(String lessonLocalId) cb) {
+    _writeListeners.add(cb);
+    return () => _writeListeners.remove(cb);
+  }
+
+  void _notifyWrite(String lessonLocalId) {
+    for (final cb in List.of(_writeListeners)) {
+      try {
+        cb(lessonLocalId);
+      } catch (_) {}
+    }
+  }
 
   @override
   StudentLearningState? read(String lessonLocalId) {
@@ -38,6 +53,7 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
   StudentLearningState write(StudentLearningState state) {
     final saved = _store.writeState(state);
     onWrite?.call(saved.lessonLocalId);
+    _notifyWrite(saved.lessonLocalId);
     return saved;
   }
 
@@ -46,7 +62,9 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
     String lessonLocalId,
     StudentStateMutator mutator,
   ) {
-    return _store.patchState(lessonLocalId, mutator);
+    final saved = _store.patchState(lessonLocalId, mutator);
+    _notifyWrite(lessonLocalId);
+    return saved;
   }
 
   @override

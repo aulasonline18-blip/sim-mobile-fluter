@@ -1,3 +1,4 @@
+// MIRROR OF: src/sim/state/studentLearningStateService.ts (Web, source of truth)
 import 'student_learning_state.dart';
 
 typedef StudentStateMutator = StudentLearningState Function(
@@ -9,6 +10,22 @@ class StudentLearningStateService {
       : _states = Map.of(seed ?? const {});
 
   final Map<String, StudentLearningState> _states;
+  final List<void Function(String)> _writeListeners = [];
+
+  // I.8: subscribe to state writes. Listeners are notified synchronously after
+  // every flush. Listeners must NOT write synchronously to avoid re-entrancy.
+  void Function() subscribe(void Function(String lessonLocalId) cb) {
+    _writeListeners.add(cb);
+    return () => _writeListeners.remove(cb);
+  }
+
+  void _notifyWrite(String lessonLocalId) {
+    for (final cb in List.of(_writeListeners)) {
+      try {
+        cb(lessonLocalId);
+      } catch (_) {}
+    }
+  }
 
   StudentLearningState? read(String lessonLocalId) => _states[lessonLocalId];
 
@@ -31,6 +48,7 @@ class StudentLearningStateService {
     _states[state.lessonLocalId] = state.copyWith(
       updatedAt: DateTime.now().millisecondsSinceEpoch,
     );
+    _notifyWrite(state.lessonLocalId);
     return _states[state.lessonLocalId]!;
   }
 

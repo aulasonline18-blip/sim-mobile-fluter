@@ -1,3 +1,4 @@
+// MIRROR OF: src/sim/state/learningDecisionEngine.ts (Web, source of truth)
 import 'student_learning_state.dart';
 
 enum DecisionActionType {

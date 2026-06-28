@@ -1,3 +1,4 @@
+// MIRROR OF: src/sim/state/dopamineReadyWindowEngine.ts (Web, source of truth)
 import '../experience/curriculum_utils.dart';
 import '../state/live_entry_state.dart';
 import '../state/student_learning_state.dart';
@@ -112,6 +113,17 @@ class DopamineReadyWindowEngine {
     for (var index = 0; index < selected.length; index++) {
       final slot = selected[index];
       final key = lessonKeyFor(slot.params);
+      // IV.3 step 1: key parity check
+      if (slot.expectedKey != null && key != slot.expectedKey) {
+        _event(lessonLocalId, 'DOPAMINE_KEY_MISMATCH', {
+          'source': source,
+          'slot': slot.slot,
+          'expectedKey': slot.expectedKey,
+          'actualKey': key,
+        });
+        results.add(false);
+        continue;
+      }
       final existing = _readReadyMaterial(
         lessonLocalId,
         slot.itemIdx,

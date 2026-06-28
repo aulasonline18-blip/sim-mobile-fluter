@@ -41,6 +41,7 @@ import '../cloud/sim_server_cloud_functions.dart';
 import '../cloud/supabase_flutter_session_provider.dart';
 import '../external_ai/sim_ai_server_config.dart';
 import '../external_ai/sim_server_ai_clients.dart';
+import '../cloud/shared_prefs_cloud_queue_storage.dart';
 import '../state/shared_prefs_state_storage.dart';
 import '../media/platform_audio_adapter.dart';
 import 'sim_organism_health.dart';
@@ -203,12 +204,16 @@ class SimOrganism {
 
     final cloudFunctions = SimServerCloudFunctions(config: aiConfig);
     final cloudQueue = CloudQueue(
-      storage: MemoryCloudQueueStorage(),
+      storage: SharedPrefsCloudQueueStorage(prefs),
       stateService: stateService,
       sessionProvider: sessionProvider,
       cloudFunctions: cloudFunctions,
     );
     stateAdapter.onWrite = (id) => cloudQueue.enqueueStudentStateSync(lessonLocalId: id);
+    // I.8: readyWindowWorker subscribes to state writes to drain queued jobs
+    stateService.subscribe((id) {
+      Future.microtask(() => readyWindowWorker.drainReadyWindowJobs(id));
+    });
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
     final curriculumSync = LessonCurriculumSyncEngine(
@@ -237,6 +242,9 @@ class SimOrganism {
     final accountDeletionController = AccountDeletionController(
       gateway: SimServerAccountDeletionGateway(config: aiConfig),
     );
+
+    // Part VIII.1: wire lifecycle observer + 1s delayed initial drain
+    cloudQueue.wireCloudQueueLifecycle();
 
     return SimOrganism._(
       lessonLocalId: lessonLocalId,

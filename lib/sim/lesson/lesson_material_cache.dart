@@ -1,3 +1,4 @@
+// MIRROR OF: src/cyber/lesson-material-cache.ts (Web, source of truth)
 import 'lesson_models.dart';
 
 class _CacheEntry {
