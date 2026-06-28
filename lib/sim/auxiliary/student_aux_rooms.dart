@@ -155,7 +155,7 @@ StudentLearningState clearPendingIfSignalOne(
     events: [
       ...state.events,
       StudentLearningEvent(
-        type: 'PENDING_CLEARED',
+        type: 'RECOVERY_PENDING_CLEARED',
         ts: now,
         payload: {'marker': marker, 'layer': layer?.value},
       ),

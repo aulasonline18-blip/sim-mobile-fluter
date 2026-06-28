@@ -79,7 +79,18 @@ class StudentAuxRoomService {
       );
     }
     var queue = aux_state.buildReviewQueue(state, count);
-    state = state.copyWith(auxRooms: aux_state.ensureAuxRooms(state));
+    final now = DateTime.now().millisecondsSinceEpoch;
+    state = state.copyWith(
+      auxRooms: aux_state.ensureAuxRooms(state),
+      events: [
+        ...state.events,
+        StudentLearningEvent(
+          type: 'REVIEW_QUEUE_PREPARED',
+          ts: now,
+          payload: {'requestedCount': count, 'queueLength': queue.length},
+        ),
+      ],
+    );
     writeState(state);
     if (queue.isNotEmpty) return queue.take(count).toList(growable: false);
     if (normalized.isEmpty) return const [];
@@ -124,7 +135,18 @@ class StudentAuxRoomService {
             DecisionSignalValue.fromValue(entry['signal']);
       }
     }
-    writeState(state.copyWith(auxRooms: aux));
+    final now = DateTime.now().millisecondsSinceEpoch;
+    writeState(state.copyWith(
+      auxRooms: aux,
+      events: [
+        ...state.events,
+        StudentLearningEvent(
+          type: 'RECOVERY_QUEUE_PREPARED',
+          ts: now,
+          payload: {'queueLength': queue.length},
+        ),
+      ],
+    ));
     return (queue: queue, signalByMarker: signalByMarker);
   }
 
@@ -206,7 +228,22 @@ class StudentAuxRoomService {
   }
 
   void completeReviewSession(String lessonLocalId) {
-    writeState(aux_state.advanceReviewCursor(readState(lessonLocalId)));
+    var state = aux_state.advanceReviewCursor(readState(lessonLocalId));
+    final review = aux_state.ensureAuxRooms(state)['review'] as Map?;
+    state = state.copyWith(
+      events: [
+        ...state.events,
+        StudentLearningEvent(
+          type: 'REVIEW_CURSOR_UPDATED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: {
+            'sequentialCursor': (review?['sequentialCursor'] as num?)?.toInt() ?? 0,
+            'currentIndex': (review?['currentIndex'] as num?)?.toInt() ?? 0,
+          },
+        ),
+      ],
+    );
+    writeState(state);
   }
 
   void registerRecoveryStarted(String lessonLocalId, List<String> queue) {
