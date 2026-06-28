@@ -59,6 +59,7 @@ class LessonOrchestrator {
         history: params.history,
         marker: params.marker,
         profile: params.pedagogicalEnvelope,
+        amparoLvl: params.amparoLvl,
       ),
     );
     final conteudo = LessonContent(

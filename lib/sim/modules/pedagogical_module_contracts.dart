@@ -41,6 +41,7 @@ class T02LessonRequest {
     this.marker,
     this.profile = const {},
     this.addendum,
+    this.amparoLvl,
   });
 
   final String lessonLocalId;
@@ -54,6 +55,7 @@ class T02LessonRequest {
   final String? marker;
   final JsonMap profile;
   final String? addendum;
+  final int? amparoLvl;
 }
 
 class T02LessonMaterial {

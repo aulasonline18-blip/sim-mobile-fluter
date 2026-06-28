@@ -444,6 +444,8 @@ class LessonAnswerProgressController {
     bool isReviewAtivo,
   ) {
     if (isReviewAtivo) return LessonMode.reforco;
+    final amparoLvl = state.progress?.amparoLvl ?? 0;
+    if (amparoLvl > 0) return LessonMode.amparo;
     final nextAction = state.extra['next_action'];
     if (nextAction is Map && nextAction['action'] == 'needsReinforcement') {
       return LessonMode.reforco;

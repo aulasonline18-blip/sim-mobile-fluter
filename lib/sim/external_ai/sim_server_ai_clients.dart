@@ -206,6 +206,7 @@ class SimServerT02Client implements T02LessonClient {
         'history': request.history,
         if (request.marker != null) 'marker': request.marker,
         if (request.addendum != null) 'addendum': request.addendum,
+        if (request.amparoLvl != null) 'amparo_level': request.amparoLvl,
         ...request.profile,
       },
       timeout: timeout,

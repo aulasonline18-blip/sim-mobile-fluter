@@ -32,6 +32,7 @@ class LessonMaterialController {
       return;
     }
 
+    final currentState = stateService.read(lessonLocalId);
     final params = CompleteLessonParams(
       lessonLocalId: lessonLocalId,
       item: item.text,
@@ -42,8 +43,9 @@ class LessonMaterialController {
       errCount: position.erros,
       history: position.historia,
       marker: item.marker,
+      amparoLvl: currentState?.progress?.amparoLvl,
       pedagogicalEnvelope: _pedagogicalEnvelope(
-        stateService.read(lessonLocalId)?.profile.toJson() ?? const {},
+        currentState?.profile.toJson() ?? const {},
         item,
       ),
     );
