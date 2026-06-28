@@ -3307,7 +3307,10 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
   }
 }
 
-class _DoubtInputSheet extends StatelessWidget {
+// §DS DoubtInputSheet — bottom-sheet modal matching DoubtInputSheet.tsx
+// Header: title + description, textarea 5 rows max 1200 chars,
+// paperclip button (bottom-left), char counter (bottom-right), submit btn.
+class _DoubtInputSheet extends StatefulWidget {
   const _DoubtInputSheet({
     required this.controller,
     required this.onSubmit,
@@ -3319,60 +3322,150 @@ class _DoubtInputSheet extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
+  State<_DoubtInputSheet> createState() => _DoubtInputSheetState();
+}
+
+class _DoubtInputSheetState extends State<_DoubtInputSheet> {
+  String? _error;
+
+  void _submit() {
+    final text = widget.controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _error = 'Escreva sua dúvida.');
+      return;
+    }
+    setState(() => _error = null);
+    widget.onSubmit(text);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final charCount = widget.controller.text.length;
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: simBorder),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Text('Duvida', style: TextStyle(color: simDark, fontSize: 16, fontWeight: FontWeight.w700)),
-              const Spacer(),
-              GestureDetector(
-                onTap: onClose,
-                child: const Icon(Icons.close, size: 20, color: simMuted),
+          // Handle bar
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: simBorder,
+                borderRadius: BorderRadius.circular(2),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: controller,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Escreva sua dúvida...',
-              hintStyle: TextStyle(color: simMuted, fontSize: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
-              contentPadding: EdgeInsets.all(12),
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.photo_camera_outlined, size: 16, color: simMuted),
-              const SizedBox(width: 6),
-              const Text('Foto (em breve)', style: TextStyle(color: simMuted, fontSize: 12)),
-              const Spacer(),
-              OutlinedButton(
-                onPressed: () {
-                  final text = controller.text.trim();
-                  if (text.isNotEmpty) onSubmit(text);
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: simDark,
-                  side: const BorderSide(color: simDark),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                const Text(
+                  'Enviar dúvida',
+                  style: TextStyle(
+                    color: simDark,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                child: const Text('Enviar', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              ),
-            ],
+                const SizedBox(height: 4),
+                // Description
+                const Text(
+                  'Escreva sua dúvida ou envie uma foto do exercício, resolução, fórmula, gráfico ou tabela.',
+                  style: TextStyle(color: simMuted, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                // Textarea container
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: simBorder),
+                  ),
+                  child: Stack(
+                    children: [
+                      TextField(
+                        controller: widget.controller,
+                        maxLines: 5,
+                        maxLength: 1200,
+                        buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          hintText: 'Escreva sua dúvida aqui...',
+                          hintStyle: TextStyle(color: simMuted, fontSize: 16),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.fromLTRB(12, 12, 12, 44),
+                        ),
+                        style: const TextStyle(color: simDark, fontSize: 16, height: 1.5),
+                      ),
+                      // Paperclip button bottom-left
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        child: GestureDetector(
+                          onTap: () {/* camera/gallery — mobile only */},
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Icon(Icons.attach_file, size: 22, color: simMuted),
+                          ),
+                        ),
+                      ),
+                      // Character counter bottom-right
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: Text(
+                          '$charCount/1200',
+                          style: TextStyle(
+                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                            fontSize: 12,
+                            color: simMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 6),
+                  Text(_error!, style: const TextStyle(color: simDestructive, fontSize: 13)),
+                ],
+                const SizedBox(height: 12),
+                // Submit button
+                GestureDetector(
+                  onTap: _submit,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: simBorder),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'Enviar dúvida',
+                      style: TextStyle(
+                        color: simDark,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ],
       ),
