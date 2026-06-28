@@ -3027,37 +3027,78 @@ class _QuestionHistoryBlock extends StatelessWidget {
   }
 }
 
-class _FeedbackBox extends StatelessWidget {
+// AUL-5: FeedbackBox with fade+slide-up animation on appear
+class _FeedbackBox extends StatefulWidget {
   const _FeedbackBox({required this.isCorrect, required this.message});
 
   final bool isCorrect;
   final String message;
 
   @override
+  State<_FeedbackBox> createState() => _FeedbackBoxState();
+}
+
+class _FeedbackBoxState extends State<_FeedbackBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 260))
+      ..forward();
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final color = isCorrect ? simSuccess : simWarn;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(100)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isCorrect ? Icons.check_circle_outline : Icons.cancel_outlined,
-            color: color,
-            size: 20,
+    final color = widget.isCorrect ? simSuccess : simWarn;
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(
+        position: _slide,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withAlpha(100)),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600),
-            ),
+          child: Row(
+            children: [
+              Icon(
+                widget.isCorrect
+                    ? Icons.check_circle_outline
+                    : Icons.cancel_outlined,
+                color: color,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  widget.message,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
