@@ -2702,6 +2702,15 @@ class _PlacementResult extends StatelessWidget {
   }
 }
 
+// Loading card copy — mirrors entryLoadingCopy() in LessonMainScreen.tsx
+(String, String) _loadingCopy(String status) => switch (status) {
+  'pedido_recebido'  => ('Recebi seu pedido.', 'A sala já abriu. Estou começando a entender seu objetivo.'),
+  't00_running'      => ('Entendendo seu objetivo...', 'Estou montando seu perfil e procurando o primeiro tema.'),
+  't02_running'      => ('Preparando sua primeira aula...', 'O professor já recebeu o primeiro tema e está escrevendo a explicação.'),
+  'primeira_aula_pronta' => ('A primeira aula chegou.', 'Estou abrindo o material.'),
+  _                  => (t('preparing_lesson'), 'A sala já abriu. Estou buscando a explicação do primeiro tema.'),
+};
+
 String _feedbackText(String key) => switch (key) {
   'aula_fb_correct' => 'Exato! Você domina este ponto.',
   'aula_fb_correct_rev' => 'Certo, mas vamos reforçar.',
@@ -2881,58 +2890,85 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
                   // Active content card
                   if (session.aulaRuntimeLoading && content == null) ...[
-                    const SizedBox(height: 20),
-                    // AUL-3: Loading phase — glass-soft card
+                    const SizedBox(height: 8),
+                    // AUL-3: Loading phase — glass-soft card matching LessonMainScreen.tsx
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      constraints: const BoxConstraints(minHeight: 280),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(0.85),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: simBorder),
                         boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0F111827),
-                            blurRadius: 16,
-                            offset: Offset(0, 4),
-                          ),
+                          BoxShadow(color: Color(0x0F111827), blurRadius: 16, offset: Offset(0, 4)),
                         ],
                       ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: simDark,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            t('preparing_lesson'),
-                            style: const TextStyle(
-                              color: simMuted,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (session.aulaRuntimeError != null) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              session.aulaRuntimeError!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: simDark,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                          Row(children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1A21B2E9),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                t('aula_theory').toUpperCase(),
+                                style: TextStyle(
+                                  fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: simDark,
+                                  letterSpacing: 2.2,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            SecondaryWideButton(
-                              label: t('aula_try_again_2'),
-                              onTap: () => unawaited(session.openAulaRuntime()),
+                          ]),
+                          const SizedBox(height: 16),
+                          Builder(builder: (_) {
+                            final copy = _loadingCopy(session.entryStatus);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  copy.$1,
+                                  style: const TextStyle(color: simDark, fontSize: 20, fontWeight: FontWeight.w600, height: 1.3),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  copy.$2,
+                                  style: const TextStyle(color: simMuted, fontSize: 14, height: 1.5),
+                                ),
+                              ],
+                            );
+                          }),
+                          const SizedBox(height: 20),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              height: 8,
+                              color: const Color(0x14000000),
+                              child: const _PulseBar(),
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () => unawaited(session.openAulaRuntime()),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0x0F000000),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: simBorder),
+                              ),
+                              child: Text(
+                                t('aula_try_again_2'),
+                                style: const TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -3485,6 +3521,49 @@ class _SinalBtn extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// Loading pulse bar — animates w-1/2 pulse, matches loading card bar in LessonMainScreen.tsx
+class _PulseBar extends StatefulWidget {
+  const _PulseBar();
+  @override
+  State<_PulseBar> createState() => _PulseBarState();
+}
+
+class _PulseBarState extends State<_PulseBar> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.4, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (_, __) => Opacity(
+        opacity: _opacity.value,
+        child: FractionallySizedBox(
+          widthFactor: 0.5,
+          alignment: Alignment.centerLeft,
+          child: Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: simDark,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
         ),
       ),
     );
