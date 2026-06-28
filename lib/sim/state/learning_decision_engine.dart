@@ -83,39 +83,6 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
       );
     }
 
-    const bool useMasteryShortcut = false;
-    if (useMasteryShortcut) {
-      final mastery = _masteryForMarker(state, currentMarker);
-      if (mastery.mastered) {
-        final nextIdx = itemIdx + 1;
-        if (nextIdx >= total) {
-          return const DecisionResult(
-            actionType: DecisionActionType.showCompletion,
-            reason: 'mastery confirmou dominio no ultimo item',
-            confidence: DecisionConfidence.high,
-          );
-        }
-        return DecisionResult(
-          actionType: DecisionActionType.advanceItem,
-          reason: 'mastery confirmou dominio -> proximo item',
-          confidence: DecisionConfidence.high,
-          proposedItemIdx: nextIdx,
-          proposedLayer: LessonLayer.l1,
-          proposedMarker: curriculum.items[nextIdx].marker,
-        );
-      }
-      if (mastery.needsReinforcement) {
-        return DecisionResult(
-          actionType: DecisionActionType.needsReinforcement,
-          reason: 'mastery indicou reforco necessario',
-          confidence: DecisionConfidence.high,
-          proposedItemIdx: itemIdx,
-          proposedLayer: layer,
-          proposedMarker: currentMarker,
-        );
-      }
-    }
-
     final lastForItem = state.attempts.reversed
         .cast<LessonAttempt?>()
         .firstWhere(
@@ -208,67 +175,3 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
   }
 }
 
-class _MasteryDecisionSnapshot {
-  const _MasteryDecisionSnapshot({
-    required this.status,
-    required this.needsReinforcement,
-  });
-
-  final String? status;
-  final bool needsReinforcement;
-
-  bool get mastered => status == 'mastered';
-}
-
-_MasteryDecisionSnapshot _masteryForMarker(
-  StudentLearningState state,
-  String? marker,
-) {
-  if (marker == null || marker.isEmpty) {
-    return const _MasteryDecisionSnapshot(
-      status: null,
-      needsReinforcement: false,
-    );
-  }
-  final typedStatus = state.truth.itemConsolidationStatus[marker];
-  if (typedStatus != null) {
-    var needsReinforcement =
-        typedStatus == 'weak' || typedStatus == 'falseMastery';
-    for (final item in state.truth.masteryEvidence.reversed) {
-      if (item['marker_id']?.toString() == marker) {
-        needsReinforcement = item['needs_reinforcement'] == true;
-        break;
-      }
-    }
-    return _MasteryDecisionSnapshot(
-      status: typedStatus,
-      needsReinforcement: needsReinforcement,
-    );
-  }
-
-  final truth = state.extra['truth'];
-  if (truth is! Map) {
-    return const _MasteryDecisionSnapshot(
-      status: null,
-      needsReinforcement: false,
-    );
-  }
-  final consolidation = truth['item_consolidation_status'];
-  final status = consolidation is Map
-      ? consolidation[marker]?.toString()
-      : null;
-  var needsReinforcement = status == 'weak' || status == 'falseMastery';
-  final evidence = truth['mastery_evidence'];
-  if (evidence is List) {
-    for (final item in evidence.reversed) {
-      if (item is Map && item['marker_id']?.toString() == marker) {
-        needsReinforcement = item['needs_reinforcement'] == true;
-        break;
-      }
-    }
-  }
-  return _MasteryDecisionSnapshot(
-    status: status,
-    needsReinforcement: needsReinforcement,
-  );
-}

@@ -115,6 +115,7 @@ ApplyDecisionResult applyStudentDecision(
         return ApplyDecisionResult(
           nextProgress: inputProgress.copyWith(
             layer: proposedLayer,
+            erros: 0,
           ),
           applied: true,
         );
@@ -153,10 +154,15 @@ StudentLearningState processAnswerWithEngine(
   );
 
   final newErros = correct ? progress.erros : progress.erros + 1;
+  // INV-09: historia only grows when correct AND sinal=1 (Web: S04_SignalTracker.recordAttempt)
+  final newHistoria = (correct && context.sinal == DecisionSignal.one)
+      ? [...progress.historia, item.marker]
+      : progress.historia;
 
-  final progressBeforeDecision = correct
-      ? progress
-      : progress.copyWith(erros: newErros);
+  final progressBeforeDecision = progress.copyWith(
+    erros: newErros,
+    historia: newHistoria,
+  );
   final synth = state.copyWith(
     progress: progressBeforeDecision,
     attempts: [...state.attempts, attempt],

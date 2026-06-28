@@ -241,11 +241,11 @@ void main() {
   // -------------------------------------------------------------------------
   // T02 – erro L1 sinal 1 → L2
   // -------------------------------------------------------------------------
-  test('T02: answer(B,1,A) em L1 → layer=L2, erros=1', () {
+  test('T02: answer(B,1,A) em L1 → layer=L2, erros=0 (ADVANCE_LAYER resets erros per INV-21)', () {
     final next = _answer(_state0(), AnswerLetter.B, DecisionSignal.one, AnswerLetter.A);
     expect(next.progress?.layer, LessonLayer.l2);
     expect(next.progress?.itemIdx, 0);
-    expect(next.progress?.erros, 1);
+    expect(next.progress?.erros, 0);
   });
 
   // -------------------------------------------------------------------------
