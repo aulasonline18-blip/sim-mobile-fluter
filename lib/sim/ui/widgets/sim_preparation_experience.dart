@@ -95,9 +95,18 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
   Timer? _msgTimer;
   List<String> _activeKeys = _messageKeys;
 
+  bool _reducedMotion = false;
+
   @override
   void initState() {
     super.initState();
+    // TW-2: reduced-motion — skip all animation controllers, instant display
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final reduced = MediaQuery.of(context).disableAnimations;
+      if (reduced != _reducedMotion) setState(() => _reducedMotion = reduced);
+    });
+
     _fadeInCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 360))
       ..forward();
@@ -115,13 +124,30 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = MediaQuery.of(context).disableAnimations;
+    if (reduced != _reducedMotion) {
+      setState(() => _reducedMotion = reduced);
+      if (reduced) {
+        for (final ctrl in [_fadeInCtrl, _bobCtrl, _nodCtrl, _waveRCtrl,
+            _waveLCtrl, _sparkCtrl, _glowCtrl, _floatCtrl, _dotCtrl]) {
+          ctrl.stop();
+          ctrl.value = 1.0;
+        }
+        _msgTimer?.cancel();
+      }
+    }
+  }
+
+  @override
   void didUpdateWidget(SimPreparationExperience old) {
     super.didUpdateWidget(old);
     if (old.stage != widget.stage) {
       _updateMessageKeys();
       setState(() => _msgIdx = 0);
     }
-    if (!old.ready && widget.ready) {
+    if (!old.ready && widget.ready && !_reducedMotion) {
       _btnPopCtrl ??= AnimationController(
           vsync: this, duration: const Duration(milliseconds: 360))
         ..forward();
@@ -172,6 +198,7 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
     final title   = t(_stageTitleKey[stage] ?? 'preparing_lesson');
     final sw      = MediaQuery.of(context).size.width;
     final isSmall = sw <= 380;
+    final reduced = _reducedMotion;
 
     final btnLabel = ready
         ? (stage == 'review'       ? t('aux_review_start_cta')
@@ -187,7 +214,7 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
         : (ready ? t('ready_to_continue') : t('can_skip_when_ready'));
 
     return FadeTransition(
-      opacity: _fadeInCtrl,
+      opacity: reduced ? const AlwaysStoppedAnimation(1.0) : _fadeInCtrl,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -222,9 +249,9 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
                 children: [
                   // R-2: Glow background
                   AnimatedBuilder(
-                    animation: _glowCtrl,
+                    animation: reduced ? const AlwaysStoppedAnimation(0.0) : _glowCtrl,
                     builder: (_, __) {
-                      final v = Curves.easeInOut.transform(_glowCtrl.value);
+                      final v = reduced ? 0.0 : Curves.easeInOut.transform(_glowCtrl.value);
                       return Positioned(
                         top: -80, left: -40, right: -40, height: 200,
                         child: Opacity(
@@ -246,10 +273,12 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
                   ),
                   // R-3: Floating background icons
                   Positioned.fill(
-                    child: AnimatedBuilder(
-                      animation: _floatCtrl,
-                      builder: (_, __) => _BgIconLayer(t: _floatCtrl.value),
-                    ),
+                    child: reduced
+                        ? const SizedBox.shrink()
+                        : AnimatedBuilder(
+                            animation: _floatCtrl,
+                            builder: (_, __) => _BgIconLayer(t: _floatCtrl.value),
+                          ),
                   ),
                   // Main column
                   Padding(
@@ -264,15 +293,17 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
                       children: [
                         // R-4 + R-5: Animated robot
                         AnimatedBuilder(
-                          animation: Listenable.merge([
-                            _bobCtrl, _nodCtrl, _waveRCtrl, _waveLCtrl, _sparkCtrl,
-                          ]),
+                          animation: reduced
+                              ? const AlwaysStoppedAnimation(0.0)
+                              : Listenable.merge([
+                                  _bobCtrl, _nodCtrl, _waveRCtrl, _waveLCtrl, _sparkCtrl,
+                                ]),
                           builder: (_, __) {
-                            final bob    = Curves.easeInOut.transform(_bobCtrl.value);
-                            final nod    = Curves.easeInOut.transform(_nodCtrl.value);
-                            final waveR  = Curves.easeInOut.transform(_waveRCtrl.value);
-                            final waveL  = Curves.easeInOut.transform(_waveLCtrl.value);
-                            final spark  = _sparkCtrl.value;
+                            final bob    = reduced ? 0.0 : Curves.easeInOut.transform(_bobCtrl.value);
+                            final nod    = reduced ? 0.0 : Curves.easeInOut.transform(_nodCtrl.value);
+                            final waveR  = reduced ? 0.0 : Curves.easeInOut.transform(_waveRCtrl.value);
+                            final waveL  = reduced ? 0.0 : Curves.easeInOut.transform(_waveLCtrl.value);
+                            final spark  = reduced ? 0.0 : _sparkCtrl.value;
                             return Transform.translate(
                               offset: Offset(0, -7 * bob),
                               child: SizedBox(
@@ -370,8 +401,8 @@ class _SimPreparationExperienceState extends State<SimPreparationExperience>
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // R-9: 3 pulsing dots (hidden on done)
-                        if (!isDone) ...[
+                        // R-9: 3 pulsing dots (hidden on done or reduced-motion)
+                        if (!isDone && !reduced) ...[
                           AnimatedBuilder(
                             animation: _dotCtrl,
                             builder: (_, __) => Row(
