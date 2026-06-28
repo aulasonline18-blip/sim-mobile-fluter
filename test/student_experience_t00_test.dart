@@ -94,7 +94,7 @@ void main() {
       final engine = StudentExperienceEngine(
         service: service,
         t00: t00,
-        placement: const LabPlacementDecisionReader(settled: false),
+        placement: const SettledPlacementReader(settled: false),
       );
 
       final result = await engine.prepareStudentExperienceEntry(

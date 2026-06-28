@@ -111,6 +111,7 @@ class SimOrganism {
     required SimAiServerConfig aiConfig,
     required SharedPreferences prefs,
     StudentStateStore? canonicalStore,
+    AudioPlaybackAdapter? playback,
   }) {
     final sessionProvider = const SupabaseFlutterSessionProvider();
 
@@ -157,7 +158,7 @@ class SimOrganism {
       service: stateService,
       t00: t00Adapter,
       t02: t02Adapter,
-      placement: const LabPlacementDecisionReader(settled: true),
+      placement: const SettledPlacementReader(settled: true),
     );
 
     final placementService = StudentPlacementService(
@@ -207,7 +208,7 @@ class SimOrganism {
     final audioPreference = AudioPreference();
     final audioCore = AudioCore(
       preference: audioPreference,
-      playback: PlatformAudioAdapter(),
+      playback: playback ?? PlatformAudioAdapter(),
       generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
       stableLangProvider: () =>
           stateService.read(lessonLocalId)?.profile.stableLang ?? '',

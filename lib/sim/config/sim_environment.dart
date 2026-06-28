@@ -1,6 +1,3 @@
-// Gateway unificado de configuração de ambiente SIM.
-// Centraliza URLs e paths de API em um único lugar.
-// NÃO contém chaves de API, segredos ou prompts.
 class SimEnvironment {
   const SimEnvironment._();
 

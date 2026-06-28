@@ -119,8 +119,6 @@ class LabSession extends ChangeNotifier {
   bool aulaRuntimeLoading = false;
   String? aulaRuntimeError;
 
-  // Flag para distinguir "ainda não carregou créditos" de "créditos = 0".
-  // Enquanto false, não bloqueamos localmente (o servidor rejeita com 402 se necessário).
   bool _creditsLoaded = false;
 
   final AudioPreference _audioPreference = AudioPreference();
@@ -266,7 +264,6 @@ class LabSession extends ChangeNotifier {
       goLogin(target: '/');
       return;
     }
-    // Só bloquear por crédito se já carregamos do servidor e confirmamos saldo zero.
     if (_creditsLoaded && credits <= 0) {
       debugPrint('[SIM] BLOCKED reason=credits_zero');
       openCredits();
@@ -454,7 +451,7 @@ class LabSession extends ChangeNotifier {
   }
 
   void _loadCreditsFromServer() {
-    authSession.credits = 1; // otimista enquanto busca do servidor
+    authSession.credits = 1;
     _creditsLoaded = false;
     unawaited(
       SimServerCreditsClient(config: _serverConfig())
@@ -465,7 +462,6 @@ class LabSession extends ChangeNotifier {
             notifyListeners();
           })
           .catchError((_) {
-            // Em caso de erro de rede, assumimos que há créditos para não bloquear.
             _creditsLoaded = false;
           }),
     );

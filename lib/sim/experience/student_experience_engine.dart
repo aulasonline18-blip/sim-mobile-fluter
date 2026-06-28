@@ -10,8 +10,8 @@ abstract interface class PlacementDecisionReader {
   bool get settled;
 }
 
-class LabPlacementDecisionReader implements PlacementDecisionReader {
-  const LabPlacementDecisionReader({this.settled = false});
+class SettledPlacementReader implements PlacementDecisionReader {
+  const SettledPlacementReader({this.settled = false});
 
   @override
   final bool settled;

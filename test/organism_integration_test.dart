@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/sim/external_ai/sim_ai_server_config.dart';
+import 'package:sim_mobile/sim/media/audio_core.dart';
 import 'package:sim_mobile/sim/organism/sim_organism.dart';
-import 'package:sim_mobile/sim/organism/sim_organism_controller.dart';
 import 'package:sim_mobile/sim/organism/sim_organism_router.dart';
 import 'package:sim_mobile/sim/school/sim_school_routes.dart';
 import 'package:sim_mobile/sim/state/student_state_store.dart';
@@ -21,6 +21,7 @@ Future<SimOrganism> _makeOrganism({String id = 'test', StudentStateStore? store}
     aiConfig: _testConfig(),
     prefs: prefs,
     canonicalStore: store,
+    playback: NoopAudioPlaybackAdapter(),
   );
 }
 
