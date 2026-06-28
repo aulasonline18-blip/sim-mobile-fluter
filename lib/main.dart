@@ -3314,32 +3314,16 @@ class _LessonDoneScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              const Icon(Icons.emoji_events_outlined, size: 64, color: simDark),
-              const SizedBox(height: 20),
-              const Text(
-                'Aula concluída!',
-                style: TextStyle(color: simDark, fontSize: 26, fontWeight: FontWeight.w800),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Parabéns! Você concluiu todos os itens desta aula.',
-                style: TextStyle(color: simMuted, fontSize: 16, height: 1.4),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              PrimaryWideButton(
-                label: 'Voltar ao início',
-                onTap: () => session.openSupport('/cyber/objeto'),
-              ),
-            ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: SingleChildScrollView(
+            child: SimPreparationExperience(
+              stage: 'done',
+              ready: true,
+              onContinue: () => session.openSupport('/cyber/objeto'),
+            ),
           ),
         ),
       ),
@@ -3663,17 +3647,17 @@ class CreditsLabScreen extends StatelessWidget {
                 const SizedBox(height: 18),
                 CreditPackButton(
                   title: '100 créditos',
-                  subtitle: 'Aulas e uso básico',
+                  subtitle: t('pay_pack_lessons_100'),
                   onTap: session.openCheckoutReturn,
                 ),
                 CreditPackButton(
                   title: '200 créditos',
-                  subtitle: 'Mais aulas e imagem quando disponível',
+                  subtitle: t('pay_pack_lessons_200'),
                   onTap: session.openCheckoutReturn,
                 ),
                 CreditPackButton(
                   title: '500 créditos',
-                  subtitle: 'Uso prolongado do SIM',
+                  subtitle: t('pay_pack_lessons_500'),
                   onTap: session.openCheckoutReturn,
                 ),
                 const SizedBox(height: 16),
