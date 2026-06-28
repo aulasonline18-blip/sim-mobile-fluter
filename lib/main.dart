@@ -1965,29 +1965,22 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
   @override
   Widget build(BuildContext context) {
     final remaining = maxFreeText - widget.session.freeText.length;
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const StepHeader(step: 3, total: 5, label: 'Entrada pedagógica'),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 576),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Tell us about who is going to study',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 28,
-                          height: 1.12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+    return CyberStepShell(
+      step: 3,
+      total: 5,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t('objeto_h1'),
+            style: const TextStyle(
+              color: simDark,
+              fontSize: 28,
+              height: 1.12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 24),
                       SimCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2153,9 +2146,9 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Preferred name',
-                                    style: TextStyle(
+                                  Text(
+                                    t('objeto_preferred_name'),
+                                    style: const TextStyle(
                                       color: simDark,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -2163,7 +2156,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   SimInput(
-                                    hint: 'What should SIM call the student?',
+                                    hint: t('objeto_name_placeholder'),
                                     controller: nameController,
                                     onChanged: widget.session.setPreferredName,
                                   ),
@@ -2230,12 +2223,12 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                       fit: BoxFit.scaleDown,
                                       child: Text(
                                         sending
-                                            ? 'Reading…'
+                                            ? t('objetivo_reading')
                                             : waitingAttachment
                                             ? 'Aguardando leitura do anexo...'
                                             : objectiveTooShort
-                                            ? 'Escreva o objetivo primeiro'
-                                            : 'Save and continue',
+                                            ? t('objeto_helper')
+                                            : t('objeto_save_continue'),
                                         style: const TextStyle(
                                           color: simDark,
                                           fontSize: 18,
@@ -2252,11 +2245,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                       ),
                     ],
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
+                ],
       ),
     );
   }
