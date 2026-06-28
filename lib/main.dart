@@ -3211,49 +3211,89 @@ class _QuestionHistoryBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SimCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            entry.text,
-            style: const TextStyle(color: simDark, fontSize: 14, height: 1.4, fontWeight: FontWeight.w600),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (entry.imageUrl != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320, maxHeight: 160),
+              color: Colors.white,
+              padding: const EdgeInsets.all(4),
+              child: Image.network(
+                entry.imageUrl!,
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-          for (final opt in entry.options)
-            Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          const SizedBox(height: 12),
+        ],
+        Text(
+          entry.text,
+          style: const TextStyle(color: simDark, fontSize: 18, height: 1.3, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 14),
+        for (final opt in entry.options) ...[
+          Builder(builder: (context) {
+            final chosen = opt.id == entry.chosenOptionId;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: opt.id == entry.chosenOptionId
-                    ? (entry.correct ? simSuccess.withAlpha(25) : simWarn.withAlpha(25))
-                    : simLight,
-                borderRadius: BorderRadius.circular(10),
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: opt.id == entry.chosenOptionId
-                      ? (entry.correct ? simSuccess : simWarn)
-                      : simBorder,
+                  color: chosen ? simDark : simBorder,
+                  width: chosen ? 1.5 : 1,
                 ),
+                boxShadow: chosen
+                    ? [const BoxShadow(color: simDark, blurRadius: 0, spreadRadius: 1)]
+                    : null,
               ),
               child: Row(
                 children: [
-                  Text(
-                    opt.id.name,
-                    style: const TextStyle(color: simDark, fontWeight: FontWeight.w800, fontSize: 13),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(opt.text, style: const TextStyle(color: simDark, fontSize: 13))),
-                  if (opt.id == entry.chosenOptionId)
-                    Icon(
-                      entry.correct ? Icons.check_circle_outline : Icons.cancel_outlined,
-                      size: 16,
-                      color: entry.correct ? simSuccess : simWarn,
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: chosen ? simDark : Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      opt.id.name.toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: chosen ? Colors.white : simDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(opt.text, style: const TextStyle(color: simDark, fontSize: 15)),
+                  ),
+                  if (chosen) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      entry.correct ? 'ok' : 'x',
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: simDark,
+                        letterSpacing: 0.18 * 11,
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ),
+            );
+          }),
         ],
-      ),
+      ],
     );
   }
 }
@@ -5149,26 +5189,48 @@ class AnswerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: active ? simLight : Colors.white,
+            color: Colors.white.withOpacity(0.85),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: active ? simDark : simBorder),
+            border: Border.all(color: active ? simDark : simBorder, width: active ? 1.5 : 1),
+            boxShadow: active
+                ? [const BoxShadow(color: simDark, blurRadius: 0, spreadRadius: 1)]
+                : [const BoxShadow(color: Color(0x0A111827), blurRadius: 8, offset: Offset(0, 2))],
           ),
-          child: Text(
-            '$label. $text',
-            style: const TextStyle(
-              color: simDark,
-              fontSize: 14.5,
-              height: 1.35,
-              fontWeight: FontWeight.w600,
-            ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: active ? simDark : const Color(0x0D000000),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'JetBrainsMono',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: active ? Colors.white : simDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  text,
+                  style: const TextStyle(color: simDark, fontSize: 15, height: 1.35),
+                ),
+              ),
+            ],
           ),
         ),
       ),

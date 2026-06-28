@@ -116,10 +116,10 @@ class _SimTypewriterState extends State<SimTypewriter>
               child: FadeTransition(
                 opacity: _cursorOpacity,
                 child: Container(
-                  width: 2,
-                  height: 6,
-                  margin: const EdgeInsets.only(left: 1),
-                  color: widget.style.color ?? Colors.black,
+                  width: 6,
+                  height: 14,
+                  margin: const EdgeInsets.only(left: 2),
+                  color: const Color(0xFF111827),
                 ),
               ),
             ),
