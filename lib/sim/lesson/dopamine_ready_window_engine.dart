@@ -350,7 +350,7 @@ class DopamineReadyWindowEngine {
     final prepared = state?.readyLessonMaterials[key];
     if (prepared == null || prepared['text_status'] != 'ready') return null;
     if (prepared['for_itemIdx'] != itemIdx) return null;
-    if (prepared['for_layer'] != layer.value) return null;
+    if (prepared['for_layer'] != layer.name) return null;
     if ((prepared['for_marker'] as String?) != marker) return null;
     return prepared;
   }

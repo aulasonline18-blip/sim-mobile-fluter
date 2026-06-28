@@ -107,6 +107,6 @@ JsonMap preparedMaterialFromLesson({
     'prompt_contract_version': 'T02_content.v3',
     'for_itemIdx': itemIdx,
     'for_marker': marker,
-    'for_layer': layer.value,
+    'for_layer': layer.name,
   };
 }

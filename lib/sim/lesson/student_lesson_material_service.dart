@@ -187,7 +187,7 @@ class StudentLessonMaterialService {
     final material = state?.readyLessonMaterials[key];
     if (material == null || material['text_status'] != 'ready') return null;
     if (material['for_itemIdx'] != input.itemIdx) return null;
-    if (material['for_layer'] != input.layer.value) return null;
+    if (material['for_layer'] != input.layer.name) return null;
     if ((material['for_marker'] as String?) != input.marker) return null;
     final options = material['options'];
     if (options is! Map) return null;

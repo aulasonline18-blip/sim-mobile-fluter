@@ -115,7 +115,6 @@ ApplyDecisionResult applyStudentDecision(
         return ApplyDecisionResult(
           nextProgress: inputProgress.copyWith(
             layer: proposedLayer,
-            erros: 0,
           ),
           applied: true,
         );

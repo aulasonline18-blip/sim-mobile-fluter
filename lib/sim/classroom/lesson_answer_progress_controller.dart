@@ -87,9 +87,11 @@ class LessonAnswerProgressController {
       correct: correct,
       imageUrl: position.imagem,
     );
-    if (!position.history.any(
-      (old) => old.id == entry.id && old.chosenOptionId == entry.chosenOptionId,
-    )) {
+    // Prevent double-tap (only block if the immediately preceding entry is identical)
+    final _lastEntry = position.history.isEmpty ? null : position.history.last;
+    if (_lastEntry == null ||
+        _lastEntry.id != entry.id ||
+        _lastEntry.chosenOptionId != entry.chosenOptionId) {
       final next = [...position.history, entry];
       final firstImageToKeep = (next.length - 4).clamp(0, next.length);
       position.history = next.asMap().entries.map((mapEntry) {
@@ -373,13 +375,25 @@ class LessonAnswerProgressController {
     if (position.phase.type != ClassroomPhaseType.concluido) return;
     audioCore?.stop();
     final item = position.itemAtivo;
-    if (item == null) {
-      position.phase = const ClassroomPhase.doneEnd();
-      return;
-    }
-
     final state = stateService.read(lessonLocalId);
     final view = state == null ? null : activeLessonView(state);
+    if (item == null) {
+      position.phase = const ClassroomPhase.doneEnd();
+      stateService.appendEvent(
+        lessonLocalId,
+        StudentLearningEvent(
+          type: 'FINAL_COMPLETION_ALLOWED',
+          ts: DateTime.now().millisecondsSinceEpoch,
+          payload: {
+            'itemIdx': view?.itemIdx ?? position.itemIdx,
+            'layer': (view?.layer ?? position.layer).value,
+            'totalItens': baseItems.length,
+            'mainAdvances': view?.mainAdvances ?? position.mainAdvances,
+          },
+        ),
+      );
+      return;
+    }
     if (view == null || state == null) {
       position.phase = const ClassroomPhase.doneEnd();
       return;

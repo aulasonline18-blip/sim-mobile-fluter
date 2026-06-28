@@ -143,7 +143,7 @@ class LessonMaterialController {
           'prompt_contract_version': 'T02_content.v3',
           'for_itemIdx': position.itemIdx,
           'for_marker': item.marker,
-          'for_layer': position.layer.value,
+          'for_layer': position.layer.name,
         },
       );
     });
