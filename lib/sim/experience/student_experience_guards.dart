@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'student_experience_types.dart';
 
 StudentExperienceErrorInfo classifyStudentExperienceError(Object error) {
@@ -14,12 +17,33 @@ StudentExperienceErrorInfo classifyStudentExperienceError(Object error) {
           'Seus creditos acabaram. Compre creditos para continuar estudando.',
     );
   }
-  if (lower.contains('timeout') ||
+  if (error is TimeoutException ||
+      lower.contains('timeout') ||
+      lower.contains('timeoutexception') ||
       lower.contains('tempo') ||
-      lower.contains('abort')) {
+      lower.contains('abort') ||
+      lower.contains('t02 nao devolveu') ||
+      lower.contains('aula minima')) {
     return const StudentExperienceErrorInfo(
       kind: StudentExperienceErrorKind.timeout,
       message: 'A preparacao demorou demais. Toque para tentar novamente.',
+    );
+  }
+  if (error is SocketException ||
+      lower.contains('socketexception') ||
+      lower.contains('connection refused') ||
+      lower.contains('connection reset') ||
+      lower.contains('network is unreachable') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('os error') ||
+      lower.contains('cleartext') ||
+      lower.contains('http 401') ||
+      lower.contains('http 403') ||
+      lower.contains('http 5')) {
+    return const StudentExperienceErrorInfo(
+      kind: StudentExperienceErrorKind.generic,
+      message:
+          'Erro de conexao com o servidor. Verifique sua internet e tente novamente.',
     );
   }
   return const StudentExperienceErrorInfo(

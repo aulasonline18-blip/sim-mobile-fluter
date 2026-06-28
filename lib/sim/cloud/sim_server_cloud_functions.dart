@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import '../external_ai/sim_ai_server_config.dart';
@@ -101,15 +102,23 @@ class SimServerCloudFunctions implements StudentStateCloudFunctions {
     SupabaseSession session,
     Object body,
   ) async {
-    final response = await transport.postJson(
-      config.uri(path),
-      headers: {
-        ...await config.jsonHeaders(),
-        ...const AuthMiddlewareContract().bearerHeaders(session),
-      },
-      body: body,
-      timeout: timeout,
-    );
+    final SimHttpResponse response;
+    try {
+      response = await transport.postJson(
+        config.uri(path),
+        headers: {
+          ...await config.jsonHeaders(),
+          ...const AuthMiddlewareContract().bearerHeaders(session),
+        },
+        body: body,
+        timeout: timeout,
+      );
+    } on TimeoutException {
+      throw SimExternalAiException(
+        'Tempo limite da requisição atingido.',
+        statusCode: 408,
+      );
+    }
     if (!response.ok) {
       throw SimExternalAiException(
         response.body,

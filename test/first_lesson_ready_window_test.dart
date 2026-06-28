@@ -182,8 +182,14 @@ void main() {
 
     final state = service.read('cyber-ready');
     expect(state?.current?.marker, 'M1');
-    expect(readLiveEntryState(service, 'cyber-ready').status,
-        LiveEntryStatus.firstLessonReady);
+    expect(
+      readLiveEntryState(service, 'cyber-ready').status,
+      LiveEntryStatus.firstLessonReady,
+    );
     expect(state?.readyLessonMaterials.values.first['text_status'], 'ready');
+    expect(
+      state?.events.map((event) => event.type),
+      contains('LESSON_TEXT_READY'),
+    );
   });
 }

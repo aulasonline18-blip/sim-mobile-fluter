@@ -54,17 +54,21 @@ class StudentExperiencePlacementAdapter {
     StudentCurriculum curriculum,
     PlacementState placement,
   ) {
-    final startMarker =
-        enabled && placement.startMarker?.trim().isNotEmpty == true
-            ? placement.startMarker!.trim()
-            : null;
+    final rawStartMarker = placement.startMarker?.trim() ?? '';
+    final startMarker = enabled && rawStartMarker.isNotEmpty
+        ? rawStartMarker
+        : null;
     final matchedIndex = startMarker == null
         ? 0
-        : curriculum.items.indexWhere((item) => item.marker.trim() == startMarker);
+        : curriculum.items.indexWhere(
+            (item) => item.marker.trim() == startMarker,
+          );
     final itemIndex = matchedIndex >= 0 ? matchedIndex : 0;
     return StartPosition(
       itemIndex: itemIndex,
-      marker: curriculum.items.isEmpty ? null : curriculum.items[itemIndex].marker,
+      marker: curriculum.items.isEmpty
+          ? null
+          : curriculum.items[itemIndex].marker,
       item: curriculum.items.isEmpty ? null : curriculum.items[itemIndex],
     );
   }

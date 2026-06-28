@@ -21,10 +21,15 @@ class DoubtInputDraft {
 
   String? validate() {
     if (cleanText.isEmpty && image == null) return emptyDoubtMessage;
-    if (image == null) return null;
-    if (!image!.type.startsWith('image/')) return imageOnlyMessage;
-    if (!image!.dataUrl.startsWith('data:image/')) return imageOnlyMessage;
-    if (image!.dataUrl.length > doubtImageMaxDataUrlLength) {
+    final selectedImage = image;
+    if (selectedImage == null) return null;
+    if (!selectedImage.type.startsWith('image/')) {
+      return imageOnlyMessage;
+    }
+    if (!selectedImage.dataUrl.startsWith('data:image/')) {
+      return imageOnlyMessage;
+    }
+    if (selectedImage.dataUrl.length > doubtImageMaxDataUrlLength) {
       return imageTooLargeMessage;
     }
     return null;

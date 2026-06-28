@@ -44,9 +44,17 @@ abstract interface class SimHttpTransport {
 
 class DartIoSimHttpTransport implements SimHttpTransport {
   DartIoSimHttpTransport({HttpClient? client})
-    : client = client ?? HttpClient();
+    : client = client ?? HttpClient(),
+      _ownsClient = client == null;
 
   final HttpClient client;
+  final bool _ownsClient;
+
+  void dispose() {
+    if (_ownsClient) {
+      client.close(force: true);
+    }
+  }
 
   @override
   Future<SimHttpResponse> postJson(

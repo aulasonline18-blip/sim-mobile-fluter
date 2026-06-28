@@ -18,8 +18,9 @@ class LessonAudioController {
   Future<bool> playConteudo(
     LessonContent? conteudo,
     String? itemMarker,
-    LessonLayer layer,
-  ) async {
+    LessonLayer layer, {
+    String? language,
+  }) async {
     if (conteudo == null) return false;
     if (!preference.getAudioEnabled()) return false;
     final parts = [
@@ -42,6 +43,7 @@ class LessonAudioController {
       parts,
       onStart: () => falando = true,
       onEnd: () => falando = false,
+      language: language,
     );
     if (!started) falando = false;
     return started;
@@ -50,22 +52,24 @@ class LessonAudioController {
   Future<void> ouvirAula(
     LessonContent? conteudo,
     String? itemMarker,
-    LessonLayer layer,
-  ) async {
+    LessonLayer layer, {
+    String? language,
+  }) async {
     if (falando) {
       pararAudio();
       return;
     }
-    await playConteudo(conteudo, itemMarker, layer);
+    await playConteudo(conteudo, itemMarker, layer, language: language);
   }
 
   Future<bool> autoSpeakLesson(
     LessonContent? conteudo,
     String? itemMarker,
-    LessonLayer layer,
-  ) {
+    LessonLayer layer, {
+    String? language,
+  }) {
     if (falando) return Future.value(false);
-    return playConteudo(conteudo, itemMarker, layer);
+    return playConteudo(conteudo, itemMarker, layer, language: language);
   }
 
   void pararAudio() {

@@ -101,11 +101,43 @@ class StudentLessonMaterialService {
 
     final after = resolveFastLessonMaterialFromStateOrCache(input);
     if (after == null) return null;
+    final waitedMs = DateTime.now().millisecondsSinceEpoch - startedAt;
+    _appendLessonTextReady(
+      input,
+      after.conteudo,
+      LessonMaterialSource.studentStateAfterWait,
+      waitedMs,
+    );
     return ResolveLessonMaterialResult(
       conteudo: after.conteudo,
       imagem: after.imagem,
       source: LessonMaterialSource.studentStateAfterWait,
-      waitedMs: DateTime.now().millisecondsSinceEpoch - startedAt,
+      waitedMs: waitedMs,
+    );
+  }
+
+  void _appendLessonTextReady(
+    ResolveLessonMaterialInput input,
+    LessonContent content,
+    LessonMaterialSource source,
+    int waitedMs,
+  ) {
+    stateService.appendEvent(
+      input.lessonLocalId,
+      StudentLearningEvent(
+        type: 'LESSON_TEXT_READY',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: {
+          'lessonLocalId': input.lessonLocalId,
+          'itemIdx': input.itemIdx,
+          'marker': input.marker,
+          'layer': input.layer.value,
+          'mode': input.params.mode.name,
+          'source': source.name,
+          'waitedMs': waitedMs,
+          'question': content.question,
+        },
+      ),
     );
   }
 
@@ -202,7 +234,8 @@ class StudentLessonMaterialService {
         queuedActions: [
           ...state.queuedActions,
           {
-            'job_id': 'lesson_material_${DateTime.now().millisecondsSinceEpoch}',
+            'job_id':
+                'lesson_material_${DateTime.now().millisecondsSinceEpoch}',
             'type': 'PREPARE_READY_WINDOW',
             'status': 'queued',
             'idempotency_key':

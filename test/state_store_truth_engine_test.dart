@@ -190,5 +190,77 @@ void main() {
       ((next.extra['truth'] as Map)['item_consolidation_status'] as Map)['M1'],
       evidence.status.name,
     );
+    expect(next.truth.itemConsolidationStatus['M1'], evidence.status.name);
+    expect(next.truth.masteryEvidence.single['marker_id'], 'M1');
   });
+
+  test(
+    'StudentLearningState serializa truth e sync tipados com fallback legado',
+    () {
+      final state =
+          StudentLearningState.empty(
+            lessonLocalId: 'lesson-typed',
+            now: 1,
+          ).copyWith(
+            truth: const StudentMasteryTruth(
+              itemConsolidationStatus: {'M1': 'mastered'},
+              masteryEvidence: [
+                {'marker_id': 'M1', 'status': 'mastered'},
+              ],
+            ),
+            audio: const StudentAudioState(
+              status: 'ready',
+              enabled: true,
+              playing: false,
+              updatedAt: 9,
+              lessonKey: 'lesson-typed:M1:1',
+              language: 'pt-BR',
+              voice: 'cedar',
+            ),
+            syncStatus: const StudentSyncStatus(
+              status: 'pending',
+              pendingJobs: 2,
+              highWaterMark: 7,
+              updatedAt: 10,
+            ),
+            extra: const {
+              'truth': {
+                'item_consolidation_status': {'OLD': 'weak'},
+              },
+            },
+          );
+
+      final json = state.toJson();
+      expect(json['truth_typed'], isA<Map>());
+      expect(json['audio_typed'], isA<Map>());
+      expect(json['sync_status_typed'], isA<Map>());
+      expect(json['truth'], isA<Map>());
+
+      final restored = StudentLearningState.fromJson(json);
+      expect(restored.truth.itemConsolidationStatus['M1'], 'mastered');
+      expect(restored.audio.status, 'ready');
+      expect(restored.audio.lessonKey, 'lesson-typed:M1:1');
+      expect(restored.syncStatus?.status, 'pending');
+      expect(
+        (restored.extra['truth'] as Map)['item_consolidation_status'],
+        isA<Map>(),
+      );
+
+      final legacy = StudentLearningState.fromJson({
+        ...json,
+        'truth_typed': null,
+        'truth': {
+          'item_consolidation_status': {'M2': 'falseMastery'},
+          'mastery_evidence': [
+            {
+              'marker_id': 'M2',
+              'status': 'falseMastery',
+              'needs_reinforcement': true,
+            },
+          ],
+        },
+      });
+      expect(legacy.truth.itemConsolidationStatus['M2'], 'falseMastery');
+    },
+  );
 }

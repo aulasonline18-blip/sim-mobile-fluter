@@ -95,20 +95,6 @@ class MasteryTruthEngine {
     final hadWrong = attempts.any((attempt) => !attempt.correct);
     final hadCorrect = attempts.any((attempt) => attempt.correct);
 
-    if (consecutiveWrong >= 2) {
-      return MasteryEvidence(
-        marker: marker,
-        status: MasteryStatus.weak,
-        reason: 'erro repetido duas vezes',
-        score: score,
-        consecutiveCorrect: consecutiveCorrect,
-        consecutiveWrong: consecutiveWrong,
-        attemptCount: attempts.length,
-        needsReview: false,
-        needsReinforcement: true,
-      );
-    }
-
     if (!last.correct && last.sinal == DecisionSignal.one) {
       return MasteryEvidence(
         marker: marker,
@@ -119,6 +105,20 @@ class MasteryTruthEngine {
         consecutiveWrong: consecutiveWrong,
         attemptCount: attempts.length,
         needsReview: true,
+        needsReinforcement: true,
+      );
+    }
+
+    if (consecutiveWrong >= 2) {
+      return MasteryEvidence(
+        marker: marker,
+        status: MasteryStatus.weak,
+        reason: 'erro repetido duas vezes',
+        score: score,
+        consecutiveCorrect: consecutiveCorrect,
+        consecutiveWrong: consecutiveWrong,
+        attemptCount: attempts.length,
+        needsReview: false,
         needsReinforcement: true,
       );
     }
@@ -257,7 +257,19 @@ class MasteryTruthEngine {
     if (evidence.needsReview && !retestFlags.contains(evidence.marker)) {
       retestFlags.add(evidence.marker);
     }
+    final typedTruth = state.truth.copyWith(
+      masteryEvidence: masteryEvidence
+          .whereType<Map>()
+          .map((entry) => JsonMap.from(entry))
+          .toList(),
+      falseMasteryFlags: falseFlags,
+      needsRetestFlags: retestFlags,
+      itemConsolidationStatus: consolidation.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      ),
+    );
     return state.copyWith(
+      truth: typedTruth,
       extra: {
         ...state.extra,
         'truth': {

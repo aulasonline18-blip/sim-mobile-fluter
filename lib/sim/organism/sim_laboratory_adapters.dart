@@ -3,6 +3,7 @@ import '../billing/credits_functions.dart';
 import '../billing/payments_functions.dart';
 import '../cloud/cloud_functions.dart';
 import '../cloud/supabase_client_contract.dart';
+import '../config/app_mode.dart';
 import '../media/audio_core.dart';
 import '../media/lesson_visual_pipeline.dart';
 import '../modules/pedagogical_module_contracts.dart';
@@ -18,20 +19,13 @@ class LaboratoryT00Client implements T00BootstrapClient {
       type: 't00_profile',
       payload: {
         'profile': 'Perfil pedagogico de laboratorio para $topic',
-        'ficha_for_next': {
-          'stable_lang': request.lang,
-          'target_topic': topic,
-        },
+        'ficha_for_next': {'stable_lang': request.lang, 'target_topic': topic},
       },
     );
     yield T00BootstrapChunk(
       type: 't00_item_partial',
       payload: {
-        'item': {
-          'marker': 'T00:1',
-          'text': topic,
-          'title': topic,
-        },
+        'item': {'marker': 'MAIN_001', 'text': topic, 'title': topic},
       },
     );
   }
@@ -60,7 +54,14 @@ class LaboratoryT02Client implements T02LessonClient {
     return _material(request, 'Nivelamento de ${request.item}');
   }
 
-  Future<T02LessonMaterial> _material(T02LessonRequest request, String topic) async {
+  Future<T02LessonMaterial> _material(
+    T02LessonRequest request,
+    String topic,
+  ) async {
+    assert(
+      AppModeConfig.current == AppMode.laboratory,
+      'LaboratoryT02Client nao pode ser usado em modo production',
+    );
     return T02LessonMaterial(
       explanation: 'LABORATORIO: explicacao temporaria para $topic.',
       question: 'Qual opcao combina melhor com $topic?',
@@ -87,26 +88,37 @@ class LaboratorySessionProvider implements SupabaseSessionProvider {
   Future<SupabaseSession?> currentSession() async => session;
 }
 
-class LaboratoryStudentStateCloudFunctions implements StudentStateCloudFunctions {
+class LaboratoryStudentStateCloudFunctions
+    implements StudentStateCloudFunctions {
   final Map<String, StudentStateRow> rows = {};
 
   @override
-  Future<void> deleteStudentStateByLesson(String lessonLocalId, SupabaseSession session) async {
+  Future<void> deleteStudentStateByLesson(
+    String lessonLocalId,
+    SupabaseSession session,
+  ) async {
     rows.remove(lessonLocalId);
   }
 
   @override
-  Future<StudentStateRow?> getStudentStateByLesson(String lessonLocalId, SupabaseSession session) async {
+  Future<StudentStateRow?> getStudentStateByLesson(
+    String lessonLocalId,
+    SupabaseSession session,
+  ) async {
     return rows[lessonLocalId];
   }
 
   @override
-  Future<List<StudentStateRow>> listStudentStates(SupabaseSession session) async {
+  Future<List<StudentStateRow>> listStudentStates(
+    SupabaseSession session,
+  ) async {
     return rows.values.toList(growable: false);
   }
 
   @override
-  Future<List<StudentStateSummaryRow>> listStudentStateSummaries(SupabaseSession session) async {
+  Future<List<StudentStateSummaryRow>> listStudentStateSummaries(
+    SupabaseSession session,
+  ) async {
     return rows.values
         .map(summarizeStudentStateRow)
         .whereType<StudentStateSummaryRow>()
@@ -141,7 +153,11 @@ class LaboratoryCreditsFunctions implements CreditsFunctions {
 
   @override
   Future<CreditsSnapshot> getMyCredits() async {
-    return CreditsSnapshot(balance: balance, lifetimeEarned: balance, lifetimeSpent: 0);
+    return CreditsSnapshot(
+      balance: balance,
+      lifetimeEarned: balance,
+      lifetimeSpent: 0,
+    );
   }
 
   @override

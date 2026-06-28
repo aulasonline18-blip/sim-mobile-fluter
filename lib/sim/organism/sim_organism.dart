@@ -1,6 +1,9 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../billing/account_deletion.dart';
 import '../billing/credits_route_controller.dart';
 import '../billing/payment_return_store.dart';
+import '../billing/sim_server_billing_clients.dart';
 import '../classroom/lesson_answer_progress_controller.dart';
 import '../classroom/lesson_hydration_engine.dart';
 import '../classroom/lesson_material_controller.dart';
@@ -32,6 +35,13 @@ import '../placement/placement_t02_caller.dart';
 import '../placement/student_placement_service.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
+import '../state/student_state_store.dart';
+import '../state/student_state_store_adapter.dart';
+import '../cloud/sim_server_cloud_functions.dart';
+import '../cloud/supabase_flutter_session_provider.dart';
+import '../external_ai/sim_ai_server_config.dart';
+import '../external_ai/sim_server_ai_clients.dart';
+import '../state/shared_prefs_state_storage.dart';
 import 'sim_laboratory_adapters.dart';
 import 'sim_organism_health.dart';
 import 'sim_organism_router.dart';
@@ -95,8 +105,16 @@ class SimOrganism {
     return stateService.ensure(lessonLocalId: lessonLocalId);
   }
 
-  static SimOrganism laboratory({String lessonLocalId = 'lab-live-entry'}) {
-    final stateService = StudentLearningStateService();
+  static SimOrganism laboratory({
+    String lessonLocalId = 'lab-live-entry',
+    StudentStateStore? canonicalStore,
+  }) {
+    final activeStore =
+        canonicalStore ??
+        StudentStateStore(local: MemoryStudentStateLocalStorage());
+    final StudentLearningStateService stateService = StudentStateStoreAdapter(
+      activeStore,
+    );
     stateService.ensure(lessonLocalId: lessonLocalId, userId: 'lab-user');
 
     const t02Client = LaboratoryT02Client();
@@ -164,6 +182,7 @@ class SimOrganism {
         stateService: stateService,
         materialService: materialService,
         materialController: lessonMaterialController,
+        store: activeStore,
       ),
     );
 
@@ -178,14 +197,17 @@ class SimOrganism {
     );
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
-    final curriculumSync = LessonCurriculumSyncEngine(stateService: stateService);
+    final curriculumSync = LessonCurriculumSyncEngine(
+      stateService: stateService,
+    );
 
     final audioPreference = AudioPreference();
     final audioCore = AudioCore(
       preference: audioPreference,
       playback: NoopAudioPlaybackAdapter(),
       generatedAudioClient: const LaboratoryGeneratedAudioClient(),
-      stableLangProvider: () => stateService.read(lessonLocalId)?.profile.stableLang ?? '',
+      stableLangProvider: () =>
+          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
     );
     final mediaService = StudentLessonMediaService(
       audioCore: audioCore,
@@ -209,6 +231,165 @@ class SimOrganism {
     );
     final accountDeletionController = AccountDeletionController(
       gateway: LaboratoryAccountDeletionGateway(),
+    );
+
+    return SimOrganism._(
+      lessonLocalId: lessonLocalId,
+      stateService: stateService,
+      router: const SimOrganismRouter(),
+      health: buildSimOrganismHealthReport(),
+      cache: cache,
+      eventBus: eventBus,
+      lessonOrchestrator: orchestrator,
+      readyWindowEngine: readyWindowEngine,
+      readyWindowWorker: readyWindowWorker,
+      materialService: materialService,
+      experienceEngine: experienceEngine,
+      placementService: placementService,
+      placementController: placementController,
+      lessonRuntimeEngine: lessonRuntimeEngine,
+      cloudQueue: cloudQueue,
+      sync: sync,
+      cloudBootstrap: cloudBootstrap,
+      curriculumSync: curriculumSync,
+      audioPreference: audioPreference,
+      audioCore: audioCore,
+      mediaService: mediaService,
+      lessonAudioController: lessonAudioController,
+      visualPipeline: visualPipeline,
+      creditsController: creditsController,
+      accountDeletionController: accountDeletionController,
+    );
+  }
+
+  static SimOrganism production({
+    required String lessonLocalId,
+    required SimAiServerConfig aiConfig,
+    required SharedPreferences prefs,
+    StudentStateStore? canonicalStore,
+  }) {
+    final sessionProvider = const SupabaseFlutterSessionProvider();
+
+    final localStorage = SharedPrefsStudentStateLocalStorage(prefs);
+    final activeStore =
+        canonicalStore ?? StudentStateStore(local: localStorage);
+    final StudentLearningStateService stateService = StudentStateStoreAdapter(
+      activeStore,
+    );
+    stateService.ensure(lessonLocalId: lessonLocalId);
+
+    final t00Client = SimServerT00Client(config: aiConfig);
+    final t02Client = SimServerT02Client(config: aiConfig);
+    final cache = LessonMaterialCache();
+    final eventBus = LessonEventBus();
+    final orchestrator = LessonOrchestrator(
+      t02Client: t02Client,
+      cache: cache,
+      bus: eventBus,
+    );
+    final readyWindowEngine = DopamineReadyWindowEngine(
+      service: stateService,
+      orchestrator: orchestrator,
+    );
+    final materialService = StudentLessonMaterialService(
+      stateService: stateService,
+      orchestrator: orchestrator,
+      readyWindowEngine: readyWindowEngine,
+    );
+    final readyWindowWorker = ReadyWindowWorker(
+      service: stateService,
+      processor: readyWindowEngine.runDopamineReadyWindowFromStudentState,
+    );
+
+    final t00Adapter = StudentExperienceT00Adapter(
+      service: stateService,
+      client: t00Client,
+    );
+    final t02Adapter = StudentExperienceT02Adapter(
+      service: stateService,
+      materialService: materialService,
+    );
+    final experienceEngine = StudentExperienceEngine(
+      service: stateService,
+      t00: t00Adapter,
+      t02: t02Adapter,
+      placement: const LabPlacementDecisionReader(settled: true),
+    );
+
+    final placementService = StudentPlacementService(
+      stateService: stateService,
+      lessonLocalId: lessonLocalId,
+    );
+    final placementStore = PlacementStore(placementService);
+    final placementController = PlacementRouteController(
+      lessonLocalId: lessonLocalId,
+      stateService: stateService,
+      store: placementStore,
+      t02Caller: PlacementT02Caller(t02Client: t02Client, enabled: false),
+      enabled: false,
+    );
+
+    final lessonMaterialController = LessonMaterialController(
+      stateService: stateService,
+      materialService: materialService,
+    );
+    final lessonRuntimeEngine = LessonRuntimeEngine(
+      stateService: stateService,
+      sessionEngine: LessonSessionEngine(service: stateService),
+      hydrationEngine: LessonHydrationEngine(materialService: materialService),
+      positionEngine: LessonPositionEngine(),
+      materialController: lessonMaterialController,
+      answerController: LessonAnswerProgressController(
+        stateService: stateService,
+        materialService: materialService,
+        materialController: lessonMaterialController,
+        store: activeStore,
+      ),
+    );
+
+    final cloudFunctions = SimServerCloudFunctions(config: aiConfig);
+    final cloudQueue = CloudQueue(
+      storage: MemoryCloudQueueStorage(),
+      stateService: stateService,
+      sessionProvider: sessionProvider,
+      cloudFunctions: cloudFunctions,
+    );
+    final sync = StudentLearningSync(cloudQueue);
+    final cloudBootstrap = LessonCloudBootstrap(sync: sync);
+    final curriculumSync = LessonCurriculumSyncEngine(
+      stateService: stateService,
+    );
+
+    final audioPreference = AudioPreference();
+    final audioCore = AudioCore(
+      preference: audioPreference,
+      playback: NoopAudioPlaybackAdapter(),
+      generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
+      stableLangProvider: () =>
+          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
+    );
+    final mediaService = StudentLessonMediaService(
+      audioCore: audioCore,
+      readState: (id) => stateService.ensure(lessonLocalId: id),
+      writeState: stateService.write,
+    );
+    final lessonAudioController = LessonAudioController(
+      lessonLocalId: lessonLocalId,
+      mediaService: mediaService,
+      preference: audioPreference,
+    );
+    final visualPipeline = LessonVisualPipeline(
+      imageClient: SimServerLessonImageClient(config: aiConfig),
+    );
+
+    final returnStore = PaymentReturnStore();
+    final creditsController = CreditsRouteController(
+      creditsFunctions: SimServerCreditsClient(config: aiConfig),
+      paymentsFunctions: SimServerPaymentsClient(config: aiConfig),
+      returnStore: returnStore,
+    );
+    final accountDeletionController = AccountDeletionController(
+      gateway: SimServerAccountDeletionGateway(config: aiConfig),
     );
 
     return SimOrganism._(

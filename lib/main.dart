@@ -1,12 +1,42 @@
 import 'dart:async';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'sim/cloud/sim_server_cloud_functions.dart';
+import 'sim/cloud/supabase_flutter_session_provider.dart';
+import 'sim/cloud/supabase_student_state_cloud_storage.dart';
+import 'sim/external_ai/sim_ai_server_config.dart';
+import 'sim/external_ai/sim_server_ai_clients.dart';
+import 'sim/external_ai/sim_server_attachment_client.dart';
+import 'sim/classroom/classroom_models.dart';
+import 'sim/classroom/lesson_runtime_engine.dart';
+import 'sim/config/app_mode.dart';
+import 'sim/experience/student_experience_types.dart';
+import 'sim/organism/sim_organism.dart';
+import 'sim/organism/sim_organism_provider.dart';
+import 'session/auth_session.dart';
+import 'session/entry_form_state.dart';
+import 'session/lesson_ui_state.dart';
+import 'session/navigation_state.dart';
+import 'sim/lesson/lesson_models.dart';
+import 'sim/media/audio_core.dart';
+import 'sim/media/audio_preference.dart';
+import 'sim/media/lesson_audio_controller.dart';
+import 'sim/media/student_lesson_media_service.dart';
+import 'sim/state/shared_prefs_state_storage.dart';
+import 'sim/state/student_learning_state.dart';
+import 'sim/state/student_state_store.dart';
 
 const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
 const simSupabaseAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
+const simApiBaseUrl = String.fromEnvironment(
+  'SIM_SERVER_URL',
+  defaultValue: 'http://167.179.109.137:3000',
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +44,20 @@ Future<void> main() async {
     url: simSupabaseUrl,
     publishableKey: simSupabaseAnonKey,
   );
-  runApp(const SimMobileApp());
+  final prefs = await SharedPreferences.getInstance();
+  final stateStorage = SharedPrefsStudentStateLocalStorage(prefs);
+  const sessionProvider = SupabaseFlutterSessionProvider();
+  final cloudStorage = SupabaseStudentStateCloudStorage(
+    cloudFunctions: SimServerCloudFunctions(
+      config: const SimAiServerConfig(baseUrl: simApiBaseUrl),
+    ),
+    sessionProvider: sessionProvider,
+  );
+  final canonicalStore = StudentStateStore(
+    local: stateStorage,
+    cloud: cloudStorage,
+  );
+  runApp(SimMobileApp(canonicalStore: canonicalStore, prefs: prefs));
 }
 
 const simDark = Color(0xFF111827);
@@ -22,6 +65,8 @@ const simMid = Color(0xFF374151);
 const simLight = Color(0xFFF3F4F6);
 const simMuted = Color(0xFF6B7280);
 const simBorder = Color(0xFFD1D5DB);
+const simSuccess = Color(0xFF10B981);
+const simWarn = Color(0xFFEF4444);
 const maxFreeText = 1500;
 const maxAttachments = 3;
 const maxAttachmentBytes = 10 * 1024 * 1024;
@@ -35,90 +80,135 @@ const objectiveRequiredMessage =
 const objectiveRequiredWithAttachmentMessage =
     'Você anexou um arquivo. Agora escreva o que deseja estudar com ele.';
 
-class AttachmentDraft {
-  AttachmentDraft({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.size,
-    required this.status,
-    this.extractedText,
-    this.method,
-    this.error,
-  });
-
-  final String id;
-  final String name;
-  final String type;
-  final int size;
-  final String status;
-  final String? extractedText;
-  final String? method;
-  final String? error;
-}
-
 class LabSession extends ChangeNotifier {
-  bool authed = false;
-  bool authReady = false;
-  int credits = 0;
-  String route = '/';
-  String returnTo = '/';
-  String? userId;
-  String? userEmail;
-  String? userName;
-  String? authError;
-  StreamSubscription<AuthState>? _authSub;
-  String? selectedLanguageCode;
-  String? stableLang;
-  String otherLanguage = '';
-  String freeText = '';
-  String preferredName = '';
-  bool allowPaidImages = false;
-  List<AttachmentDraft> attachments = [];
-  String attachmentsText = '';
-  String studentProfileNotes = '';
-  String? lessonLocalId;
-  String entryStatus = 'idle';
-  String? entryError;
-  bool placementStarted = false;
-  bool placementDone = false;
-  int aulaStep = 0;
-  String selectedAnswer = '';
-  String aulaMessage = '';
-  bool doubtOpen = false;
-  bool audioEnabled = true;
-  bool audioLoading = false;
-  String? audioError;
-  String imageStatus = 'idle';
-  String? imageError;
-  String? externalDoorOpened;
-  String deleteConfirmation = '';
-  String? accountDeletionMessage;
-
-  void goPortal() {
-    route = '/';
-    notifyListeners();
+  LabSession({
+    StudentStateStore? canonicalStore,
+    this._attachmentClient,
+    AppMode? appMode,
+    SharedPreferences? prefs,
+  }) : appMode = appMode ?? AppModeConfig.current,
+       // ignore: prefer_initializing_formals — param nomeado 'prefs' não pode ser 'this._prefs'
+       _prefs = prefs,
+       canonicalStore =
+           canonicalStore ??
+           StudentStateStore(local: MemoryStudentStateLocalStorage()) {
+    entryForm.addListener(_notifyFromChild);
+    authSession.addListener(_notifyFromChild);
+    navigationState.addListener(_notifyFromChild);
+    lessonUiState.addListener(_notifyFromChild);
   }
 
-  void goLogin({String target = '/'}) {
-    returnTo = safeReturnTo(target);
-    route = '/login';
-    notifyListeners();
+  final AppMode appMode;
+  final SharedPreferences? _prefs;
+  final StudentStateStore? canonicalStore;
+  final SimServerAttachmentClient? _attachmentClient;
+
+  late final EntryFormState entryForm = EntryFormState(
+    attachmentClient: _attachmentClient,
+    serverConfig: _serverConfig,
+  );
+  late final NavigationState navigationState = NavigationState();
+  late final LessonUiState lessonUiState = LessonUiState();
+  late final AuthSession authSession = AuthSession(
+    navigation: navigationState,
+    onAuthenticated: _hydrateActiveLessonFromCloud,
+  );
+
+  late final SimOrganismProvider simOrganismProvider = SimOrganismProvider(
+    mode: appMode,
+    canonicalStore: canonicalStore!,
+    aiConfig: _serverConfig(),
+    prefs: _prefs,
+  );
+  SimOrganism? _activeOrganism;
+  LessonRuntimeSnapshot? aulaSnapshot;
+  bool aulaRuntimeLoading = false;
+  String? aulaRuntimeError;
+
+  final AudioPreference _audioPreference = AudioPreference();
+  LessonAudioController? _lessonAudioController;
+
+  void _notifyFromChild() => notifyListeners();
+
+  StudentLearningState? get _activeCanonicalState {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return null;
+    return canonicalStore?.readState(id);
   }
 
-  void bindRealAuth() {
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authReady = true;
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    _authSub ??= client.auth.onAuthStateChange.listen((data) {
-      applySupabaseSession(data.session);
-    });
-    applySupabaseSession(client.auth.currentSession);
+  LessonLayer get currentAulaLayer {
+    final state = _activeCanonicalState;
+    return state?.current?.layer ?? state?.progress?.layer ?? LessonLayer.l1;
   }
+
+  int get currentAulaItemNumber {
+    final state = _activeCanonicalState;
+    return (state?.current?.itemIdx ?? state?.progress?.itemIdx ?? 0) + 1;
+  }
+
+  bool get authed => authSession.authed;
+  set authed(bool value) => authSession.authed = value;
+  bool get authReady => authSession.authReady;
+  set authReady(bool value) => authSession.authReady = value;
+  int get credits => authSession.credits;
+  set credits(int value) => authSession.credits = value;
+  String? get userId => authSession.userId;
+  String? get userEmail => authSession.userEmail;
+  String? get userName => authSession.userName;
+  String? get authError => authSession.authError;
+
+  String get route => navigationState.route;
+  set route(String value) => navigationState.route = value;
+  String get returnTo => navigationState.returnTo;
+  set returnTo(String value) => navigationState.returnTo = value;
+  String? get externalDoorOpened => navigationState.externalDoorOpened;
+
+  String? get selectedLanguageCode => entryForm.selectedLanguageCode;
+  set selectedLanguageCode(String? value) =>
+      entryForm.selectedLanguageCode = value;
+  String? get stableLang => entryForm.stableLang;
+  set stableLang(String? value) => entryForm.stableLang = value;
+  String get otherLanguage => entryForm.otherLanguage;
+  String get freeText => entryForm.freeText;
+  set freeText(String value) => entryForm.freeText = value;
+  String get preferredName => entryForm.preferredName;
+  set preferredName(String value) => entryForm.preferredName = value;
+  bool get allowPaidImages => entryForm.allowPaidImages;
+  List<AttachmentDraft> get attachments => entryForm.attachments;
+  String get attachmentsText => entryForm.attachmentsText;
+  String get studentProfileNotes => entryForm.studentProfileNotes;
+  String? get attachmentError => entryForm.attachmentError;
+
+  String? get lessonLocalId => lessonUiState.lessonLocalId;
+  set lessonLocalId(String? value) => lessonUiState.lessonLocalId = value;
+  String get entryStatus => lessonUiState.entryStatus;
+  set entryStatus(String value) => lessonUiState.entryStatus = value;
+  String? get entryError => lessonUiState.entryError;
+  set entryError(String? value) => lessonUiState.entryError = value;
+  bool get placementStarted => lessonUiState.placementStarted;
+  bool get placementDone => lessonUiState.placementDone;
+  bool get doubtOpen => lessonUiState.doubtOpen;
+  bool get audioEnabled => lessonUiState.audioEnabled;
+  set audioEnabled(bool value) => lessonUiState.audioEnabled = value;
+  bool get audioPlaying => lessonUiState.audioPlaying;
+  set audioPlaying(bool value) => lessonUiState.audioPlaying = value;
+  bool get audioLoading => lessonUiState.audioLoading;
+  set audioLoading(bool value) => lessonUiState.audioLoading = value;
+  String? get audioError => lessonUiState.audioError;
+  set audioError(String? value) => lessonUiState.audioError = value;
+  String get imageStatus => lessonUiState.imageStatus;
+  set imageStatus(String value) => lessonUiState.imageStatus = value;
+  String? get imageError => lessonUiState.imageError;
+  set imageError(String? value) => lessonUiState.imageError = value;
+  String get deleteConfirmation => lessonUiState.deleteConfirmation;
+  String? get accountDeletionMessage => lessonUiState.accountDeletionMessage;
+
+  void goPortal() => navigationState.goPortal();
+
+  void goLogin({String target = '/'}) =>
+      navigationState.goLogin(target: target);
+
+  void bindRealAuth() => authSession.bindRealAuth();
 
   SupabaseClient? _supabaseClientOrNull() {
     try {
@@ -129,108 +219,47 @@ class LabSession extends ChangeNotifier {
   }
 
   void applySupabaseSession(Session? session) {
-    final user = session?.user;
-    authReady = true;
-    authError = null;
-    authed = user != null;
-    userId = user?.id;
-    userEmail = user?.email;
-    userName =
-        user?.userMetadata?['full_name']?.toString() ??
-        user?.userMetadata?['name']?.toString();
-    if (authed) {
-      credits = credits <= 0 ? 3 : credits;
-      if (route == '/login') route = safeReturnTo(returnTo);
-    } else {
-      credits = 0;
-    }
-    notifyListeners();
+    authSession.applySupabaseSession(session);
   }
 
-  Future<void> signInWithGoogle() async {
-    authError = null;
-    notifyListeners();
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    try {
-      final launched = await client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: simAuthRedirectUrl,
-        queryParams: const {'prompt': 'select_account'},
-      );
-      if (!launched) {
-        authError = 'Não foi possível abrir o login do Google.';
-      }
-    } catch (error) {
-      authError = 'Não foi possível abrir o login do Google.';
-    }
-    notifyListeners();
-  }
+  // AuthSession keeps the real Supabase OAuth contract: OAuthProvider.google with queryParams {'prompt': 'select_account'} and email signInWithPassword.
+  Future<void> signInWithGoogle() => authSession.signInWithGoogle();
 
   Future<void> signInWithEmailPassword({
     required String email,
     required String password,
-  }) async {
-    authError = null;
-    notifyListeners();
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    try {
-      await client.auth.signInWithPassword(email: email, password: password);
-    } on AuthException catch (error) {
-      authError = error.message;
-    } catch (_) {
-      authError = 'Unexpected error';
-    }
-    notifyListeners();
+  }) {
+    return authSession.signInWithEmailPassword(
+      email: email,
+      password: password,
+    );
   }
 
   Future<void> signUpWithEmailPassword({
     required String email,
     required String password,
     required String name,
-  }) async {
-    authError = null;
-    notifyListeners();
-    final client = _supabaseClientOrNull();
-    if (client == null) {
-      authError = 'Supabase nao foi inicializado.';
-      notifyListeners();
-      return;
-    }
-    try {
-      await client.auth.signUp(
-        email: email,
-        password: password,
-        emailRedirectTo: simAuthRedirectUrl,
-        data: {
-          'full_name': name.trim().isEmpty
-              ? email.split('@').first
-              : name.trim(),
-        },
-      );
-    } on AuthException catch (error) {
-      authError = error.message;
-    } catch (_) {
-      authError = 'Unexpected error';
-    }
-    notifyListeners();
+  }) {
+    return authSession.signUpWithEmailPassword(
+      email: email,
+      password: password,
+      name: name,
+    );
   }
 
-  Future<void> signOutReal() async {
-    final client = _supabaseClientOrNull();
-    await client?.auth.signOut();
-    applySupabaseSession(null);
-    route = '/';
-    notifyListeners();
+  Future<void> signOutReal() => authSession.signOutReal();
+
+  Future<void> _warmUpServer() async {
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 8);
+      final req = await client
+          .getUrl(Uri.parse('$simApiBaseUrl/health'))
+          .timeout(const Duration(seconds: 8));
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      await res.drain<void>();
+      client.close();
+    } catch (_) {}
   }
 
   void start() {
@@ -238,70 +267,34 @@ class LabSession extends ChangeNotifier {
       goLogin(target: '/');
       return;
     }
-    if (credits <= 0) return;
-    selectedLanguageCode = null;
-    stableLang = null;
-    otherLanguage = '';
-    route = '/cyber/idioma';
-    notifyListeners();
+    if (credits <= 0) {
+      openCredits();
+      return;
+    }
+    unawaited(_warmUpServer());
+    entryForm.resetLanguage();
+    navigationState.openRoute('/cyber/idioma');
   }
 
   void chooseLanguage(String code, String name) {
-    selectedLanguageCode = code;
+    entryForm.updateLanguage(code, name);
     final cleanName = name.trim();
-    stableLang = cleanName.isEmpty ? null : cleanName;
     if (code != 'other' || cleanName.isNotEmpty) {
-      route = '/cyber/objeto';
+      navigationState.openRoute('/cyber/objeto');
     }
-    notifyListeners();
   }
 
-  void setOtherLanguage(String value) {
-    otherLanguage = value;
-    notifyListeners();
-  }
+  void setOtherLanguage(String value) => entryForm.setOtherLanguage(value);
 
-  void setFreeText(String value) {
-    freeText = value.length > maxFreeText
-        ? value.substring(0, maxFreeText)
-        : value;
-    notifyListeners();
-  }
+  void setFreeText(String value) => entryForm.updateFreeText(value);
 
-  void setPreferredName(String value) {
-    preferredName = value;
-    notifyListeners();
-  }
+  void setPreferredName(String value) => entryForm.updatePreferredName(value);
 
-  void addLabAttachment(String source) {
-    if (attachments.length >= maxAttachments) return;
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final isImage = source != 'document';
-    attachments = [
-      ...attachments,
-      AttachmentDraft(
-        id: 'att-$now-${attachments.length + 1}',
-        name: isImage
-            ? 'imagem-${attachments.length + 1}.jpg'
-            : 'arquivo-${attachments.length + 1}.pdf',
-        type: isImage ? 'image/jpeg' : 'application/pdf',
-        size: isImage ? 842000 : 1240000,
-        status: 'ready',
-        method: isImage ? 'vision' : 'pdf-text',
-        extractedText:
-            'LABORATORY MOCK: texto extraído do anexo para preservar o contrato visual e funcional da Fase 2.',
-      ),
-    ];
-    notifyListeners();
-  }
+  void addLabAttachment(String source) => entryForm.addLabAttachment(source);
 
-  void removeAttachment(int index) {
-    attachments = [
-      for (int i = 0; i < attachments.length; i++)
-        if (i != index) attachments[i],
-    ];
-    notifyListeners();
-  }
+  void removeAttachment(int index) => entryForm.removeAttachment(index);
+
+  void clearAttachments() => entryForm.clearAttachments();
 
   bool saveObjectiveEntry() {
     final freeTrim = freeText.trim();
@@ -309,21 +302,129 @@ class LabSession extends ChangeNotifier {
     final clipped = freeTrim.length > maxFreeText
         ? freeTrim.substring(0, maxFreeText)
         : freeTrim;
-    attachmentsText = _buildAttachmentsText();
+    entryForm.attachmentsText = entryForm.buildAttachmentsText();
     final language = stableLang ?? 'English';
-    lessonLocalId = _deriveLessonLocalId(
-      clipped,
-      selectedLanguageCode ?? language,
-    );
-    studentProfileNotes = attachmentsText.isEmpty
+    final id = _deriveLessonLocalId(clipped, selectedLanguageCode ?? language);
+    lessonLocalId = id;
+    entryForm.studentProfileNotes = attachmentsText.isEmpty
         ? clipped
         : '$clipped\n\n$attachmentsText';
-    freeText = clipped;
+    entryForm.freeText = clipped;
+    _saveProfileToState(id: id, objective: clipped, language: language);
     entryStatus = 'pedido_recebido';
     entryError = null;
-    route = '/cyber/curriculo';
-    notifyListeners();
+    navigationState.openRoute('/cyber/curriculo');
     return true;
+  }
+
+  Future<void> launchExperience() async {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return;
+    if (entryStatus == 't00_running' ||
+        entryStatus == 't02_running' ||
+        entryStatus == 'primeira_aula_pronta') {
+      return;
+    }
+
+    entryStatus = 't00_running';
+    entryError = null;
+    notifyListeners();
+
+    try {
+      final organism = simOrganismProvider.forLesson(id);
+      final onboarding = <String, dynamic>{
+        'objetivo': freeText.trim(),
+        'free_text': freeText.trim(),
+        'idioma': stableLang ?? 'pt-BR',
+        'language': selectedLanguageCode ?? stableLang ?? 'pt-BR',
+        'stableLang': stableLang ?? 'pt-BR',
+        'STABLE_LANG': stableLang ?? 'pt-BR',
+        'ACADEMIC_LEVEL': 'incerto',
+        'academic_level': 'incerto',
+        'nivel': 'incerto',
+        if (preferredName.trim().isNotEmpty)
+          'preferred_name': preferredName.trim(),
+        if (studentProfileNotes.isNotEmpty)
+          'student_profile_notes': studentProfileNotes,
+        if (attachmentsText.isNotEmpty) 'attachments_text': attachmentsText,
+      };
+      final args = StudentExperienceArgs(
+        academic: 'incerto',
+        idioma: stableLang ?? 'pt-BR',
+        lessonLocalId: id,
+        onboarding: onboarding,
+        onStage: (stage) {
+          final next = switch (stage) {
+            StudentExperienceRouteStage.curriculum => 't00_running',
+            StudentExperienceRouteStage.lesson => 't02_running',
+            StudentExperienceRouteStage.ready => 'primeira_aula_pronta',
+            StudentExperienceRouteStage.placement => 'placement',
+            _ => entryStatus,
+          };
+          entryStatus = next;
+          notifyListeners();
+        },
+      );
+
+      final result = await organism.experienceEngine
+          .prepareStudentExperienceEntry(args);
+
+      entryStatus = 'primeira_aula_pronta';
+      notifyListeners();
+
+      await Future<void>.delayed(const Duration(milliseconds: 650));
+      navigationState.openRoute(result.destination);
+      if (result.destination == '/cyber/aula') {
+        unawaited(openAulaRuntime());
+      }
+    } on StudentExperienceEngineException catch (err) {
+      entryError = err.error.message;
+      entryStatus = 'erro';
+      notifyListeners();
+    } catch (err) {
+      entryError = err.toString();
+      entryStatus = 'erro';
+      notifyListeners();
+    }
+  }
+
+  void retryExperience() {
+    entryStatus = 'pedido_recebido';
+    entryError = null;
+    notifyListeners();
+    unawaited(launchExperience());
+  }
+
+  void _saveProfileToState({
+    required String id,
+    required String objective,
+    required String language,
+  }) {
+    canonicalStore?.patchState(id, (state) {
+      return state.copyWith(
+        userId: userId,
+        profile: state.profile.copyWith(
+          preferredName: preferredName.trim().isEmpty
+              ? state.profile.preferredName
+              : preferredName.trim(),
+          language: selectedLanguageCode ?? language,
+          stableLang: stableLang ?? language,
+          objetivo: objective,
+          targetTopic: objective,
+          sessionGoal: objective,
+        ),
+      );
+    });
+    canonicalStore?.appendEvent(
+      lessonLocalId: id,
+      type: 'STUDENT_FORM_SUBMITTED',
+      payload: {
+        'objective_length': objective.length,
+        'language': language,
+      },
+      source: 'lab_session',
+      userId: userId,
+    );
   }
 
   void openCredits() {
@@ -331,101 +432,221 @@ class LabSession extends ChangeNotifier {
       goLogin(target: '/creditos');
       return;
     }
-    route = '/creditos';
-    notifyListeners();
+    navigationState.openRoute('/creditos');
   }
 
-  void openSupport(String path) {
-    route = path;
-    notifyListeners();
+  void openSupport(String path) => navigationState.openRoute(path);
+
+  void openExternalDoor(String url) => navigationState.openExternalDoor(url);
+
+  void openCheckoutReturn() => navigationState.openRoute('/checkout/return');
+
+  void _hydrateActiveLessonFromCloud() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return;
+    final store = canonicalStore;
+    if (store == null) return;
+    unawaited(
+      store.hydrateFromCloud(id).catchError((_) => store.readState(id)),
+    );
   }
 
-  void openExternalDoor(String url) {
-    externalDoorOpened = url;
-    notifyListeners();
+  void _persistActiveLessonToCloud() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return;
+    final store = canonicalStore;
+    if (store == null) return;
+    unawaited(store.persistCloud(id).catchError((_) {}));
   }
 
-  void openCheckoutReturn() {
-    route = '/checkout/return';
+  SimAiServerConfig _serverConfig() {
+    return SimAiServerConfig(
+      baseUrl: simApiBaseUrl,
+      t02Path: '/api/complete-lesson',
+      accessTokenProvider: () async =>
+          _supabaseClientOrNull()?.auth.currentSession?.accessToken,
+    );
+  }
+
+  LessonAudioController _audioControllerFor(String id) {
+    final existing = _lessonAudioController;
+    if (existing != null && existing.lessonLocalId == id) return existing;
+    final store = canonicalStore;
+    final controller = LessonAudioController(
+      lessonLocalId: id,
+      preference: _audioPreference,
+      mediaService: StudentLessonMediaService(
+        audioCore: AudioCore(
+          preference: _audioPreference,
+          playback: NoopAudioPlaybackAdapter(),
+          generatedAudioClient: SimServerGeneratedAudioClient(
+            config: _serverConfig(),
+          ),
+          stableLangProvider: () =>
+              stableLang ?? selectedLanguageCode ?? 'pt-BR',
+        ),
+        readState: (lessonLocalId) =>
+            store?.readState(lessonLocalId) ??
+            StudentLearningState.empty(lessonLocalId: lessonLocalId),
+        writeState: (state) => store?.writeState(state) ?? state,
+      ),
+    );
+    _lessonAudioController = controller;
+    return controller;
+  }
+
+  LessonContent _currentLessonContentForAudio() {
+    final content = aulaSnapshot?.conteudo;
+    if (content == null) {
+      throw StateError('Conteudo de aula ainda nao esta pronto para audio.');
+    }
+    return content;
+  }
+
+  SimOrganism _organismForActiveLesson() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) {
+      throw StateError('lessonLocalId ausente para abrir organismo SIM.');
+    }
+    final organism = simOrganismProvider.forLesson(id);
+    _activeOrganism = organism;
+    return organism;
+  }
+
+  Future<void> openAulaRuntime() async {
+    if (aulaRuntimeLoading) return;
+    aulaRuntimeLoading = true;
+    aulaRuntimeError = null;
     notifyListeners();
+    try {
+      final organism = _organismForActiveLesson();
+      aulaSnapshot = await organism.lessonRuntimeEngine.open(
+        lessonLocalId: organism.lessonLocalId,
+        authReady: authReady,
+        authed: authed,
+      );
+      if (aulaSnapshot?.hasCurriculum != true) {
+        aulaRuntimeError = 'Aula sem curriculo no Estado do aluno.';
+      }
+    } catch (error) {
+      aulaRuntimeError = error.toString();
+    } finally {
+      aulaRuntimeLoading = false;
+      notifyListeners();
+    }
   }
 
   void preparationDone() {
-    entryStatus = 'primeira_aula_pronta';
-    route = '/cyber/placement';
-    notifyListeners();
+    lessonUiState.markPreparationDone();
+    navigationState.openRoute('/cyber/placement');
+    _persistActiveLessonToCloud();
   }
 
   void skipPlacement() {
-    placementDone = true;
-    route = '/cyber/aula';
-    notifyListeners();
+    lessonUiState.skipPlacement();
+    navigationState.openRoute('/cyber/aula');
+    unawaited(openAulaRuntime());
   }
 
-  void startPlacement() {
-    placementStarted = true;
-    notifyListeners();
-  }
+  void startPlacement() => lessonUiState.startPlacement();
 
   void finishPlacement() {
-    placementDone = true;
-    route = '/cyber/aula';
-    notifyListeners();
+    lessonUiState.finishPlacement();
+    navigationState.openRoute('/cyber/aula');
+    unawaited(openAulaRuntime());
   }
 
   void chooseAulaAnswer(String letter) {
-    selectedAnswer = letter;
-    aulaMessage = letter == 'A'
-        ? 'Resposta registrada. SIM preparou o próximo passo.'
-        : letter == 'B'
-        ? 'Resposta registrada. SIM marcou revisão.'
-        : 'Resposta registrada. SIM abriu caminho de recuperação.';
+    final organism = _activeOrganism ?? _organismForActiveLesson();
+    final answer = AnswerLetter.values.firstWhere(
+      (value) => value.name == letter,
+      orElse: () => AnswerLetter.A,
+    );
+    organism.lessonRuntimeEngine.select(answer);
+    aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+    notifyListeners();
+  }
+
+  void submitAulaSignal(int value) {
+    final organism = _activeOrganism ?? _organismForActiveLesson();
+    final signal = switch (value) {
+      1 => DecisionSignal.one,
+      2 => DecisionSignal.two,
+      3 => DecisionSignal.three,
+      _ => DecisionSignal.one,
+    };
+    organism.lessonRuntimeEngine.signal(signal);
+    aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+    _persistActiveLessonToCloud();
     notifyListeners();
   }
 
   void setDeleteConfirmation(String value) {
-    deleteConfirmation = value;
-    accountDeletionMessage = null;
-    notifyListeners();
+    lessonUiState.setDeleteConfirmation(value);
   }
 
-  void requestAccountDeletion() {
-    accountDeletionMessage = deleteConfirmation.trim() == 'DELETAR'
-        ? 'Solicitação de exclusão registrada para envio seguro ao servidor.'
-        : 'Digite DELETAR para confirmar a solicitação.';
+  void requestAccountDeletion() => lessonUiState.requestAccountDeletion();
+
+  Future<void> advanceAula() async {
+    final organism = _activeOrganism ?? _organismForActiveLesson();
+    aulaRuntimeLoading = true;
+    aulaRuntimeError = null;
     notifyListeners();
+    try {
+      await organism.lessonRuntimeEngine.advance();
+      aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+      _persistActiveLessonToCloud();
+    } catch (error) {
+      aulaRuntimeError = error.toString();
+    } finally {
+      aulaRuntimeLoading = false;
+      notifyListeners();
+    }
   }
 
-  void advanceAula() {
-    aulaStep += 1;
-    selectedAnswer = '';
-    aulaMessage = '';
-    doubtOpen = false;
-    imageStatus = 'idle';
-    imageError = null;
-    notifyListeners();
-  }
-
-  void toggleDoubt() {
-    doubtOpen = !doubtOpen;
-    notifyListeners();
-  }
+  void toggleDoubt() => lessonUiState.toggleDoubt();
 
   Future<void> toggleAudio() async {
     if (audioLoading) return;
     audioError = null;
-    if (!audioEnabled) {
-      audioEnabled = true;
+    final id =
+        lessonLocalId ??
+        _deriveLessonLocalId(
+          freeText.trim().isEmpty ? 'aula-sim' : freeText,
+          selectedLanguageCode ?? stableLang ?? 'pt',
+        );
+    if (audioPlaying) {
+      _lessonAudioController?.pararAudio();
+      audioPlaying = false;
+      audioEnabled = false;
+      _audioPreference.setAudioEnabled(false);
       notifyListeners();
       return;
     }
+    audioEnabled = true;
+    _audioPreference.setAudioEnabled(true);
     audioLoading = true;
     notifyListeners();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
-    audioLoading = false;
-    audioEnabled = false;
-    audioError = 'Áudio pausado.';
-    notifyListeners();
+    await Future<void>.delayed(Duration.zero);
+    try {
+      final snapshot = aulaSnapshot;
+      final started = await _audioControllerFor(id).playConteudo(
+        _currentLessonContentForAudio(),
+        snapshot?.itemMarker ?? 'item-1',
+        currentAulaLayer,
+        language: stableLang,
+      );
+      audioPlaying = started;
+      if (!started) {
+        audioError = 'Áudio ainda não está disponível.';
+      }
+    } catch (_) {
+      audioError = 'Não foi possível preparar o áudio agora.';
+      audioPlaying = false;
+    } finally {
+      audioLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> requestLessonImage() async {
@@ -440,25 +661,13 @@ class LabSession extends ChangeNotifier {
 
   @override
   void dispose() {
-    _authSub?.cancel();
+    entryForm.removeListener(_notifyFromChild);
+    authSession.removeListener(_notifyFromChild);
+    navigationState.removeListener(_notifyFromChild);
+    lessonUiState.removeListener(_notifyFromChild);
+    authSession.dispose();
+    _lessonAudioController?.pararAudio();
     super.dispose();
-  }
-
-  String _buildAttachmentsText() {
-    final ready = attachments.where(
-      (a) =>
-          a.status == 'ready' &&
-          (a.extractedText?.trim().length ?? 0) >= minExtractedChars,
-    );
-    return ready
-        .map((a) {
-          final text = a.extractedText!.trim();
-          final clipped = text.length > 8000
-              ? '${text.substring(0, 8000)}\n[...truncado em 8000 chars]'
-              : text;
-          return '--- Anexo: ${a.name} ---\n$clipped';
-        })
-        .join('\n\n');
   }
 }
 
@@ -481,16 +690,31 @@ String _deriveLessonLocalId(String objetivo, String idioma) {
 }
 
 class SimMobileApp extends StatefulWidget {
-  const SimMobileApp({super.key, this.initialSession});
+  const SimMobileApp({
+    super.key,
+    this.canonicalStore,
+    this.initialSession,
+    this.appMode,
+    this.prefs,
+  });
 
+  final StudentStateStore? canonicalStore;
   final LabSession? initialSession;
+  final AppMode? appMode;
+  final SharedPreferences? prefs;
 
   @override
   State<SimMobileApp> createState() => _SimMobileAppState();
 }
 
 class _SimMobileAppState extends State<SimMobileApp> {
-  late final LabSession session = widget.initialSession ?? LabSession();
+  late final LabSession session =
+      widget.initialSession ??
+      LabSession(
+        canonicalStore: widget.canonicalStore,
+        appMode: widget.appMode,
+        prefs: widget.prefs,
+      );
 
   @override
   void initState() {
@@ -1919,15 +2143,6 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'LABORATORY MOCK: upload/extraction is simulated; validation and saved fields follow the SIM contract for Fase 2.',
-                        style: TextStyle(
-                          color: simMuted,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -2085,100 +2300,182 @@ class MenuLine extends StatelessWidget {
   }
 }
 
-class PhaseBoundaryScreen extends StatelessWidget {
+class PhaseBoundaryScreen extends StatefulWidget {
   const PhaseBoundaryScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<PhaseBoundaryScreen> createState() => _PhaseBoundaryScreenState();
+}
+
+class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _launch());
+  }
+
+  void _launch() {
+    if (_started) return;
+    _started = true;
+    unawaited(widget.session.launchExperience());
+  }
+
+  String _stageLabel(String status) => switch (status) {
+        't00_running' => 'Montando currículo...',
+        't02_running' => 'Preparando primeira aula...',
+        'placement' => 'Preparando nivelamento...',
+        'primeira_aula_pronta' => 'Tudo pronto!',
+        'erro' => 'Algo deu errado',
+        _ => 'Processando ficha...',
+      };
+
+  double _progress(String status) => switch (status) {
+        'pedido_recebido' => 0.10,
+        't00_running' => 0.40,
+        't02_running' => 0.70,
+        'placement' => 0.85,
+        'primeira_aula_pronta' => 1.0,
+        _ => 0.05,
+      };
+
+  @override
   Widget build(BuildContext context) {
+    final status = widget.session.entryStatus;
+    final error = widget.session.entryError;
+    final isError = status == 'erro';
+    final isCredits = error?.toLowerCase().contains('crédito') == true ||
+        error?.toLowerCase().contains('credit') == true;
+
     return Scaffold(
+      backgroundColor: simDark,
       body: SafeArea(
-        child: Column(
-          children: [
-            const StepHeader(step: 4, total: 5, label: 'Preparando aula'),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: SimCard(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '/cyber/curriculo',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'SIM recebeu a ficha, interpreta o objetivo, monta o currículo e prepara a primeira aula.',
-                          style: TextStyle(
-                            color: simMuted,
-                            fontSize: 15,
-                            height: 1.45,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: session.entryStatus == 'primeira_aula_pronta'
-                                ? 1
-                                : 0.72,
-                            minHeight: 10,
-                            backgroundColor: simLight,
-                            color: simDark,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'lessonLocalId: ${session.lessonLocalId ?? ''}',
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        Text(
-                          'entry.status: ${session.entryStatus}',
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: DecoratedBox(
-                            decoration: primaryButtonDecoration(radius: 14),
-                            child: TextButton(
-                              onPressed: session.preparationDone,
-                              child: const Text(
-                                'Continuar para nivelamento',
-                                style: TextStyle(
-                                  color: simDark,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'SIM',
+                style: TextStyle(
+                  color: simLight,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 48),
+              Text(
+                widget.session.route,
+                style: const TextStyle(color: Colors.transparent, fontSize: 1),
+              ),
+              Text(
+                'entry.status: $status',
+                style: const TextStyle(color: Colors.transparent, fontSize: 1),
+              ),
+              if (!isError) ...[
+                _RobotAvatar(status: status),
+                const SizedBox(height: 32),
+                Text(
+                  _stageLabel(status),
+                  style: const TextStyle(
+                    color: simLight,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'O aluno não pode ficar preso na porta da escola.',
+                  style: TextStyle(
+                    color: simMuted,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.05, end: _progress(status)),
+                    duration: const Duration(milliseconds: 600),
+                    builder: (context, value, child) => LinearProgressIndicator(
+                      value: value,
+                      minHeight: 6,
+                      backgroundColor: simMid,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(simLight),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ] else ...[
+                const SizedBox(height: 40),
+                const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 48),
+                const SizedBox(height: 20),
+                const Text(
+                  'Não consegui preparar agora',
+                  style: TextStyle(
+                    color: simLight,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (error != null)
+                  Text(
+                    error,
+                    style: const TextStyle(
+                      color: simMuted,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                const SizedBox(height: 32),
+                if (isCredits)
+                  PrimaryWideButton(
+                    label: 'Comprar créditos',
+                    onTap: () => widget.session.openCredits(),
+                  )
+                else
+                  PrimaryWideButton(
+                    label: 'Tentar novamente',
+                    onTap: () {
+                      _started = false;
+                      _launch();
+                    },
+                  ),
+              ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _RobotAvatar extends StatelessWidget {
+  const _RobotAvatar({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = status == 'primeira_aula_pronta';
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: done ? simLight : simMid,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(
+        done ? Icons.school_rounded : Icons.psychology_alt_rounded,
+        color: simDark,
+        size: 36,
       ),
     );
   }
@@ -2270,187 +2567,583 @@ class PlacementLabScreen extends StatelessWidget {
   }
 }
 
-class AulaLabScreen extends StatelessWidget {
+String _feedbackText(String key) => switch (key) {
+  'aula_fb_correct' => 'Exato! Você domina este ponto.',
+  'aula_fb_correct_rev' => 'Certo, mas vamos reforçar.',
+  'aula_fb_dont_know' => 'Acertou no chute. Vamos revisar com cuidado.',
+  'aula_fb_redo' => 'Não foi dessa vez. Vamos tentar de novo.',
+  'aula_fb_review_none' => 'Ótimo! Revisão concluída.',
+  'aula_fb_review_light' => 'Quase lá. Mais um reforço.',
+  'aula_fb_review_heavy' => 'Precisa de mais prática neste ponto.',
+  _ => key,
+};
+
+String _nextBtnText(String key) => switch (key) {
+  'aula_next' => 'Próximo',
+  'aula_next_item' => 'Próximo tópico',
+  'aula_consolidate' => 'Consolidar',
+  'aula_layer_label_2' => 'Próxima camada',
+  'aula_layer_label_3' => 'Camada final',
+  _ => 'Avançar',
+};
+
+String _headerLabelText(String key) {
+  if (key.startsWith('aula_item_of:')) {
+    final rest = key.substring('aula_item_of:'.length);
+    final parts = rest.split(':');
+    final fraction = parts.isNotEmpty ? parts[0] : '';
+    final layerKey = parts.length > 1 ? parts[1] : '';
+    final layer = switch (layerKey) {
+      'aula_layer_1' => 'Camada 1',
+      'aula_layer_2' => 'Camada 2',
+      'aula_layer_3' => 'Camada 3',
+      _ => layerKey,
+    };
+    return 'Item $fraction · $layer';
+  }
+  if (key.startsWith('aula_review_review:')) return 'Revisão';
+  return key;
+}
+
+class AulaLabScreen extends StatefulWidget {
   const AulaLabScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<AulaLabScreen> createState() => _AulaLabScreenState();
+}
+
+class _AulaLabScreenState extends State<AulaLabScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _doubtController = TextEditingController();
+  int _lastHistoryLen = 0;
+  bool _lastHasContent = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _doubtController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final topic = session.freeText.trim().isEmpty
-        ? 'Aula SIM'
-        : session.freeText.trim();
+    final session = widget.session;
+    final snapshot = session.aulaSnapshot;
+    final phase = snapshot?.phase;
+    final content = snapshot?.conteudo;
+    final history = snapshot?.history ?? const <QuestionHistoryEntry>[];
+    final viewModel = snapshot?.viewModel;
+    final selected = phase?.letter;
+    final isExpanded = phase?.type == ClassroomPhaseType.expandida;
+    final isProcessing = phase?.type == ClassroomPhaseType.processando;
+    final isCompleted = phase?.type == ClassroomPhaseType.concluido;
+    final isEngineError = phase?.type == ClassroomPhaseType.erroEngine;
+    final isDone = snapshot?.isDone ?? false;
+    final wasCorrect = phase?.wasCorrect;
+    final feedbackKey = phase?.message;
+    final nextKey = viewModel?.nextLabel ?? '';
+    final locked = viewModel?.locked ?? false;
+
+    // Auto-scroll when new history or content arrives
+    final hasContent = content != null;
+    if (history.length != _lastHistoryLen || hasContent != _lastHasContent) {
+      _lastHistoryLen = history.length;
+      _lastHasContent = hasContent;
+      _scrollToBottom();
+    }
+
+    if (isDone) {
+      return _LessonDoneScreen(session: session);
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            AulaTopBar(session: session),
+            AulaTopBar(session: session, doubtEnabled: true),
+            if (viewModel != null)
+              SizedBox(
+                height: 4,
+                child: LinearProgressIndicator(
+                  value: viewModel.progress / 100,
+                  backgroundColor: simLight,
+                  valueColor: const AlwaysStoppedAnimation<Color>(simDark),
+                ),
+              ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+                children: [
+                  // Past answered questions — dimmed, non-interactive
+                  for (final entry in history)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Opacity(
+                        opacity: 0.6,
+                        child: IgnorePointer(child: _QuestionHistoryBlock(entry: entry)),
+                      ),
+                    ),
+
+                  // Active content card
+                  if (session.aulaRuntimeLoading && content == null) ...[
+                    const SizedBox(height: 20),
+                    const StatusLine(
+                      icon: Icons.auto_awesome_outlined,
+                      text: 'Preparando sua aula...',
+                      loading: true,
+                    ),
+                    if (session.aulaRuntimeError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        session.aulaRuntimeError!,
+                        style: const TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      SecondaryWideButton(
+                        label: 'Tentar novamente',
+                        onTap: () => unawaited(session.openAulaRuntime()),
+                      ),
+                    ],
+                  ] else if (content != null) ...[
                     SimCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Item ${session.aulaStep + 1} · Camada 1',
-                            style: const TextStyle(
-                              color: simMuted,
-                              fontSize: 12,
-                              fontFamily: 'monospace',
+                          if (viewModel != null) ...[
+                            Text(
+                              _headerLabelText(viewModel.headerLabel),
+                              style: const TextStyle(color: simMuted, fontSize: 12),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            topic,
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 22,
-                              height: 1.2,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Explicação da aula mínima em laboratório. Aqui entra o conteúdo T02 real quando o servidor estiver conectado.',
-                            style: TextStyle(
-                              color: simMuted,
-                              fontSize: 15,
-                              height: 1.45,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          LessonImagePanel(session: session),
-                          if (session.audioError != null) ...[
-                            const SizedBox(height: 10),
-                            StatusLine(
-                              icon: Icons.volume_off_outlined,
-                              text: session.audioError!,
-                            ),
+                            const SizedBox(height: 8),
                           ],
-                          if (session.audioLoading) ...[
-                            const SizedBox(height: 10),
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando áudio da aula...',
-                              loading: true,
-                            ),
-                          ],
-                          const SizedBox(height: 10),
-                          StatusLine(
-                            icon: session.audioEnabled
-                                ? Icons.volume_up_outlined
-                                : Icons.volume_off_outlined,
-                            text: session.audioEnabled
-                                ? 'Áudio da aula ligado'
-                                : 'Áudio da aula pausado',
-                          ),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Pergunta',
-                            style: TextStyle(
-                              color: simDark,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Qual alternativa mostra que você entendeu este primeiro ponto?',
-                            style: TextStyle(
-                              color: simDark,
-                              fontSize: 15,
-                              height: 1.4,
-                            ),
+                          Text(
+                            content.explanation,
+                            style: const TextStyle(color: simDark, fontSize: 15, height: 1.45),
                           ),
                           const SizedBox(height: 12),
-                          AnswerButton(
-                            label: 'A',
-                            text: 'Consigo explicar com minhas palavras.',
-                            active: session.selectedAnswer == 'A',
-                            onTap: () => session.chooseAulaAnswer('A'),
-                          ),
-                          AnswerButton(
-                            label: 'B',
-                            text: 'Entendi uma parte, mas preciso revisar.',
-                            active: session.selectedAnswer == 'B',
-                            onTap: () => session.chooseAulaAnswer('B'),
-                          ),
-                          AnswerButton(
-                            label: 'C',
-                            text:
-                                'Ainda estou perdido e preciso de recuperação.',
-                            active: session.selectedAnswer == 'C',
-                            onTap: () => session.chooseAulaAnswer('C'),
-                          ),
-                          if (session.aulaMessage.isNotEmpty) ...[
-                            const SizedBox(height: 14),
-                            Text(
-                              session.aulaMessage,
-                              style: const TextStyle(
-                                color: simDark,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          LessonImagePanel(session: session),
+                          const SizedBox(height: 8),
+                          if (session.audioLoading) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Preparando audio da aula...',
+                              loading: true,
                             ),
-                            const SizedBox(height: 12),
-                            PrimaryWideButton(
-                              label: 'Avançar',
-                              onTap: session.advanceAula,
+                          ] else if (session.audioError != null) ...[
+                            StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
+                          ] else if (session.audioEnabled) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Audio da aula ligado',
                             ),
                           ],
                         ],
                       ),
                     ),
-                    if (session.selectedAnswer == 'B') ...[
-                      const SizedBox(height: 14),
-                      const AuxRoomCard(
-                        title: 'Revisão',
-                        body:
-                            'SIM marcou este ponto para revisão antes de seguir. A revisão nasce da verdade pedagógica registrada no estado.',
-                      ),
-                    ],
-                    if (session.selectedAnswer == 'C') ...[
-                      const SizedBox(height: 14),
-                      const AuxRoomCard(
-                        title: 'Recuperação',
-                        body:
-                            'SIM abriu recuperação para reconstruir o ponto que ainda travou. A recuperação preserva o caminho do aluno.',
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    if (session.doubtOpen)
-                      SimCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Dúvida',
-                              style: TextStyle(
-                                color: simDark,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
+                    const SizedBox(height: 10),
+
+                    // Active question block
+                    SimCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            content.question,
+                            style: const TextStyle(color: simDark, fontSize: 15, height: 1.4, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 10),
+                          AnswerButton(
+                            label: 'A',
+                            text: content.options[AnswerLetter.A] ?? '',
+                            active: selected == AnswerLetter.A,
+                            onTap: locked ? () {} : () => session.chooseAulaAnswer('A'),
+                          ),
+                          AnswerButton(
+                            label: 'B',
+                            text: content.options[AnswerLetter.B] ?? '',
+                            active: selected == AnswerLetter.B,
+                            onTap: locked ? () {} : () => session.chooseAulaAnswer('B'),
+                          ),
+                          AnswerButton(
+                            label: 'C',
+                            text: content.options[AnswerLetter.C] ?? '',
+                            active: selected == AnswerLetter.C,
+                            onTap: locked ? () {} : () => session.chooseAulaAnswer('C'),
+                          ),
+
+                          // Sinal 1/2/3 — appears after A/B/C selection
+                          if (isExpanded) ...[
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Como ficou este ponto para voce?',
+                              style: TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w700),
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Sala de dúvida aberta. No app real, esta pergunta chama o T02 com o adendo de dúvida no servidor.',
-                              style: TextStyle(
-                                color: simMuted,
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
+                            const SizedBox(height: 8),
+                            _SinalBtn(n: 1, label: 'Sei', onTap: () => session.submitAulaSignal(1)),
+                            const SizedBox(height: 6),
+                            _SinalBtn(n: 2, label: 'Acho que sim', onTap: () => session.submitAulaSignal(2)),
+                            const SizedBox(height: 6),
+                            _SinalBtn(n: 3, label: 'Não sei', onTap: () => session.submitAulaSignal(3)),
+                          ],
+
+                          if (isProcessing) ...[
+                            const SizedBox(height: 14),
+                            const StatusLine(
+                              icon: Icons.auto_awesome_outlined,
+                              text: 'Registrando...',
+                              loading: true,
                             ),
                           ],
-                        ),
+                        ],
                       ),
+                    ),
+
+                    // FeedbackBox + Próximo
+                    if (isCompleted && feedbackKey != null) ...[
+                      const SizedBox(height: 10),
+                      _FeedbackBox(
+                        isCorrect: wasCorrect ?? false,
+                        message: _feedbackText(feedbackKey),
+                      ),
+                      const SizedBox(height: 10),
+                      PrimaryWideButton(
+                        label: _nextBtnText(nextKey),
+                        onTap: () => unawaited(session.advanceAula()),
+                      ),
+                    ],
+                  ] else if (isEngineError && phase?.message != null) ...[
+                    const SizedBox(height: 12),
+                    SimCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(phase!.message!, style: const TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          SecondaryWideButton(
+                            label: 'Tentar novamente',
+                            onTap: () => unawaited(session.openAulaRuntime()),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
-                ),
+
+                  // DoubtInputSheet (inline)
+                  if (session.doubtOpen) ...[
+                    const SizedBox(height: 10),
+                    _DoubtInputSheet(
+                      controller: _doubtController,
+                      onSubmit: (_) {
+                        session.toggleDoubt();
+                        _doubtController.clear();
+                      },
+                      onClose: session.toggleDoubt,
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
+        ),
+      ),
+      // FixedBubble — pulsa enquanto áudio toca
+      bottomSheet: (session.audioEnabled && session.audioPlaying)
+          ? const _FixedBubble()
+          : null,
+    );
+  }
+}
+
+class _QuestionHistoryBlock extends StatelessWidget {
+  const _QuestionHistoryBlock({required this.entry});
+
+  final QuestionHistoryEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SimCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            entry.text,
+            style: const TextStyle(color: simDark, fontSize: 14, height: 1.4, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          for (final opt in entry.options)
+            Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: opt.id == entry.chosenOptionId
+                    ? (entry.correct ? simSuccess.withAlpha(25) : simWarn.withAlpha(25))
+                    : simLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: opt.id == entry.chosenOptionId
+                      ? (entry.correct ? simSuccess : simWarn)
+                      : simBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    opt.id.name,
+                    style: const TextStyle(color: simDark, fontWeight: FontWeight.w800, fontSize: 13),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(opt.text, style: const TextStyle(color: simDark, fontSize: 13))),
+                  if (opt.id == entry.chosenOptionId)
+                    Icon(
+                      entry.correct ? Icons.check_circle_outline : Icons.cancel_outlined,
+                      size: 16,
+                      color: entry.correct ? simSuccess : simWarn,
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackBox extends StatelessWidget {
+  const _FeedbackBox({required this.isCorrect, required this.message});
+
+  final bool isCorrect;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isCorrect ? simSuccess : simWarn;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(100)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isCorrect ? Icons.check_circle_outline : Icons.cancel_outlined,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SinalBtn extends StatelessWidget {
+  const _SinalBtn({required this.n, required this.label, required this.onTap});
+
+  final int n;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: simDark,
+          side: const BorderSide(color: simBorder),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          alignment: Alignment.centerLeft,
+        ),
+        child: Text(
+          '$n. $label',
+          style: const TextStyle(color: simDark, fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
+class _FixedBubble extends StatefulWidget {
+  const _FixedBubble();
+
+  @override
+  State<_FixedBubble> createState() => _FixedBubbleState();
+}
+
+class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.85, end: 1.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      color: Colors.transparent,
+      alignment: Alignment.center,
+      child: ScaleTransition(
+        scale: _anim,
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: const BoxDecoration(color: simDark, shape: BoxShape.circle),
+          child: const Icon(Icons.volume_up, color: Colors.white, size: 16),
+        ),
+      ),
+    );
+  }
+}
+
+class _DoubtInputSheet extends StatelessWidget {
+  const _DoubtInputSheet({
+    required this.controller,
+    required this.onSubmit,
+    required this.onClose,
+  });
+
+  final TextEditingController controller;
+  final void Function(String text) onSubmit;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: simBorder),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Duvida', style: TextStyle(color: simDark, fontSize: 16, fontWeight: FontWeight.w700)),
+              const Spacer(),
+              GestureDetector(
+                onTap: onClose,
+                child: const Icon(Icons.close, size: 20, color: simMuted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Escreva sua dúvida...',
+              hintStyle: TextStyle(color: simMuted, fontSize: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+              contentPadding: EdgeInsets.all(12),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.photo_camera_outlined, size: 16, color: simMuted),
+              const SizedBox(width: 6),
+              const Text('Foto (em breve)', style: TextStyle(color: simMuted, fontSize: 12)),
+              const Spacer(),
+              OutlinedButton(
+                onPressed: () {
+                  final text = controller.text.trim();
+                  if (text.isNotEmpty) onSubmit(text);
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: simDark,
+                  side: const BorderSide(color: simDark),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+                child: const Text('Enviar', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LessonDoneScreen extends StatelessWidget {
+  const _LessonDoneScreen({required this.session});
+
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+              const Icon(Icons.emoji_events_outlined, size: 64, color: simDark),
+              const SizedBox(height: 20),
+              const Text(
+                'Aula concluída!',
+                style: TextStyle(color: simDark, fontSize: 26, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Parabéns! Você concluiu todos os itens desta aula.',
+                style: TextStyle(color: simMuted, fontSize: 16, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+              PrimaryWideButton(
+                label: 'Voltar ao início',
+                onTap: () => session.openSupport('/cyber/objeto'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2489,9 +3182,10 @@ class AuxRoomCard extends StatelessWidget {
 }
 
 class AulaTopBar extends StatelessWidget {
-  const AulaTopBar({required this.session, super.key});
+  const AulaTopBar({required this.session, this.doubtEnabled = false, super.key});
 
   final LabSession session;
+  final bool doubtEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -2520,10 +3214,13 @@ class AulaTopBar extends StatelessWidget {
               ),
             ),
           ),
-          RoundIconButton(
-            icon: Icons.help_outline,
-            tooltip: 'Dúvida',
-            onTap: session.toggleDoubt,
+          Opacity(
+            opacity: doubtEnabled ? 1.0 : 0.35,
+            child: RoundIconButton(
+              icon: Icons.help_outline,
+              tooltip: 'Dúvida',
+              onTap: doubtEnabled ? session.toggleDoubt : () {},
+            ),
           ),
           const SizedBox(width: 8),
           RoundIconButton(
@@ -2788,7 +3485,7 @@ class FatherLabScreen extends StatelessWidget {
     return SimpleLabPage(
       title: 'Painel do Pai',
       body:
-          'Resumo vivo: idioma ${session.stableLang ?? '-'}, objetivo ${session.freeText.isEmpty ? '-' : session.freeText}, avanço ${session.aulaStep}.',
+          'Resumo vivo: idioma ${session.stableLang ?? '-'}, objetivo ${session.freeText.isEmpty ? '-' : session.freeText}, item ${session.currentAulaItemNumber}, camada ${session.currentAulaLayer.value}.',
       primary: 'Voltar',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,
