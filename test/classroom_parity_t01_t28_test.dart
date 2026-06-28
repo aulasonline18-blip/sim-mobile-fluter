@@ -1,6 +1,7 @@
 // Bateria de paridade T01–T28 (Planta Sala de Aula, seção 18).
 // Cada teste é isolado e roda <50ms.
 import 'dart:async';
+import 'package:flutter/widgets.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/sim/classroom/amparo_controller.dart';
@@ -400,11 +401,18 @@ void main() {
     final svc = StudentLearningStateService(seed: {'L1': _state0()});
     final ctrl = _controller(svc);
     final pos = LessonPositionState(
-      lessonLocalId: 'L1',
       items: const [PlannedItem(marker: 'M-1', text: 'Velocidade média')],
-      itemAtivo: const PlannedItem(marker: 'M-1', text: 'Velocidade média'),
       itemIdx: 0,
       layer: LessonLayer.l1,
+      erros: 0,
+      historia: const [],
+      history: const [],
+      mainAdvances: 0,
+      loadingLayer: LessonLayer.l1,
+      conteudo: null,
+      phase: const ClassroomPhase.reading(),
+      imagem: null,
+      teoriaPronta: false,
     );
 
     final content = LessonContent(
@@ -682,7 +690,7 @@ void main() {
       ),
     );
     expect(result, isNotNull);
-    expect(result?.question, 'Q');
+    expect(result?.conteudo.question, 'Q');
   });
 
   // -------------------------------------------------------------------------
@@ -721,13 +729,20 @@ void main() {
     final ctrl = _controller(svc, audio: audio);
 
     final pos = LessonPositionState(
-      lessonLocalId: 'L1',
       items: const [PlannedItem(marker: 'M-1', text: 'Velocidade média')],
-      itemAtivo: const PlannedItem(marker: 'M-1', text: 'Velocidade média'),
       itemIdx: 0,
       layer: LessonLayer.l1,
+      erros: 0,
+      historia: const [],
+      history: const [],
+      mainAdvances: 0,
+      loadingLayer: LessonLayer.l1,
+      conteudo: null,
+      phase: const ClassroomPhase.reading(),
+      imagem: null,
+      teoriaPronta: false,
     );
-    pos.phase = const ClassroomPhase.lendo();
+    pos.phase = const ClassroomPhase.reading();
 
     ctrl.selecionar(pos, AnswerLetter.A);
 
@@ -742,11 +757,18 @@ void main() {
     final svc = StudentLearningStateService(seed: {'L1': _state0()});
     final ctrl = _controller(svc);
     final pos = LessonPositionState(
-      lessonLocalId: 'L1',
       items: const [PlannedItem(marker: 'M-1', text: 'Velocidade média')],
-      itemAtivo: const PlannedItem(marker: 'M-1', text: 'Velocidade média'),
       itemIdx: 0,
       layer: LessonLayer.l1,
+      erros: 0,
+      historia: const [],
+      history: const [],
+      mainAdvances: 0,
+      loadingLayer: LessonLayer.l1,
+      conteudo: null,
+      phase: const ClassroomPhase.reading(),
+      imagem: null,
+      teoriaPronta: false,
     );
     pos.phase = const ClassroomPhase.loading();
 
@@ -770,13 +792,20 @@ void main() {
     final svc = StudentLearningStateService(seed: {'L1': _state0()});
     final ctrl = _controller(svc);
     final pos = LessonPositionState(
-      lessonLocalId: 'L1',
       items: const [PlannedItem(marker: 'M-1', text: 'Velocidade média')],
-      itemAtivo: const PlannedItem(marker: 'M-1', text: 'Velocidade média'),
       itemIdx: 0,
       layer: LessonLayer.l1,
+      erros: 0,
+      historia: const [],
+      history: const [],
+      mainAdvances: 0,
+      loadingLayer: LessonLayer.l1,
+      conteudo: null,
+      phase: const ClassroomPhase.reading(),
+      imagem: null,
+      teoriaPronta: false,
     );
-    pos.phase = const ClassroomPhase.lendo();
+    pos.phase = const ClassroomPhase.reading();
 
     await ctrl.avancar(
       lessonLocalId: 'L1',
@@ -818,11 +847,18 @@ void main() {
     final svc = StudentLearningStateService(seed: {'L1': completed});
     final ctrl = _controller(svc);
     final pos = LessonPositionState(
-      lessonLocalId: 'L1',
       items: const [PlannedItem(marker: 'M-3', text: 'MRUV gráfico v-t')],
-      itemAtivo: const PlannedItem(marker: 'M-3', text: 'MRUV gráfico v-t'),
       itemIdx: 2,
       layer: LessonLayer.l3,
+      erros: 0,
+      historia: const [],
+      history: const [],
+      mainAdvances: 0,
+      loadingLayer: LessonLayer.l1,
+      conteudo: null,
+      phase: const ClassroomPhase.reading(),
+      imagem: null,
+      teoriaPronta: false,
     );
     pos.phase = const ClassroomPhase.completed(
       message: 'ok',
