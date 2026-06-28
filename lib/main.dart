@@ -2937,16 +2937,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           // Sinal 1/2/3 — appears after A/B/C selection
                           if (isExpanded) ...[
                             const SizedBox(height: 14),
-                            const Text(
-                              'Como ficou este ponto para voce?',
-                              style: TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 8),
-                            _SinalBtn(n: 1, label: 'Sei', onTap: () => session.submitAulaSignal(1)),
-                            const SizedBox(height: 6),
-                            _SinalBtn(n: 2, label: 'Acho que sim', onTap: () => session.submitAulaSignal(2)),
-                            const SizedBox(height: 6),
-                            _SinalBtn(n: 3, label: 'Não sei', onTap: () => session.submitAulaSignal(3)),
+                            _SinalRow(onSignal: session.submitAulaSignal),
                           ],
 
                           if (isProcessing) ...[
@@ -3107,6 +3098,35 @@ class _FeedbackBox extends StatelessWidget {
   }
 }
 
+// AUL-8: Row of 3 equal signal buttons, mono-18 number, label-11 uppercase
+class _SinalRow extends StatelessWidget {
+  const _SinalRow({required this.onSignal});
+  final void Function(int) onSignal;
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = [
+      (1, t('aula_sig_certeza')),
+      (2, t('aula_sig_revisar')),
+      (3, t('aula_sig_nao_sei')),
+    ];
+    return Row(
+      children: [
+        for (int i = 0; i < labels.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: _SinalBtn(
+              n: labels[i].$1,
+              label: labels[i].$2,
+              onTap: () => onSignal(labels[i].$1),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _SinalBtn extends StatelessWidget {
   const _SinalBtn({required this.n, required this.label, required this.onTap});
 
@@ -3116,20 +3136,39 @@ class _SinalBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: simDark,
-          side: const BorderSide(color: simBorder),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          alignment: Alignment.centerLeft,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: simBorder),
         ),
-        child: Text(
-          '$n. $label',
-          style: const TextStyle(color: simDark, fontSize: 15, fontWeight: FontWeight.w600),
+        child: Column(
+          children: [
+            Text(
+              '$n',
+              style: TextStyle(
+                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: simDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: simMuted,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -3176,8 +3215,12 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
         child: Container(
           width: 34,
           height: 34,
-          decoration: const BoxDecoration(color: simDark, shape: BoxShape.circle),
-          child: const Icon(Icons.volume_up, color: Colors.white, size: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: simDark, width: 1.5),
+          ),
+          child: const Icon(Icons.volume_up, color: simDark, size: 16),
         ),
       ),
     );

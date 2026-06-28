@@ -56,18 +56,20 @@ class _FixedBubbleState extends State<FixedBubble>
             child: Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF00D1FF),
-                boxShadow: [
+                color: Colors.white,
+                border: Border.all(color: const Color(0xFF111827), width: 1.5),
+                boxShadow: const [
                   BoxShadow(
-                    color: Color(0x6600D1FF),
-                    blurRadius: 12,
-                    spreadRadius: 4,
+                    color: Color(0x2E111827),
+                    blurRadius: 18,
+                    spreadRadius: -4,
+                    offset: Offset(0, 6),
                   ),
                 ],
               ),
-              child: const Icon(Icons.volume_up, color: Colors.black, size: 20),
+              child: const Icon(Icons.volume_up, color: Color(0xFF111827), size: 20),
             ),
           ),
         ),
