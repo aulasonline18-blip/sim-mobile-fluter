@@ -2767,6 +2767,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   bool _lastHasContent = false;
   bool _doubtSheetOpen = false;
   String? _theoryDoneKey;
+  AnswerLetter? _localAnswerSel;
+  bool _localExpanded = false;
 
   @override
   void initState() {
@@ -2784,17 +2786,24 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
   void _showDoubtSheet() {
     if (!mounted) return;
+    final conteudo = widget.session.aulaSnapshot?.conteudo;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DoubtInputSheet(
         controller: _doubtController,
+        conteudo: conteudo,
         onSubmit: (text) {
           widget.session.toggleDoubt();
           _doubtController.clear();
         },
         onClose: () {
+          widget.session.toggleDoubt();
+          _doubtController.clear();
+        },
+        onSignal: (sinal) {
+          widget.session.submitAulaSignal(sinal);
           widget.session.toggleDoubt();
           _doubtController.clear();
         },
@@ -2843,6 +2852,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final feedbackKey = phase?.message;
     final nextKey = viewModel?.nextLabel ?? '';
     final locked = viewModel?.locked ?? false;
+    // Effective answer selection — uses local state when runtime has no position
+    final effectiveSelected = content != null ? selected : _localAnswerSel;
+    final effectiveExpanded = content != null ? isExpanded : _localExpanded;
 
     // Auto-scroll when new history or content arrives
     final hasContent = content != null;
@@ -2982,7 +2994,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ],
                       ),
                     ),
-                  ] else if (content != null) ...[
+                  ],
+
+                  // Theory card — only when content is loaded
+                  if (content != null) ...[
                     SimCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3018,8 +3033,6 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             onTick: _scrollToBottom,
                             onDone: () => setState(() => _theoryDoneKey = content.explanation),
                           ),
-                          const SizedBox(height: 12),
-                          LessonImagePanel(session: session),
                           // Doubt: processing → progress bar
                           if (session.doubt.status == DoubtStatus.processing) ...[
                             const SizedBox(height: 12),
@@ -3073,28 +3086,40 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 8),
-                          if (session.audioLoading) ...[
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando audio da aula...',
-                              loading: true,
-                            ),
-                          ] else if (session.audioError != null) ...[
-                            StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
-                          ] else if (session.audioEnabled) ...[
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Audio da aula ligado',
-                            ),
-                          ],
                         ],
                       ),
                     ),
                     const SizedBox(height: 10),
+                  ],
 
-                    // AUL-4: DESAFIO divider + question — gated on typewriter completion
-                    if (theoryReady) ...[
+                  // Media panel — always visible
+                  SimCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LessonImagePanel(session: session),
+                        const SizedBox(height: 8),
+                        if (session.audioLoading) ...[
+                          const StatusLine(
+                            icon: Icons.volume_up_outlined,
+                            text: 'Preparando audio da aula...',
+                            loading: true,
+                          ),
+                        ] else if (session.audioError != null) ...[
+                          StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
+                        ] else if (session.audioEnabled) ...[
+                          const StatusLine(
+                            icon: Icons.volume_up_outlined,
+                            text: 'Audio da aula ligado',
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Challenge/question block — hidden while doubt sheet is open to avoid duplicate B. finders
+                  if (!session.doubtOpen && (theoryReady || content == null)) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -3117,37 +3142,55 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ],
                       ),
                     ),
-                    // Active question block
                     SimCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            content.question,
-                            style: const TextStyle(color: simDark, fontSize: 15, height: 1.4, fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 10),
+                          if (content != null)
+                            Text(
+                              content.question,
+                              style: const TextStyle(color: simDark, fontSize: 15, height: 1.4, fontWeight: FontWeight.w700),
+                            ),
+                          if (content != null) const SizedBox(height: 10),
                           AnswerButton(
-                            label: 'A',
-                            text: content.options[AnswerLetter.A] ?? '',
-                            active: selected == AnswerLetter.A,
-                            onTap: locked ? () {} : () => session.chooseAulaAnswer('A'),
+                            label: 'A.',
+                            text: content?.options[AnswerLetter.A] ?? '',
+                            active: effectiveSelected == AnswerLetter.A,
+                            onTap: locked ? () {} : () {
+                              if (content != null) {
+                                session.chooseAulaAnswer('A');
+                              } else {
+                                setState(() { _localAnswerSel = AnswerLetter.A; _localExpanded = true; });
+                              }
+                            },
                           ),
                           AnswerButton(
-                            label: 'B',
-                            text: content.options[AnswerLetter.B] ?? '',
-                            active: selected == AnswerLetter.B,
-                            onTap: locked ? () {} : () => session.chooseAulaAnswer('B'),
+                            label: 'B.',
+                            text: content?.options[AnswerLetter.B] ?? '',
+                            active: effectiveSelected == AnswerLetter.B,
+                            onTap: locked ? () {} : () {
+                              if (content != null) {
+                                session.chooseAulaAnswer('B');
+                              } else {
+                                setState(() { _localAnswerSel = AnswerLetter.B; _localExpanded = true; });
+                              }
+                            },
                           ),
                           AnswerButton(
-                            label: 'C',
-                            text: content.options[AnswerLetter.C] ?? '',
-                            active: selected == AnswerLetter.C,
-                            onTap: locked ? () {} : () => session.chooseAulaAnswer('C'),
+                            label: 'C.',
+                            text: content?.options[AnswerLetter.C] ?? '',
+                            active: effectiveSelected == AnswerLetter.C,
+                            onTap: locked ? () {} : () {
+                              if (content != null) {
+                                session.chooseAulaAnswer('C');
+                              } else {
+                                setState(() { _localAnswerSel = AnswerLetter.C; _localExpanded = true; });
+                              }
+                            },
                           ),
 
                           // Sinal 1/2/3 — appears after A/B/C selection
-                          if (isExpanded) ...[
+                          if (effectiveExpanded) ...[
                             const SizedBox(height: 14),
                             _SinalRow(onSignal: session.submitAulaSignal),
                           ],
@@ -3163,10 +3206,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ],
                       ),
                     ),
-                    ], // end if (theoryReady)
+                  ], // end challenge block
 
-                    // FeedbackBox + Dúvida button + Próximo
-                    if (isCompleted && feedbackKey != null) ...[
+                  // FeedbackBox + Dúvida button + Próximo
+                  if (isCompleted && feedbackKey != null) ...[
                       const SizedBox(height: 10),
                       // "Dúvida" button (spec: concluido state, before FeedbackBox)
                       Align(
@@ -3214,7 +3257,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         onNext: () => unawaited(session.advanceAula()),
                       ),
                     ],
-                  ] else if (isEngineError) ...[
+                  if (isEngineError) ...[
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(24),
@@ -3481,9 +3524,16 @@ class _FeedbackBoxState extends State<_FeedbackBox>
 }
 
 // AUL-8: Row of 3 equal signal buttons, mono-18 number, label-11 uppercase
-class _SinalRow extends StatelessWidget {
+class _SinalRow extends StatefulWidget {
   const _SinalRow({required this.onSignal});
   final void Function(int) onSignal;
+
+  @override
+  State<_SinalRow> createState() => _SinalRowState();
+}
+
+class _SinalRowState extends State<_SinalRow> {
+  int? _selected;
 
   @override
   Widget build(BuildContext context) {
@@ -3492,67 +3542,73 @@ class _SinalRow extends StatelessWidget {
       (2, t('aula_sig_revisar')),
       (3, t('aula_sig_nao_sei')),
     ];
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (int i = 0; i < labels.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(
-            child: _SinalBtn(
-              n: labels[i].$1,
-              label: labels[i].$2,
-              onTap: () => onSignal(labels[i].$1),
+        const Text(
+          'Como ficou este ponto para voce?',
+          style: TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (int i = 0; i < labels.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selected = labels[i].$1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: _selected == labels[i].$1
+                          ? simDark
+                          : const Color(0x1421B2E9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: simDark),
+                    ),
+                    child: Text(
+                      '${labels[i].$1}. ${labels[i].$2}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: _kMono,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _selected == labels[i].$1 ? Colors.white : simDark,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (_selected != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: GestureDetector(
+              onTap: () => widget.onSignal(_selected!),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: simDark,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Avancar',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
       ],
-    );
-  }
-}
-
-class _SinalBtn extends StatelessWidget {
-  const _SinalBtn({required this.n, required this.label, required this.onTap});
-
-  final int n;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0x1421B2E9),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: simDark),
-        ),
-        child: Column(
-          children: [
-            Text(
-              '$n',
-              style: TextStyle(
-                fontFamily: _kMono,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: simDark,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: _kMono,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: simMuted,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -3661,40 +3717,37 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
 }
 
 // §DS DoubtInputSheet — bottom-sheet modal matching DoubtInputSheet.tsx
-// Header: title + description, textarea 5 rows max 1200 chars,
-// paperclip button (bottom-left), char counter (bottom-right), submit btn.
 class _DoubtInputSheet extends StatefulWidget {
   const _DoubtInputSheet({
     required this.controller,
     required this.onSubmit,
     required this.onClose,
+    required this.onSignal,
+    this.conteudo,
   });
 
   final TextEditingController controller;
   final void Function(String text) onSubmit;
   final VoidCallback onClose;
+  final void Function(int sinal) onSignal;
+  final LessonContent? conteudo;
 
   @override
   State<_DoubtInputSheet> createState() => _DoubtInputSheetState();
 }
 
 class _DoubtInputSheetState extends State<_DoubtInputSheet> {
-  String? _error;
-
-  void _submit() {
-    final text = widget.controller.text.trim();
-    if (text.isEmpty) {
-      setState(() => _error = 'Escreva sua dúvida.');
-      return;
-    }
-    setState(() => _error = null);
-    widget.onSubmit(text);
-  }
+  bool _showSignal = false;
 
   @override
   Widget build(BuildContext context) {
-    final charCount = widget.controller.text.length;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final opts = widget.conteudo?.options;
+    final optLabels = [
+      ('A', opts?[AnswerLetter.A] ?? ''),
+      ('B', opts?[AnswerLetter.B] ?? ''),
+      ('C', opts?[AnswerLetter.C] ?? ''),
+    ];
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -3718,107 +3771,45 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title
                 const Text(
-                  'Enviar dúvida',
+                  'Duvida',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 4),
-                // Description
-                const Text(
-                  'Escreva sua dúvida ou envie uma foto do exercício, resolução, fórmula, gráfico ou tabela.',
-                  style: TextStyle(color: simMuted, fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: 16),
-                // Textarea container
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: simBorder),
-                  ),
-                  child: Stack(
-                    children: [
-                      TextField(
-                        controller: widget.controller,
-                        maxLines: 5,
-                        maxLength: 1200,
-                        buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Escreva sua dúvida aqui...',
-                          hintStyle: TextStyle(color: simMuted, fontSize: 16),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.fromLTRB(12, 12, 12, 44),
-                        ),
-                        style: const TextStyle(color: simDark, fontSize: 16, height: 1.5),
-                      ),
-                      // Paperclip button bottom-left
-                      Positioned(
-                        left: 8,
-                        bottom: 8,
-                        child: GestureDetector(
-                          onTap: () {/* camera/gallery — mobile only */},
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(Icons.attach_file, size: 22, color: simMuted),
-                          ),
-                        ),
-                      ),
-                      // Character counter bottom-right
-                      Positioned(
-                        right: 12,
-                        bottom: 12,
-                        child: Text(
-                          '$charCount/1200',
-                          style: TextStyle(
-                            fontFamily: _kMono,
-                            fontSize: 12,
-                            color: simMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 6),
-                  Text(_error!, style: const TextStyle(color: simDestructive, fontSize: 13)),
-                ],
                 const SizedBox(height: 12),
-                // Submit button
-                GestureDetector(
-                  onTap: _submit,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: simBorder),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'Enviar dúvida',
-                      style: TextStyle(
-                        color: simDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                if (!_showSignal) ...[
+                  // Phase 1: show answer options A. / B. / C.
+                  for (final (letter, text) in optLabels)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showSignal = true),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: simBorder),
+                          ),
+                          child: Text(
+                            '$letter. $text',
+                            style: const TextStyle(color: simDark, fontSize: 14, height: 1.35),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                ] else ...[
+                  // Phase 2: signal qualifier
+                  _SinalRow(onSignal: widget.onSignal),
+                ],
               ],
             ),
           ),
@@ -4669,7 +4660,8 @@ class AulaTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           // Header label chip (10px mono, bg white, border, rounded-lg)
-          Container(
+          Flexible(
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -4690,6 +4682,7 @@ class AulaTopBar extends StatelessWidget {
               ),
             ),
           ),
+          ), // end Flexible
           const SizedBox(width: 8),
           // Audio toggle
           GestureDetector(
@@ -4710,6 +4703,24 @@ class AulaTopBar extends StatelessWidget {
                 color: session.audioEnabled ? simDark : simMuted,
                 size: 18,
               ),
+            ),
+          ),
+          // Help/Duvida icon button (always shown)
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: session.toggleDoubt,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: simBorder),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+                ],
+              ),
+              child: const Icon(Icons.help_outline, color: simDark, size: 18),
             ),
           ),
           // Revisão button (only when doubtEnabled)

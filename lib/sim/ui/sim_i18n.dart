@@ -8,8 +8,8 @@ const Map<String, String> _simStrings = {
   'portal_statement_p2': ' — do seu nível ao domínio,',
   'portal_statement_p3': ' com',
   'portal_statement_real_progress': 'progresso real',
-  'portal_btn_start': 'Continuar',
-  'portal_btn_signin': 'Entrar',
+  'portal_btn_start': 'Start',
+  'portal_btn_signin': 'Sign in to start',
   'portal_help_title': 'Precisa de ajuda?',
   'portal_help_body': 'Fale com a gente pelo WhatsApp ou Messenger.',
 
@@ -24,10 +24,10 @@ const Map<String, String> _simStrings = {
   // (language names are hardcoded in the buttons)
 
   // Objeto
-  'objeto_h1': 'O que você quer estudar?',
+  'objeto_h1': 'Tell us about who is going to study',
   'objeto_card1_title': 'Resumo livre',
   'objeto_helper': 'Escreva com suas palavras. SIM vai montar o currículo ideal.',
-  'objeto_save_continue': 'Salvar e continuar',
+  'objeto_save_continue': 'Save and continue',
   'objeto_too_long': 'Texto muito longo',
   'objeto_preferred_name': 'Como você quer ser chamado?',
   'objeto_name_placeholder': 'Ex: João',
@@ -44,9 +44,9 @@ const Map<String, String> _simStrings = {
   'aula_next_item': 'Próximo item',
   'aula_consolidate': 'Consolidar',
   'aula_layer_label': 'Nível',
-  'aula_sig_certeza': 'Certeza',
-  'aula_sig_revisar': 'Revisar',
-  'aula_sig_nao_sei': 'Não sei',
+  'aula_sig_certeza': 'Com certeza',
+  'aula_sig_revisar': 'Acho que sim',
+  'aula_sig_nao_sei': 'Nao sei bem',
   'aula_fb_correct': 'Correto!',
   'aula_fb_correct_rev': 'Correto! Revisando...',
   'aula_fb_dont_know': 'Vamos revisar juntos.',
