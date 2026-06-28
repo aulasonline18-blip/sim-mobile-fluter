@@ -35,6 +35,7 @@ import 'sim/ui/widgets/cyber_step_shell.dart';
 import 'sim/ui/widgets/sim_preparation_experience.dart';
 import 'sim/ui/widgets/sim_typewriter.dart';
 import 'sim/auxiliary/aux_room_models.dart';
+import 'sim/ui/widgets/doubt_progress_bar.dart';
 
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 const simSupabaseAnonKey =
@@ -248,7 +249,10 @@ class LabSession extends ChangeNotifier {
 
   ReviewRoomView? get reviewRoom => lessonUiState.reviewRoom;
   RecoveryRoomView? get recoveryRoom => lessonUiState.recoveryRoom;
+  DoubtState get doubt => lessonUiState.doubt;
 
+  void setDoubt(DoubtState s) => lessonUiState.setDoubt(s);
+  void resetDoubt() => lessonUiState.resetDoubt();
   void openReviewRoom() => lessonUiState.openReviewRoom();
   void closeReviewRoom() => lessonUiState.closeReviewRoom();
   void setReviewRoom(ReviewRoomView v) => lessonUiState.setReviewRoom(v);
@@ -2801,16 +2805,12 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            AulaTopBar(session: session, doubtEnabled: true),
-            if (viewModel != null)
-              SizedBox(
-                height: 4,
-                child: LinearProgressIndicator(
-                  value: viewModel.progress / 100,
-                  backgroundColor: simLight,
-                  valueColor: const AlwaysStoppedAnimation<Color>(simDark),
-                ),
-              ),
+            AulaTopBar(
+              session: session,
+              doubtEnabled: true,
+              progress: viewModel?.progress.toDouble(),
+              headerLabel: viewModel != null ? _headerLabelText(viewModel.headerLabel) : null,
+            ),
             Expanded(
               child: ListView(
                 controller: _scrollController,
@@ -2920,6 +2920,59 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ),
                           const SizedBox(height: 12),
                           LessonImagePanel(session: session),
+                          // Doubt: processing → progress bar
+                          if (session.doubt.status == DoubtStatus.processing) ...[
+                            const SizedBox(height: 12),
+                            DoubtProgressBar(
+                              progress: session.doubt.progress.toDouble(),
+                              label: 'Analisando sua dúvida...',
+                            ),
+                          ],
+                          // Doubt: explaining / error → explanation card
+                          if (session.doubt.status == DoubtStatus.explaining ||
+                              session.doubt.status == DoubtStatus.error) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: simBorder),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x59111827),
+                                    blurRadius: 30,
+                                    spreadRadius: -24,
+                                    offset: Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Explicação da sua dúvida',
+                                    style: TextStyle(
+                                      color: simDark,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  if (session.doubt.error != null)
+                                    Text(
+                                      session.doubt.error!,
+                                      style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4),
+                                    )
+                                  else if (session.doubt.response != null)
+                                    Text(
+                                      session.doubt.response!.explanation,
+                                      style: const TextStyle(color: simDark, fontSize: 14, height: 1.5),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           if (session.audioLoading) ...[
                             const StatusLine(
@@ -3010,17 +3063,53 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                       ),
                     ),
 
-                    // FeedbackBox + Próximo
+                    // FeedbackBox + Dúvida button + Próximo
                     if (isCompleted && feedbackKey != null) ...[
+                      const SizedBox(height: 10),
+                      // "Dúvida" button (spec: concluido state, before FeedbackBox)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: session.doubt.status != DoubtStatus.processing
+                              ? session.toggleDoubt
+                              : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: simBorder),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x47111827),
+                                  blurRadius: 20,
+                                  spreadRadius: -16,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              session.doubt.status == DoubtStatus.processing
+                                  ? 'Dúvida...'
+                                  : 'Dúvida',
+                              style: TextStyle(
+                                color: session.doubt.status == DoubtStatus.processing
+                                    ? simMuted
+                                    : simDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       _FeedbackBox(
                         isCorrect: wasCorrect ?? false,
                         message: _feedbackText(feedbackKey),
-                      ),
-                      const SizedBox(height: 10),
-                      PrimaryWideButton(
-                        label: _nextBtnText(nextKey),
-                        onTap: () => unawaited(session.advanceAula()),
+                        nextLabel: _nextBtnText(nextKey),
+                        nextReady: !locked,
+                        onNext: () => unawaited(session.advanceAula()),
                       ),
                     ],
                   ] else if (isEngineError && phase?.message != null) ...[
@@ -3122,10 +3211,19 @@ class _QuestionHistoryBlock extends StatelessWidget {
 
 // AUL-5: FeedbackBox with fade+slide-up animation on appear
 class _FeedbackBox extends StatefulWidget {
-  const _FeedbackBox({required this.isCorrect, required this.message});
+  const _FeedbackBox({
+    required this.isCorrect,
+    required this.message,
+    this.nextLabel,
+    this.nextReady = true,
+    this.onNext,
+  });
 
   final bool isCorrect;
   final String message;
+  final String? nextLabel;
+  final bool nextReady;
+  final VoidCallback? onNext;
 
   @override
   State<_FeedbackBox> createState() => _FeedbackBoxState();
@@ -3189,6 +3287,27 @@ class _FeedbackBoxState extends State<_FeedbackBox>
                   ),
                 ),
               ),
+              if (widget.onNext != null) ...[
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: widget.nextReady ? widget.onNext : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: widget.nextReady ? simDark : simLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${widget.nextLabel ?? ''} >>',
+                      style: TextStyle(
+                        color: widget.nextReady ? Colors.white : simMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -4267,98 +4386,147 @@ class _RecoveryRoomScreen extends StatelessWidget {
   }
 }
 
-// AUL-1: Fixed header — 36×36 hamburger with 3px bars, badge 10px mono,
-// audio toggle, Revisão button. Height 64, white bg, 1px bottom border.
+// AUL-1: Fixed header — menu btn + 3px progress bar + header label chip +
+// audio toggle + Revisão button (mono, uppercase, BookOpenCheck icon).
+// Matches LessonMainScreen.tsx header exactly.
 class AulaTopBar extends StatelessWidget {
-  const AulaTopBar({required this.session, this.doubtEnabled = false, super.key});
+  const AulaTopBar({
+    required this.session,
+    this.doubtEnabled = false,
+    this.progress,
+    this.headerLabel,
+    super.key,
+  });
 
   final LabSession session;
   final bool doubtEnabled;
+  final double? progress;
+  final String? headerLabel;
 
   @override
   Widget build(BuildContext context) {
-    final lang = session.stableLang ?? 'SIM';
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.96),
         border: const Border(bottom: BorderSide(color: simBorder, width: 1)),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0xFF111827).withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Color(0x1A000000),
+            blurRadius: 12,
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
-          // 36×36 hamburger with 3px bars + glow
+          // Menu button 36×36, rounded-xl
           _HamburgerBtn(onTap: () => showAulaMenu(context, session)),
-          const SizedBox(width: 8),
-          // Badge: language label, 10px mono
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: simLight,
+          const SizedBox(width: 10),
+          // 3px progress bar (flex-1)
+          Expanded(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: simBorder),
-            ),
-            child: Text(
-              lang.toUpperCase(),
-              style: TextStyle(
-                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: simMuted,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Revisão button
-          if (doubtEnabled) ...[
-            GestureDetector(
-              onTap: session.openReviewRoom,
               child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: simBorder),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  t('aux_review_button'),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: simDark,
+                height: 3,
+                color: const Color(0x0F111827),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progress != null
+                        ? (progress! / 100).clamp(0.0, 1.0)
+                        : 0.0,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: simDark,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-          ],
-          // Audio toggle
-          GestureDetector(
-            onTap: session.toggleAudio,
-            child: SizedBox(
-              width: 36,
-              height: 36,
-              child: Center(
-                child: Icon(
-                  session.audioEnabled
-                      ? Icons.volume_up_outlined
-                      : Icons.volume_off_outlined,
-                  color: simDark,
-                  size: 22,
-                ),
+          ),
+          const SizedBox(width: 10),
+          // Header label chip (10px mono, bg white, border, rounded-lg)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: simBorder),
+              boxShadow: const [
+                BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Text(
+              (headerLabel ?? (session.stableLang ?? 'SIM')).toUpperCase(),
+              style: TextStyle(
+                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: simDark,
+                letterSpacing: 0.14 * 10,
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          // Audio toggle
+          GestureDetector(
+            onTap: session.toggleAudio,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: simBorder),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+                ],
+              ),
+              child: Icon(
+                session.audioEnabled ? Icons.volume_up_outlined : Icons.volume_off_outlined,
+                color: session.audioEnabled ? simDark : simMuted,
+                size: 18,
+              ),
+            ),
+          ),
+          // Revisão button (only when doubtEnabled)
+          if (doubtEnabled) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: session.openReviewRoom,
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: simDark,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: simDark),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x2E111827), blurRadius: 12, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.menu_book_outlined, color: Colors.white, size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      t('aux_review_button').toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 0.16 * 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

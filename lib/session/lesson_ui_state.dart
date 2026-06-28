@@ -12,6 +12,7 @@ class LessonUiState extends ChangeNotifier {
 
   ReviewRoomView? reviewRoom;
   RecoveryRoomView? recoveryRoom;
+  DoubtState doubt = DoubtState.idle;
 
   void openReviewRoom() {
     reviewRoom = const ReviewRoomView(
@@ -49,6 +50,16 @@ class LessonUiState extends ChangeNotifier {
 
   void setRecoveryRoom(RecoveryRoomView view) {
     recoveryRoom = view;
+    notifyListeners();
+  }
+
+  void setDoubt(DoubtState state) {
+    doubt = state;
+    notifyListeners();
+  }
+
+  void resetDoubt() {
+    doubt = DoubtState.idle;
     notifyListeners();
   }
   bool audioPlaying = false;
