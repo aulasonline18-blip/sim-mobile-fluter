@@ -121,6 +121,7 @@ class ReviewRoomView {
     this.letra,
     this.sinal,
     this.resultCorrect,
+    this.resultMsg,
     this.errMsg,
   });
 
@@ -132,6 +133,7 @@ class ReviewRoomView {
   final AnswerLetter? letra;
   final DecisionSignal? sinal;
   final bool? resultCorrect;
+  final String? resultMsg;
   final String? errMsg;
 
   ReviewRoomView copyWith({
@@ -143,6 +145,7 @@ class ReviewRoomView {
     AnswerLetter? letra,
     DecisionSignal? sinal,
     bool? resultCorrect,
+    String? resultMsg,
     String? errMsg,
   }) {
     return ReviewRoomView(
@@ -154,6 +157,7 @@ class ReviewRoomView {
       letra: letra ?? this.letra,
       sinal: sinal ?? this.sinal,
       resultCorrect: resultCorrect ?? this.resultCorrect,
+      resultMsg: resultMsg ?? this.resultMsg,
       errMsg: errMsg ?? this.errMsg,
     );
   }
@@ -168,6 +172,7 @@ class RecoveryRoomView {
     this.letra,
     this.sinal,
     this.resultCorrect,
+    this.resultMsg,
     this.errMsg,
     this.restartRequired = false,
   });
@@ -179,6 +184,7 @@ class RecoveryRoomView {
   final AnswerLetter? letra;
   final DecisionSignal? sinal;
   final bool? resultCorrect;
+  final String? resultMsg;
   final String? errMsg;
   final bool restartRequired;
 
@@ -190,6 +196,7 @@ class RecoveryRoomView {
     AnswerLetter? letra,
     DecisionSignal? sinal,
     bool? resultCorrect,
+    String? resultMsg,
     String? errMsg,
     bool? restartRequired,
   }) {
@@ -201,6 +208,7 @@ class RecoveryRoomView {
       letra: letra ?? this.letra,
       sinal: sinal ?? this.sinal,
       resultCorrect: resultCorrect ?? this.resultCorrect,
+      resultMsg: resultMsg ?? this.resultMsg,
       errMsg: errMsg ?? this.errMsg,
       restartRequired: restartRequired ?? this.restartRequired,
     );

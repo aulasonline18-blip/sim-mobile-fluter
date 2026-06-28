@@ -18,6 +18,7 @@ const Map<String, String> _simStrings = {
 
   // Step shell
   'step_label_pedagogica': 'Pedagógica',
+  'step_of': 'Passo {n} de {total}',
 
   // Idioma
   // (language names are hardcoded in the buttons)

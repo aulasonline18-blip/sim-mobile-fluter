@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../sim_i18n.dart';
 
 // §2.1 CyberStepShell — casca dos passos T03, T04, T06
 // Barra de progresso fina (6px) topo + label "Step {n} of {total}"
@@ -74,7 +75,7 @@ class CyberStepShell extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Step $step of $total',
+                      t('step_of', {'n': step, 'total': total}),
                       style: TextStyle(
                         fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
                         fontSize: 13,

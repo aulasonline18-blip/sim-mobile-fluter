@@ -4275,16 +4275,18 @@ class _ReviewRoomScreen extends StatelessWidget {
       headerLabel: '${t('aux_review_button')} ${review.idx + 1}/${review.count}',
       progressWidth: progressWidth,
       resultCorrect: review.resultCorrect,
-      resultMsg: review.errMsg,
+      resultMsg: review.resultMsg,
       onBack: session.closeReviewRoom,
       onSelect: (letter) => session.setReviewRoom(review.copyWith(letra: letter)),
-      onSignal: (signal) => session.setReviewRoom(
-        review.copyWith(
+      onSignal: (signal) {
+        final correct = review.letra == review.conteudo!.correctAnswer;
+        session.setReviewRoom(review.copyWith(
           sinal: signal,
           status: ReviewRoomStatus.result,
-          resultCorrect: review.letra == review.conteudo!.correctAnswer,
-        ),
-      ),
+          resultCorrect: correct,
+          resultMsg: correct ? t('aula_fb_correct') : t('aula_fb_redo'),
+        ));
+      },
       onNext: () {
         final nextIdx = review.idx + 1;
         if (nextIdx >= review.count) {
@@ -4429,15 +4431,17 @@ class _RecoveryRoomScreen extends StatelessWidget {
       status: status == RecoveryRoomStatus.result ? 'result' : 'answering',
       headerLabel: t('aux_recovery_preparing_title'),
       resultCorrect: recovery.resultCorrect,
-      resultMsg: recovery.errMsg,
+      resultMsg: recovery.resultMsg,
       onSelect: (letter) => session.setRecoveryRoom(recovery.copyWith(letra: letter)),
-      onSignal: (signal) => session.setRecoveryRoom(
-        recovery.copyWith(
+      onSignal: (signal) {
+        final correct = recovery.letra == recovery.conteudo!.correctAnswer;
+        session.setRecoveryRoom(recovery.copyWith(
           sinal: signal,
           status: RecoveryRoomStatus.result,
-          resultCorrect: recovery.letra == recovery.conteudo!.correctAnswer,
-        ),
-      ),
+          resultCorrect: correct,
+          resultMsg: correct ? t('aula_fb_correct') : t('aula_fb_redo'),
+        ));
+      },
       onNext: () {
         final nextIdx = recovery.idx + 1;
         if (nextIdx >= recovery.queue.length) {
