@@ -38,6 +38,10 @@ import 'sim/auxiliary/aux_room_models.dart';
 import 'sim/ui/widgets/doubt_progress_bar.dart';
 
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
+
+// JetBrains Mono font family name — used instead of _kMono
+// so TextStyle objects can remain const.
+const String _kMono = 'JetBrains Mono';
 const simSupabaseAnonKey =
     'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
@@ -928,7 +932,7 @@ class PortalScreen extends StatelessWidget {
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
-                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                        fontFamily: _kMono,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -948,7 +952,7 @@ class PortalScreen extends StatelessWidget {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                            fontFamily: _kMono,
                           ),
                         ),
                       ),
@@ -1220,7 +1224,7 @@ class HelpCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1232,7 +1236,7 @@ class HelpCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       t('portal_help_body'),
                       style: const TextStyle(
@@ -1275,7 +1279,7 @@ class HelpCard extends StatelessWidget {
               style: const TextStyle(
                 color: simMuted,
                 fontSize: 11,
-                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontFamily: _kMono,
               ),
             ),
           ],
@@ -1471,7 +1475,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 12,
-                      fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                      fontFamily: _kMono,
                       letterSpacing: 0.25 * 12,
                     ),
                   ),
@@ -1529,7 +1533,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   color: simMuted,
                                   fontSize: 12,
-                                  fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                  fontFamily: _kMono,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1629,7 +1633,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
-                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                        fontFamily: _kMono,
                       ),
                     ),
                   ),
@@ -1644,7 +1648,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                            fontFamily: _kMono,
                           ),
                         ),
                       ),
@@ -1656,7 +1660,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                            fontFamily: _kMono,
                           ),
                         ),
                       ),
@@ -1668,7 +1672,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 11,
-                      fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                      fontFamily: _kMono,
                     ),
                   ),
                 ],
@@ -2060,7 +2064,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                                       style: const TextStyle(
                                         color: simMuted,
                                         fontSize: 12,
-                                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                        fontFamily: _kMono,
                                       ),
                                     ),
                                   ),
@@ -2221,7 +2225,8 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                       ),
                     ],
                   ),
-                ],
+                ),
+          ],
       ),
     );
   }
@@ -2628,7 +2633,7 @@ class _PlacementIntro extends StatelessWidget {
         const SizedBox(height: 32),
         PrimaryWideButton(
           label: preparing ? t('placement_preparing') : t('placement_start'),
-          onTap: onStart,
+          onTap: onStart ?? () {},
         ),
       ],
     );
@@ -2649,7 +2654,7 @@ class _PlacementQuestion extends StatelessWidget {
         Text(
           t('placement_question_of', {'n': '1', 'total': '1'}),
           style: TextStyle(
-            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+            fontFamily: _kMono,
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: simMuted,
@@ -2925,7 +2930,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               child: Text(
                                 t('aula_theory').toUpperCase(),
                                 style: TextStyle(
-                                  fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                  fontFamily: _kMono,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: simDark,
@@ -2990,7 +2995,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             Text(
                               t('aula_theory'),
                               style: TextStyle(
-                                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                fontFamily: _kMono,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: simMuted,
@@ -3103,7 +3108,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             child: Text(
                               t('aula_challenge'),
                               style: TextStyle(
-                                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                fontFamily: _kMono,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: simMuted,
@@ -3530,7 +3535,7 @@ class _SinalBtn extends StatelessWidget {
             Text(
               '$n',
               style: TextStyle(
-                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontFamily: _kMono,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: simDark,
@@ -3541,7 +3546,7 @@ class _SinalBtn extends StatelessWidget {
               label.toUpperCase(),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontFamily: _kMono,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: simMuted,
@@ -3780,7 +3785,7 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                         child: Text(
                           '$charCount/1200',
                           style: TextStyle(
-                            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                            fontFamily: _kMono,
                             fontSize: 12,
                             color: simMuted,
                           ),
@@ -3975,7 +3980,7 @@ class _AuxQuestionScreen extends StatelessWidget {
                   Text(
                     headerLabel.toUpperCase(),
                     style: TextStyle(
-                      fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                      fontFamily: _kMono,
                       fontSize: 11,
                       color: simMuted,
                       letterSpacing: 0.18 * 11,
@@ -4110,7 +4115,7 @@ class _AuxOptionTile extends StatelessWidget {
                     child: Text(
                       letterStr,
                       style: TextStyle(
-                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                        fontFamily: _kMono,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: selected ? Colors.white : simDark,
@@ -4680,7 +4685,7 @@ class AulaTopBar extends StatelessWidget {
             child: Text(
               (headerLabel ?? (session.stableLang ?? 'SIM')).toUpperCase(),
               style: TextStyle(
-                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontFamily: _kMono,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 color: simDark,
@@ -4734,7 +4739,7 @@ class AulaTopBar extends StatelessWidget {
                     Text(
                       t('aux_review_button').toUpperCase(),
                       style: TextStyle(
-                        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                        fontFamily: _kMono,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -5412,7 +5417,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
 
   Future<void> _handleLogout() async {
     widget.onClose();
-    widget.session.logout();
+    await widget.session.signOutReal();
   }
 
   @override
@@ -5445,7 +5450,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               Text(
                 t('menu').toUpperCase(),
                 style: TextStyle(
-                  fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                  fontFamily: _kMono,
                   fontSize: 11,
                   letterSpacing: 0.22 * 11,
                   color: muted,
@@ -5537,7 +5542,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                       Text(
                         'TOP UP',
                         style: TextStyle(
-                          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                          fontFamily: _kMono,
                           fontSize: 10,
                           color: muted,
                           letterSpacing: 0.8,
@@ -5561,7 +5566,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                 Text(
                   t('historico').toUpperCase(),
                   style: TextStyle(
-                    fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                    fontFamily: _kMono,
                     fontSize: 10,
                     letterSpacing: 0.22 * 10,
                     color: muted,
@@ -5622,7 +5627,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                                 Text(
                                   '$pct% · $advances/$total',
                                   style: TextStyle(
-                                    fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                                    fontFamily: _kMono,
                                     fontSize: 10,
                                     color: muted,
                                     letterSpacing: 0.5,
@@ -5658,7 +5663,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                       Text(
                         t('drawer_progress'),
                         style: TextStyle(
-                          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                          fontFamily: _kMono,
                           fontSize: 11,
                           color: muted,
                         ),
@@ -5667,7 +5672,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                       Text(
                         '$advances/$total',
                         style: TextStyle(
-                          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                          fontFamily: _kMono,
                           fontSize: 11,
                           color: text,
                         ),
