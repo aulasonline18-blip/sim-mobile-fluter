@@ -2225,8 +2225,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                       ),
                     ],
                   ),
-                ),
-          ],
+                ],
       ),
     );
   }
