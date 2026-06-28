@@ -32,6 +32,7 @@ import 'sim/state/student_learning_state.dart';
 import 'sim/state/student_state_store.dart';
 import 'sim/ui/sim_i18n.dart';
 import 'sim/ui/widgets/cyber_step_shell.dart';
+import 'sim/ui/widgets/sim_preparation_experience.dart';
 
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 const simSupabaseAnonKey =
@@ -2420,158 +2421,109 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
     unawaited(widget.session.launchExperience());
   }
 
-  String _stageLabel(String status) => switch (status) {
-        't00_running' => 'Montando currículo...',
-        't02_running' => 'Preparando primeira aula...',
-        'placement' => 'Preparando nivelamento...',
-        'primeira_aula_pronta' => 'Tudo pronto!',
-        'erro' => 'Algo deu errado',
-        _ => 'Processando ficha...',
-      };
-
-  double _progress(String status) => switch (status) {
-        'pedido_recebido' => 0.10,
-        't00_running' => 0.40,
-        't02_running' => 0.70,
-        'placement' => 0.85,
-        'primeira_aula_pronta' => 1.0,
-        _ => 0.05,
+  String _toSimStage(String status) => switch (status) {
+        'pedido_recebido' => 'profile',
+        't00_running'     => 'curriculum',
+        't02_running'     => 'lesson',
+        'placement'       => 'placement',
+        'primeira_aula_pronta' => 'done',
+        'erro'            => 'error',
+        _                 => 'generic',
       };
 
   @override
   Widget build(BuildContext context) {
-    final status = widget.session.entryStatus;
-    final error = widget.session.entryError;
+    final status  = widget.session.entryStatus;
+    final error   = widget.session.entryError;
     final isError = status == 'erro';
     final isCredits = error?.toLowerCase().contains('crédito') == true ||
         error?.toLowerCase().contains('credit') == true;
+    final simStage  = _toSimStage(status);
+    final isReady   = status == 'primeira_aula_pronta';
 
     return Scaffold(
-      backgroundColor: simDark,
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'SIM',
-                style: TextStyle(
-                  color: simLight,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 48),
-              Text(
-                widget.session.route,
-                style: const TextStyle(color: Colors.transparent, fontSize: 1),
-              ),
-              Text(
-                'entry.status: $status',
-                style: const TextStyle(color: Colors.transparent, fontSize: 1),
-              ),
-              if (!isError) ...[
-                _RobotAvatar(status: status),
-                const SizedBox(height: 32),
-                Text(
-                  _stageLabel(status),
-                  style: const TextStyle(
-                    color: simLight,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    height: 1.3,
+        child: isError
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Color(0xFFF87171),
+                        size: 48,
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Não consegui preparar agora',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: simDark,
+                        ),
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          error,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: simMuted,
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 32),
+                      if (isCredits)
+                        PrimaryWideButton(
+                          label: t('aula_buy_credits'),
+                          onTap: () => widget.session.openCredits(),
+                        )
+                      else
+                        PrimaryWideButton(
+                          label: 'Tentar novamente',
+                          onTap: () {
+                            _started = false;
+                            _launch();
+                          },
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'O aluno não pode ficar preso na porta da escola.',
-                  style: TextStyle(
-                    color: simMuted,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.05, end: _progress(status)),
-                    duration: const Duration(milliseconds: 600),
-                    builder: (context, value, child) => LinearProgressIndicator(
-                      value: value,
-                      minHeight: 6,
-                      backgroundColor: simMid,
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(simLight),
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Column(
+                  children: [
+                    // invisible debug labels
+                    Text(
+                      widget.session.route,
+                      style: const TextStyle(color: Colors.transparent, fontSize: 1),
                     ),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 40),
-                const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 48),
-                const SizedBox(height: 20),
-                const Text(
-                  'Não consegui preparar agora',
-                  style: TextStyle(
-                    color: simLight,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (error != null)
-                  Text(
-                    error,
-                    style: const TextStyle(
-                      color: simMuted,
-                      fontSize: 14,
-                      height: 1.5,
+                    Text(
+                      'entry.status: $status',
+                      style: const TextStyle(color: Colors.transparent, fontSize: 1),
                     ),
-                  ),
-                const SizedBox(height: 32),
-                if (isCredits)
-                  PrimaryWideButton(
-                    label: 'Comprar créditos',
-                    onTap: () => widget.session.openCredits(),
-                  )
-                else
-                  PrimaryWideButton(
-                    label: 'Tentar novamente',
-                    onTap: () {
-                      _started = false;
-                      _launch();
-                    },
-                  ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RobotAvatar extends StatelessWidget {
-  const _RobotAvatar({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final done = status == 'primeira_aula_pronta';
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: done ? simLight : simMid,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Icon(
-        done ? Icons.school_rounded : Icons.psychology_alt_rounded,
-        color: simDark,
-        size: 36,
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: SimPreparationExperience(
+                          stage: simStage,
+                          ready: isReady,
+                          onContinue: () {
+                            _started = false;
+                            _launch();
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
