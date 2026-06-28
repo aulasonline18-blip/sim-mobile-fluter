@@ -2529,88 +2529,188 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
   }
 }
 
-class PlacementLabScreen extends StatelessWidget {
+class PlacementLabScreen extends StatefulWidget {
   const PlacementLabScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<PlacementLabScreen> createState() => _PlacementLabScreenState();
+}
+
+// NV-1..NV-4: Nivelamento 4-step sub-flow inside CyberStepShell
+// step 1/4 = Choice, 2/4 = Intro, 3/4 = Question, 4/4 = Result
+class _PlacementLabScreenState extends State<PlacementLabScreen> {
+  // sub-step within placement: 1=choice, 2=intro, 3=question, 4=result
+  int _subStep = 1;
+  bool _preparing = false;
+
+  void _goToIntro() => setState(() => _subStep = 2);
+  void _goToQuestion() async {
+    setState(() => _preparing = true);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (mounted) setState(() { _subStep = 3; _preparing = false; });
+  }
+  void _goToResult() => setState(() => _subStep = 4);
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const StepHeader(step: 5, total: 5, label: 'Nivelamento'),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: SimCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Você já conhece esse assunto?',
-                        style: TextStyle(
-                          color: simDark,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        session.placementStarted
-                            ? 'Pergunta de nivelamento: escolha a opção que melhor representa seu ponto de partida.'
-                            : 'SIM pode começar do zero ou fazer uma pergunta rápida para sugerir o ponto certo.',
-                        style: const TextStyle(
-                          color: simMuted,
-                          fontSize: 15,
-                          height: 1.45,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      if (!session.placementStarted) ...[
-                        PrimaryWideButton(
-                          label: 'Começar do zero',
-                          onTap: session.skipPlacement,
-                        ),
-                        const SizedBox(height: 12),
-                        SecondaryWideButton(
-                          label: 'Fazer nivelamento',
-                          onTap: session.startPlacement,
-                        ),
-                      ] else ...[
-                        const Text(
-                          'Qual alternativa descreve melhor seu conhecimento?',
-                          style: TextStyle(
-                            color: simDark,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SecondaryWideButton(
-                          label: 'A. Domino bem',
-                          onTap: session.finishPlacement,
-                        ),
-                        const SizedBox(height: 8),
-                        SecondaryWideButton(
-                          label: 'B. Sei uma parte',
-                          onTap: session.finishPlacement,
-                        ),
-                        const SizedBox(height: 8),
-                        SecondaryWideButton(
-                          label: 'C. Preciso começar guiado',
-                          onTap: session.finishPlacement,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+    return CyberStepShell(
+      step: _subStep,
+      total: 4,
+      child: _buildSubStep(),
+    );
+  }
+
+  Widget _buildSubStep() {
+    switch (_subStep) {
+      case 1: return _PlacementChoice(
+        onBeginning: widget.session.skipPlacement,
+        onQuick: _goToIntro,
+      );
+      case 2: return _PlacementIntro(
+        onStart: _preparing ? null : _goToQuestion,
+        preparing: _preparing,
+      );
+      case 3: return _PlacementQuestion(
+        session: widget.session,
+        onDone: _goToResult,
+      );
+      case 4: return _PlacementResult(
+        session: widget.session,
+        onContinue: widget.session.finishPlacement,
+      );
+      default: return const SizedBox.shrink();
+    }
+  }
+}
+
+// NV-1: Choice screen
+class _PlacementChoice extends StatelessWidget {
+  const _PlacementChoice({required this.onBeginning, required this.onQuick});
+  final VoidCallback onBeginning;
+  final VoidCallback onQuick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('placement_choice_h1'),
+          style: const TextStyle(
+            color: simDark, fontSize: 28, height: 1.12, fontWeight: FontWeight.w700,
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        Text(
+          t('placement_choice_body'),
+          style: const TextStyle(color: simMuted, fontSize: 17, height: 1.45),
+        ),
+        const SizedBox(height: 32),
+        PrimaryWideButton(label: t('placement_start_beginning'), onTap: onBeginning),
+        const SizedBox(height: 12),
+        SecondaryWideButton(label: t('placement_take_quick'), onTap: onQuick),
+      ],
+    );
+  }
+}
+
+// NV-2: Intro screen
+class _PlacementIntro extends StatelessWidget {
+  const _PlacementIntro({required this.onStart, required this.preparing});
+  final VoidCallback? onStart;
+  final bool preparing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('placement_intro_h1'),
+          style: const TextStyle(
+            color: simDark, fontSize: 28, height: 1.12, fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          t('placement_intro_body'),
+          style: const TextStyle(color: simMuted, fontSize: 17, height: 1.45),
+        ),
+        const SizedBox(height: 32),
+        PrimaryWideButton(
+          label: preparing ? t('placement_preparing') : t('placement_start'),
+          onTap: onStart,
+        ),
+      ],
+    );
+  }
+}
+
+// NV-3: Question screen
+class _PlacementQuestion extends StatelessWidget {
+  const _PlacementQuestion({required this.session, required this.onDone});
+  final LabSession session;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('placement_question_of', {'n': '1', 'total': '1'}),
+          style: TextStyle(
+            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: simMuted,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Qual alternativa descreve melhor seu conhecimento atual?',
+          style: TextStyle(
+            color: simDark, fontSize: 20, height: 1.3, fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 24),
+        SecondaryWideButton(label: 'A. Domino bem', onTap: onDone),
+        const SizedBox(height: 8),
+        SecondaryWideButton(label: 'B. Sei uma parte', onTap: onDone),
+        const SizedBox(height: 8),
+        SecondaryWideButton(label: 'C. Preciso começar guiado', onTap: onDone),
+      ],
+    );
+  }
+}
+
+// NV-4: Result screen
+class _PlacementResult extends StatelessWidget {
+  const _PlacementResult({required this.session, required this.onContinue});
+  final LabSession session;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('placement_result_h1'),
+          style: const TextStyle(
+            color: simDark, fontSize: 28, height: 1.12, fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          t('placement_result_body'),
+          style: const TextStyle(color: simMuted, fontSize: 17, height: 1.45),
+        ),
+        const SizedBox(height: 32),
+        PrimaryWideButton(label: t('continue'), onTap: onContinue),
+      ],
     );
   }
 }
