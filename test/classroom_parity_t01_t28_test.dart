@@ -415,19 +415,17 @@ void main() {
       teoriaPronta: false,
     );
 
-    final content = LessonContent(
-      explanation: 'E',
-      question: 'Q',
-      options: const {
-        AnswerLetter.A: 'A',
-        AnswerLetter.B: 'B',
-        AnswerLetter.C: 'C',
-      },
-      correctAnswer: AnswerLetter.A,
-    );
-
     for (var i = 0; i < 5; i++) {
-      pos.conteudo = content;
+      pos.conteudo = LessonContent(
+        explanation: 'E$i',
+        question: 'Q$i',
+        options: const {
+          AnswerLetter.A: 'A',
+          AnswerLetter.B: 'B',
+          AnswerLetter.C: 'C',
+        },
+        correctAnswer: AnswerLetter.A,
+      );
       pos.imagem = 'http://img/$i.png';
       pos.phase = ClassroomPhase.expanded(AnswerLetter.A);
       ctrl.enviarSinal(

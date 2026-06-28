@@ -26,6 +26,10 @@ Future<SimOrganism> _makeOrganism({String id = 'test', StudentStateStore? store}
 }
 
 void main() {
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+  });
+
   test('organismo usa o canonicalStore externo quando fornecido', () async {
     final canonicalStore = StudentStateStore(
       local: MemoryStudentStateLocalStorage(),

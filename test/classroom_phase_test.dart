@@ -163,7 +163,7 @@ void main() {
     await runtime.open(lessonLocalId: 'cyber-class');
 
     runtime.select(AnswerLetter.A);
-    runtime.signal(DecisionSignal.one);
+    await runtime.signal(DecisionSignal.one);
     var snap = runtime.snapshot();
 
     expect(snap.phase.type, ClassroomPhaseType.concluido);
@@ -202,7 +202,7 @@ void main() {
       await runtime.open(lessonLocalId: 'cyber-class');
 
       runtime.select(AnswerLetter.B);
-      runtime.signal(DecisionSignal.one);
+      await runtime.signal(DecisionSignal.one);
 
       final state = store.readState('cyber-class');
       final truth = state.extra['truth'] as Map;
@@ -249,7 +249,7 @@ void main() {
       await runtime.open(lessonLocalId: 'cyber-class');
 
       runtime.select(AnswerLetter.A);
-      runtime.signal(DecisionSignal.one);
+      await runtime.signal(DecisionSignal.one);
 
       final state = store.readState('cyber-class');
       final truth = state.extra['truth'] as Map;
