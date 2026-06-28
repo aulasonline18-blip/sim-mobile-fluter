@@ -2422,52 +2422,64 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
         child: isError
             ? Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Color(0xFFF87171),
-                        size: 48,
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Não consegui preparar agora',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: simDark,
-                        ),
-                      ),
-                      if (error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          error,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    constraints: const BoxConstraints(maxWidth: 448),
+                    decoration: glassDecoration(radius: 18),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Não consegui preparar agora.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: simMuted,
-                            fontSize: 14,
-                            height: 1.5,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: simDark,
+                          ),
+                        ),
+                        if (error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            error,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        if (isCredits)
+                          PrimaryWideButton(
+                            label: t('aula_buy_credits'),
+                            onTap: () => widget.session.openCredits(),
+                          )
+                        else
+                          PrimaryWideButton(
+                            label: 'Tentar novamente',
+                            onTap: () {
+                              _started = false;
+                              _launch();
+                            },
+                          ),
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () => widget.session.openSupport('/cyber/objeto'),
+                          child: const Text(
+                            'Trocar objetivo',
+                            style: TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 32),
-                      if (isCredits)
-                        PrimaryWideButton(
-                          label: t('aula_buy_credits'),
-                          onTap: () => widget.session.openCredits(),
-                        )
-                      else
-                        PrimaryWideButton(
-                          label: 'Tentar novamente',
-                          onTap: () {
-                            _started = false;
-                            _launch();
-                          },
-                        ),
-                    ],
+                    ),
                   ),
                 ),
               )
@@ -2842,7 +2854,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Stack(
+          children: [
+          Column(
           children: [
             AulaTopBar(
               session: session,
@@ -3172,12 +3186,20 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               ),
             ),
           ],
+          ),
+          // FixedBubble — fixed bottom-center overlay while audio plays
+          if (session.audioEnabled && session.audioPlaying)
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: IgnorePointer(child: const _FixedBubble()),
+              ),
+            ),
+          ],
         ),
       ),
-      // FixedBubble — pulsa enquanto áudio toca
-      bottomSheet: (session.audioEnabled && session.audioPlaying)
-          ? const _FixedBubble()
-          : null,
     );
   }
 }
@@ -3292,7 +3314,16 @@ class _FeedbackBoxState extends State<_FeedbackBox>
           decoration: BoxDecoration(
             color: color.withAlpha(20),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withAlpha(100)),
+            border: Border.all(color: color),
+            boxShadow: [
+              BoxShadow(color: color, blurRadius: 0, spreadRadius: 1),
+              BoxShadow(
+                color: color.withAlpha(100),
+                blurRadius: 40,
+                spreadRadius: -10,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -3386,9 +3417,9 @@ class _SinalBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0x1421B2E9),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: simBorder),
+          border: Border.all(color: simDark),
         ),
         child: Column(
           children: [
@@ -3429,18 +3460,19 @@ class _FixedBubble extends StatefulWidget {
 
 class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _anim;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _anim = Tween<double>(begin: 0.85, end: 1.15).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    final curved = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _scale = Tween<double>(begin: 1.0, end: 1.08).animate(curved);
+    _opacity = Tween<double>(begin: 1.0, end: 0.85).animate(curved);
   }
 
   @override
@@ -3451,21 +3483,28 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      color: Colors.transparent,
-      alignment: Alignment.center,
-      child: ScaleTransition(
-        scale: _anim,
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: simDark, width: 1.5),
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => Opacity(
+        opacity: _opacity.value,
+        child: Transform.scale(
+          scale: _scale.value,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: simDark, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: simDark.withAlpha((0.18 * (_controller.value) * 255).round()),
+                  blurRadius: 12,
+                  spreadRadius: (_controller.value * 12).round().toDouble(),
+                ),
+              ],
+            ),
           ),
-          child: const Icon(Icons.volume_up, color: simDark, size: 16),
         ),
       ),
     );
