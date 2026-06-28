@@ -171,7 +171,7 @@ class CloudQueue with WidgetsBindingObserver {
 
   void wireCloudQueueLifecycle() {
     WidgetsBinding.instance.addObserver(this);
-    Future.delayed(const Duration(seconds: 1), () => drainQueue());
+    unawaited(Future.delayed(const Duration(seconds: 1), () => drainQueue()));
   }
 
   @override
@@ -179,7 +179,7 @@ class CloudQueue with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.inactive) {
-      drainQueue(force: true);
+      unawaited(drainQueue(force: true));
     }
   }
 

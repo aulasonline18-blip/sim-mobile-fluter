@@ -348,8 +348,11 @@ class DopamineReadyWindowEngine {
     final state = service.read(lessonLocalId);
     final key = preparedLessonMaterialKey(itemIdx, marker, layer);
     final prepared = state?.readyLessonMaterials[key];
-    if (prepared?['text_status'] == 'ready') return prepared;
-    return null;
+    if (prepared == null || prepared['text_status'] != 'ready') return null;
+    if (prepared['for_itemIdx'] != itemIdx) return null;
+    if (prepared['for_layer'] != layer.value) return null;
+    if ((prepared['for_marker'] as String?) != marker) return null;
+    return prepared;
   }
 
   void _mirrorPreparedLesson({

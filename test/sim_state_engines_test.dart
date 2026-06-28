@@ -64,82 +64,85 @@ void main() {
     expect(decision.proposedLayer, LessonLayer.l3);
   });
 
-  test('LearningDecisionEngine uses mastery truth for reinforcement', () {
-    final state = _state().copyWith(
-      extra: const {
-        'truth': {
-          'item_consolidation_status': {'M1': 'falseMastery'},
-          'mastery_evidence': [
-            {
-              'marker_id': 'M1',
-              'status': 'falseMastery',
-              'needs_reinforcement': true,
-            },
-          ],
+  test(
+    'LearningDecisionEngine ignores mastery truth when useMasteryShortcut is off',
+    () {
+      // useMasteryShortcut = false (D-2): mastery truth no longer drives
+      // the decision engine. Falls through to attempt-based logic.
+      // With no attempts, returns showCurrentLesson (medium confidence).
+      final stateWithFalseMastery = _state().copyWith(
+        extra: const {
+          'truth': {
+            'item_consolidation_status': {'M1': 'falseMastery'},
+            'mastery_evidence': [
+              {
+                'marker_id': 'M1',
+                'status': 'falseMastery',
+                'needs_reinforcement': true,
+              },
+            ],
+          },
         },
-      },
-    );
+      );
+      final stateWithMastered = _state().copyWith(
+        extra: const {
+          'truth': {
+            'item_consolidation_status': {'M1': 'mastered'},
+            'mastery_evidence': [
+              {
+                'marker_id': 'M1',
+                'status': 'mastered',
+                'needs_reinforcement': false,
+              },
+            ],
+          },
+        },
+      );
 
-    final decision = decideNextActionFromState(state);
+      expect(
+        decideNextActionFromState(stateWithFalseMastery).actionType,
+        DecisionActionType.showCurrentLesson,
+      );
+      expect(
+        decideNextActionFromState(stateWithMastered).actionType,
+        DecisionActionType.showCurrentLesson,
+      );
+    },
+  );
 
-    expect(decision.actionType, DecisionActionType.needsReinforcement);
-    expect(decision.proposedMarker, 'M1');
-  });
-
-  test('LearningDecisionEngine uses mastered truth to advance item', () {
-    final state = _state().copyWith(
-      extra: const {
-        'truth': {
-          'item_consolidation_status': {'M1': 'mastered'},
-          'mastery_evidence': [
+  test(
+    'LearningDecisionEngine typed truth and legacy extra both ignored when shortcut off',
+    () {
+      final state = _state().copyWith(
+        truth: const StudentMasteryTruth(
+          itemConsolidationStatus: {'M1': 'mastered'},
+          masteryEvidence: [
             {
               'marker_id': 'M1',
               'status': 'mastered',
               'needs_reinforcement': false,
             },
           ],
-        },
-      },
-    );
-
-    final decision = decideNextActionFromState(state);
-
-    expect(decision.actionType, DecisionActionType.advanceItem);
-    expect(decision.proposedItemIdx, 1);
-    expect(decision.proposedMarker, 'M2');
-  });
-
-  test('LearningDecisionEngine prefers typed truth over legacy extra', () {
-    final state = _state().copyWith(
-      truth: const StudentMasteryTruth(
-        itemConsolidationStatus: {'M1': 'mastered'},
-        masteryEvidence: [
-          {
-            'marker_id': 'M1',
-            'status': 'mastered',
-            'needs_reinforcement': false,
+        ),
+        extra: const {
+          'truth': {
+            'item_consolidation_status': {'M1': 'falseMastery'},
+            'mastery_evidence': [
+              {
+                'marker_id': 'M1',
+                'status': 'falseMastery',
+                'needs_reinforcement': true,
+              },
+            ],
           },
-        ],
-      ),
-      extra: const {
-        'truth': {
-          'item_consolidation_status': {'M1': 'falseMastery'},
-          'mastery_evidence': [
-            {
-              'marker_id': 'M1',
-              'status': 'falseMastery',
-              'needs_reinforcement': true,
-            },
-          ],
         },
-      },
-    );
+      );
 
-    final decision = decideNextActionFromState(state);
+      final decision = decideNextActionFromState(state);
 
-    expect(decision.actionType, DecisionActionType.advanceItem);
-    expect(decision.proposedMarker, 'M2');
-  });
+      expect(decision.actionType, DecisionActionType.showCurrentLesson);
+    },
+  );
 
   test('StudentLessonExecutor applies answer without legacy fallback', () {
     final next = processAnswerWithEngine(
