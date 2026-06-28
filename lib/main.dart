@@ -667,7 +667,7 @@ class LabSession extends ChangeNotifier {
       3 => DecisionSignal.three,
       _ => DecisionSignal.one,
     };
-    organism.lessonRuntimeEngine.signal(signal);
+    unawaited(organism.lessonRuntimeEngine.signal(signal));
     aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
     _persistActiveLessonToCloud();
     notifyListeners();

@@ -41,7 +41,7 @@ class LessonAnswerProgressController {
     position.phase = ClassroomPhase.expanded(letter);
   }
 
-  void enviarSinal({
+  Future<void> enviarSinal({
     required String lessonLocalId,
     required String? topic,
     required LessonPositionState position,
@@ -111,6 +111,8 @@ class LessonAnswerProgressController {
     }
 
     position.phase = ClassroomPhase.processing(letter, signal);
+    // VIII.3: 350ms delay before engine runs so the UI can show "processando" state
+    await Future.delayed(const Duration(milliseconds: 350));
     final currentState = stateService.read(lessonLocalId);
     if (currentState != null && !position.isReviewAtivo) {
       final nextState = processAnswerWithEngine(

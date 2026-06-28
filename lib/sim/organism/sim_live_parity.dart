@@ -157,7 +157,7 @@ class SimLiveParityRunner {
     var snapshot = organism.lessonRuntimeEngine.snapshot();
     final correct = snapshot.conteudo?.correctAnswer ?? AnswerLetter.A;
     organism.lessonRuntimeEngine.select(correct);
-    organism.lessonRuntimeEngine.signal(DecisionSignal.one);
+    await organism.lessonRuntimeEngine.signal(DecisionSignal.one);
     await organism.lessonRuntimeEngine.advance();
 
     final marker = snapshot.itemMarker ?? controller.state.current?.marker;

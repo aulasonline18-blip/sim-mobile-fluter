@@ -125,11 +125,11 @@ class LessonRuntimeEngine {
     answerController.selecionar(position, letter);
   }
 
-  void signal(DecisionSignal signal) {
+  Future<void> signal(DecisionSignal signal) async {
     final position = _position;
     final session = _session;
     if (position == null || session == null) return;
-    answerController.enviarSinal(
+    await answerController.enviarSinal(
       lessonLocalId: session.lessonLocalId,
       topic: session.curriculum?.topic ?? session.onboarding.objetivo,
       position: position,
