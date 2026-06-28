@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'sim/billing/sim_server_billing_clients.dart';
 import 'sim/cloud/sim_server_cloud_functions.dart';
 import 'sim/cloud/supabase_flutter_session_provider.dart';
 import 'sim/cloud/supabase_student_state_cloud_storage.dart';
@@ -12,7 +13,6 @@ import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
-import 'sim/config/app_mode.dart';
 import 'sim/experience/student_experience_types.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_provider.dart';
@@ -84,10 +84,8 @@ class LabSession extends ChangeNotifier {
   LabSession({
     StudentStateStore? canonicalStore,
     this._attachmentClient,
-    AppMode? appMode,
     SharedPreferences? prefs,
-  }) : appMode = appMode ?? AppModeConfig.current,
-       // ignore: prefer_initializing_formals — param nomeado 'prefs' não pode ser 'this._prefs'
+  }) : // ignore: prefer_initializing_formals — param nomeado 'prefs' não pode ser 'this._prefs'
        _prefs = prefs,
        canonicalStore =
            canonicalStore ??
@@ -98,7 +96,6 @@ class LabSession extends ChangeNotifier {
     lessonUiState.addListener(_notifyFromChild);
   }
 
-  final AppMode appMode;
   final SharedPreferences? _prefs;
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
@@ -111,14 +108,13 @@ class LabSession extends ChangeNotifier {
   late final LessonUiState lessonUiState = LessonUiState();
   late final AuthSession authSession = AuthSession(
     navigation: navigationState,
-    onAuthenticated: _hydrateActiveLessonFromCloud,
+    onAuthenticated: _onAuthenticated,
   );
 
   late final SimOrganismProvider simOrganismProvider = SimOrganismProvider(
-    mode: appMode,
     canonicalStore: canonicalStore!,
     aiConfig: _serverConfig(),
-    prefs: _prefs,
+    prefs: _prefs!,
   );
   SimOrganism? _activeOrganism;
   LessonRuntimeSnapshot? aulaSnapshot;
@@ -441,6 +437,24 @@ class LabSession extends ChangeNotifier {
 
   void openCheckoutReturn() => navigationState.openRoute('/checkout/return');
 
+  void _onAuthenticated() {
+    _loadCreditsFromServer();
+    _hydrateActiveLessonFromCloud();
+  }
+
+  void _loadCreditsFromServer() {
+    authSession.credits = 1; // otimista enquanto busca do servidor
+    unawaited(
+      SimServerCreditsClient(config: _serverConfig())
+          .getMyCredits()
+          .then((snapshot) {
+            authSession.credits = snapshot.balance;
+            notifyListeners();
+          })
+          .catchError((_) {}),
+    );
+  }
+
   void _hydrateActiveLessonFromCloud() {
     final id = lessonLocalId;
     if (id == null || id.trim().isEmpty) return;
@@ -694,13 +708,11 @@ class SimMobileApp extends StatefulWidget {
     super.key,
     this.canonicalStore,
     this.initialSession,
-    this.appMode,
     this.prefs,
   });
 
   final StudentStateStore? canonicalStore;
   final LabSession? initialSession;
-  final AppMode? appMode;
   final SharedPreferences? prefs;
 
   @override
@@ -712,7 +724,6 @@ class _SimMobileAppState extends State<SimMobileApp> {
       widget.initialSession ??
       LabSession(
         canonicalStore: widget.canonicalStore,
-        appMode: widget.appMode,
         prefs: widget.prefs,
       );
 

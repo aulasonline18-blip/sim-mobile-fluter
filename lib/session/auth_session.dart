@@ -53,7 +53,6 @@ class AuthSession extends ChangeNotifier {
         user?.userMetadata?['full_name']?.toString() ??
         user?.userMetadata?['name']?.toString();
     if (authed) {
-      credits = credits <= 0 ? 3 : credits;
       if (navigation.route == '/login') {
         navigation.route = safeNavigationReturnTo(navigation.returnTo);
       }
