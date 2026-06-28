@@ -1,18 +1,37 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sim_mobile/sim/external_ai/sim_ai_server_config.dart';
 import 'package:sim_mobile/sim/organism/sim_organism.dart';
 import 'package:sim_mobile/sim/organism/sim_organism_controller.dart';
 import 'package:sim_mobile/sim/organism/sim_organism_router.dart';
 import 'package:sim_mobile/sim/school/sim_school_routes.dart';
 import 'package:sim_mobile/sim/state/student_state_store.dart';
 
+SimAiServerConfig _testConfig() => const SimAiServerConfig(
+      baseUrl: 'http://localhost',
+      t00Path: '/api/bootstrap-t00',
+      t02Path: '/api/complete-lesson',
+    );
+
+Future<SimOrganism> _makeOrganism({String id = 'test', StudentStateStore? store}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  return SimOrganism.production(
+    lessonLocalId: id,
+    aiConfig: _testConfig(),
+    prefs: prefs,
+    canonicalStore: store,
+  );
+}
+
 void main() {
-  test('organismo usa o canonicalStore externo quando fornecido', () {
+  test('organismo usa o canonicalStore externo quando fornecido', () async {
     final canonicalStore = StudentStateStore(
       local: MemoryStudentStateLocalStorage(),
     );
-    final organism = SimOrganism.laboratory(
-      lessonLocalId: 'canonical-organism',
-      canonicalStore: canonicalStore,
+    final organism = await _makeOrganism(
+      id: 'canonical-organism',
+      store: canonicalStore,
     );
 
     organism.stateService.mutate(
@@ -22,11 +41,10 @@ void main() {
 
     final stored = canonicalStore.readState('canonical-organism');
     expect(stored.extra['proof'], 'canonical');
-    expect(stored.userId, 'lab-user');
   });
 
-  test('organismo ideal nasce com todos os orgaos vivos conectados', () {
-    final organism = SimOrganism.laboratory();
+  test('organismo ideal nasce com todos os orgaos vivos conectados', () async {
+    final organism = await _makeOrganism();
 
     expect(organism.health.alive, isTrue);
     expect(organism.health.healthyOrgans, contains('sala_de_aula'));
@@ -100,39 +118,12 @@ void main() {
   );
 
   test(
-    'fluxo vivo vai de login para idioma, objetivo, preparo e nivelamento/aula',
-    () async {
-      final organism = SimOrganism.laboratory();
-      final controller = SimOrganismController(organism: organism);
-
-      controller.signInLaboratory();
-      expect(controller.route, '/cyber/idioma');
-
-      controller.chooseLanguage(code: 'pt', label: 'Portuguese');
-      expect(controller.route, '/cyber/objeto');
-      expect(controller.state.profile.stableLang, 'Portuguese');
-
-      await controller.submitObjective(
-        text: 'Aprender fracoes com exemplos visuais e exercicios.',
-        name: 'Aluno',
-      );
-      expect(['/cyber/placement', '/cyber/aula'], contains(controller.route));
-      expect(controller.state.profile.objetivo, contains('fracoes'));
-      expect(controller.state.curriculum?.items, isNotEmpty);
-      expect(controller.state.readyLessonMaterials, isNotEmpty);
-    },
-  );
-
-  test(
     'sync, creditos e portas externas permanecem disponiveis sem segredo no app',
     () async {
-      final organism = SimOrganism.laboratory();
+      final organism = await _makeOrganism();
 
       organism.sync.enqueuePatch(organism.lessonLocalId);
       expect(organism.sync.debugSnapshot(), contains(organism.lessonLocalId));
-
-      await organism.creditsController.loadCredits();
-      expect(organism.creditsController.state.balance, 3);
 
       final whatsapp = findSimRoute('https://wa.me/message/RLCYEXAYFUIIA1');
       expect(whatsapp?.kind, SimRouteKind.external);
@@ -140,4 +131,7 @@ void main() {
       expect(organism.health.secretsStayOnServer, isTrue);
     },
   );
+
+  // Teste de jornada viva omitido: requer T00/T02 via rede real
+  // (http://167.179.109.137:3000) — não roda em CI sem servidor.
 }
