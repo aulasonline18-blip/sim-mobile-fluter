@@ -224,7 +224,7 @@ StudentLearningState processAnswerWithEngine(
     attempts: [...state.attempts, attempt],
     events: [
       ...state.events,
-      if (amparoEvent != null) amparoEvent,
+      ?amparoEvent,
       event,
     ],
   );

@@ -44,7 +44,6 @@ String? renderQuadraticFunction(Map<String, dynamic> p) {
   final xLbl = labels['x']?.toString() ?? 'x';
   final yLbl = labels['y']?.toString() ?? 'y';
   final vertexLbl = labels['vertex']?.toString() ?? 'vertex';
-  final rootLbl = labels['root']?.toString() ?? 'root';
   final title = labels['title']?.toString() ?? 'y = a·x² + b·x + c';
 
   final body = StringBuffer();

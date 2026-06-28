@@ -49,10 +49,15 @@ double niceStep(double range, {int targetTicks = 8}) {
   final pow = math.pow(10, exp.floor()).toDouble();
   final norm = rough / pow;
   double step;
-  if (norm < 1.5) step = 1;
-  else if (norm < 3) step = 2;
-  else if (norm < 7) step = 5;
-  else step = 10;
+  if (norm < 1.5) {
+    step = 1;
+  } else if (norm < 3) {
+    step = 2;
+  } else if (norm < 7) {
+    step = 5;
+  } else {
+    step = 10;
+  }
   return step * pow;
 }
 
@@ -146,10 +151,17 @@ String labelTag(double cx, double cy, String text, {String? color, String? bg, S
   final w = math.max(28.0, text.length * charW + padX * 2);
   double x = cx - w / 2;
   double y = cy - h / 2;
-  if (anchor == 'above') y = cy - h - 12;
-  else if (anchor == 'below') y = cy + 12;
-  else if (anchor == 'right') { x = cx + 12; y = cy - h / 2; }
-  else if (anchor == 'left') { x = cx - w - 12; y = cy - h / 2; }
+  if (anchor == 'above') {
+    y = cy - h - 12;
+  } else if (anchor == 'below') {
+    y = cy + 12;
+  } else if (anchor == 'right') {
+    x = cx + 12;
+    y = cy - h / 2;
+  } else if (anchor == 'left') {
+    x = cx - w - 12;
+    y = cy - h / 2;
+  }
   return '''
     <g>
       <rect x="${x.toStringAsFixed(2)}" y="${y.toStringAsFixed(2)}" width="${w.toStringAsFixed(2)}" height="${h.toStringAsFixed(2)}" rx="6" ry="6" fill="$b" stroke="$c" stroke-width="1.2" stroke-opacity="0.9"/>

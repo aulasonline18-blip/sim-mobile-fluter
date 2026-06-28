@@ -83,7 +83,7 @@ class _WaveformBar extends StatelessWidget {
           final delay = i / bars;
           return AnimatedBuilder(
             animation: animation,
-            builder: (_, __) {
+            builder: (_, child) {
               final t = speaking
                   ? ((animation.value + delay) % 1.0)
                   : 0.28;

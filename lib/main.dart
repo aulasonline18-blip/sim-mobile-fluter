@@ -29,9 +29,9 @@ import 'sim/state/shared_prefs_state_storage.dart';
 import 'sim/state/student_learning_state.dart';
 import 'sim/state/student_state_store.dart';
 
-const simSupabaseUrl = 'https://qgdlmxobfexoyllvdlee.supabase.co';
+const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 const simSupabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnZGxteG9iZmV4b3lsbHZkbGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODgzNzAsImV4cCI6MjA5NDc2NDM3MH0.szSCxlrkftrovIElV4nbgArJqSsfKOpGy1xvUs4rnL0';
+    'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
 const simApiBaseUrl = String.fromEnvironment(
   'SIM_SERVER_URL',
@@ -42,7 +42,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: simSupabaseUrl,
-    anonKey: simSupabaseAnonKey,
+    publishableKey: simSupabaseAnonKey,
   );
   final prefs = await SharedPreferences.getInstance();
   final stateStorage = SharedPrefsStudentStateLocalStorage(prefs);
