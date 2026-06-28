@@ -2742,9 +2742,48 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   final TextEditingController _doubtController = TextEditingController();
   int _lastHistoryLen = 0;
   bool _lastHasContent = false;
+  bool _doubtSheetOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.session.addListener(_onSessionChange);
+  }
+
+  void _onSessionChange() {
+    final open = widget.session.doubtOpen;
+    if (open && !_doubtSheetOpen) {
+      _doubtSheetOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showDoubtSheet());
+    }
+  }
+
+  void _showDoubtSheet() {
+    if (!mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DoubtInputSheet(
+        controller: _doubtController,
+        onSubmit: (text) {
+          widget.session.toggleDoubt();
+          _doubtController.clear();
+        },
+        onClose: () {
+          widget.session.toggleDoubt();
+          _doubtController.clear();
+        },
+      ),
+    ).whenComplete(() {
+      _doubtSheetOpen = false;
+      if (widget.session.doubtOpen) widget.session.toggleDoubt();
+    });
+  }
 
   @override
   void dispose() {
+    widget.session.removeListener(_onSessionChange);
     _scrollController.dispose();
     _doubtController.dispose();
     super.dispose();
@@ -3129,18 +3168,6 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                   ],
 
-                  // DoubtInputSheet (inline)
-                  if (session.doubtOpen) ...[
-                    const SizedBox(height: 10),
-                    _DoubtInputSheet(
-                      controller: _doubtController,
-                      onSubmit: (_) {
-                        session.toggleDoubt();
-                        _doubtController.clear();
-                      },
-                      onClose: session.toggleDoubt,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -3479,11 +3506,13 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
   @override
   Widget build(BuildContext context) {
     final charCount = widget.controller.text.length;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
