@@ -33,6 +33,7 @@ import 'sim/state/student_state_store.dart';
 import 'sim/ui/sim_i18n.dart';
 import 'sim/ui/widgets/cyber_step_shell.dart';
 import 'sim/ui/widgets/sim_preparation_experience.dart';
+import 'sim/ui/widgets/sim_typewriter.dart';
 
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 const simSupabaseAnonKey =
@@ -2879,9 +2880,14 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             ),
                             const SizedBox(height: 8),
                           ],
-                          Text(
-                            content.explanation,
-                            style: const TextStyle(color: simDark, fontSize: 15, height: 1.45),
+                          SimTypewriter(
+                            text: content.explanation,
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 15,
+                              height: 1.45,
+                            ),
+                            onTick: _scrollToBottom,
                           ),
                           const SizedBox(height: 12),
                           LessonImagePanel(session: session),
