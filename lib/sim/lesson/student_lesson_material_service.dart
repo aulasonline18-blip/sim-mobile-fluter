@@ -19,8 +19,8 @@ class ResolveLessonMaterialInput {
     required this.marker,
     required this.layer,
     required this.params,
-    this.waitBeforeOrderMs = 0,
-    this.waitAfterOrderMs = 0,
+    this.waitBeforeOrderMs = 2000,
+    this.waitAfterOrderMs = 12000,
   });
 
   final String lessonLocalId;

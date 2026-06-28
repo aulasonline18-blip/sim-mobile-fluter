@@ -83,34 +83,37 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
       );
     }
 
-    final mastery = _masteryForMarker(state, currentMarker);
-    if (mastery.mastered) {
-      final nextIdx = itemIdx + 1;
-      if (nextIdx >= total) {
-        return const DecisionResult(
-          actionType: DecisionActionType.showCompletion,
-          reason: 'mastery confirmou dominio no ultimo item',
+    const bool useMasteryShortcut = false;
+    if (useMasteryShortcut) {
+      final mastery = _masteryForMarker(state, currentMarker);
+      if (mastery.mastered) {
+        final nextIdx = itemIdx + 1;
+        if (nextIdx >= total) {
+          return const DecisionResult(
+            actionType: DecisionActionType.showCompletion,
+            reason: 'mastery confirmou dominio no ultimo item',
+            confidence: DecisionConfidence.high,
+          );
+        }
+        return DecisionResult(
+          actionType: DecisionActionType.advanceItem,
+          reason: 'mastery confirmou dominio -> proximo item',
           confidence: DecisionConfidence.high,
+          proposedItemIdx: nextIdx,
+          proposedLayer: LessonLayer.l1,
+          proposedMarker: curriculum.items[nextIdx].marker,
         );
       }
-      return DecisionResult(
-        actionType: DecisionActionType.advanceItem,
-        reason: 'mastery confirmou dominio -> proximo item',
-        confidence: DecisionConfidence.high,
-        proposedItemIdx: nextIdx,
-        proposedLayer: LessonLayer.l1,
-        proposedMarker: curriculum.items[nextIdx].marker,
-      );
-    }
-    if (mastery.needsReinforcement) {
-      return DecisionResult(
-        actionType: DecisionActionType.needsReinforcement,
-        reason: 'mastery indicou reforco necessario',
-        confidence: DecisionConfidence.high,
-        proposedItemIdx: itemIdx,
-        proposedLayer: layer,
-        proposedMarker: currentMarker,
-      );
+      if (mastery.needsReinforcement) {
+        return DecisionResult(
+          actionType: DecisionActionType.needsReinforcement,
+          reason: 'mastery indicou reforco necessario',
+          confidence: DecisionConfidence.high,
+          proposedItemIdx: itemIdx,
+          proposedLayer: layer,
+          proposedMarker: currentMarker,
+        );
+      }
     }
 
     final lastForItem = state.attempts.reversed

@@ -118,9 +118,8 @@ class SimOrganism {
     final localStorage = SharedPrefsStudentStateLocalStorage(prefs);
     final activeStore =
         canonicalStore ?? StudentStateStore(local: localStorage);
-    final StudentLearningStateService stateService = StudentStateStoreAdapter(
-      activeStore,
-    );
+    final stateAdapter = StudentStateStoreAdapter(activeStore);
+    final StudentLearningStateService stateService = stateAdapter;
     stateService.ensure(lessonLocalId: lessonLocalId);
 
     final t00Client = SimServerT00Client(config: aiConfig);
@@ -174,6 +173,15 @@ class SimOrganism {
       enabled: false,
     );
 
+    final audioPreference = AudioPreference();
+    final audioCore = AudioCore(
+      preference: audioPreference,
+      playback: playback ?? PlatformAudioAdapter(),
+      generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
+      stableLangProvider: () =>
+          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
+    );
+
     final lessonMaterialController = LessonMaterialController(
       stateService: stateService,
       materialService: materialService,
@@ -189,6 +197,7 @@ class SimOrganism {
         materialService: materialService,
         materialController: lessonMaterialController,
         store: activeStore,
+        audioCore: audioCore,
       ),
     );
 
@@ -199,19 +208,11 @@ class SimOrganism {
       sessionProvider: sessionProvider,
       cloudFunctions: cloudFunctions,
     );
+    stateAdapter.onWrite = (id) => cloudQueue.enqueueStudentStateSync(lessonLocalId: id);
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
     final curriculumSync = LessonCurriculumSyncEngine(
       stateService: stateService,
-    );
-
-    final audioPreference = AudioPreference();
-    final audioCore = AudioCore(
-      preference: audioPreference,
-      playback: playback ?? PlatformAudioAdapter(),
-      generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
-      stableLangProvider: () =>
-          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
     );
     final mediaService = StudentLessonMediaService(
       audioCore: audioCore,

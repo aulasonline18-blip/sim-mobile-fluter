@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
+
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import 'cloud_functions.dart';
@@ -64,7 +68,7 @@ class MemoryCloudQueueStorage implements CloudQueueStorage {
   }
 }
 
-class CloudQueue {
+class CloudQueue with WidgetsBindingObserver {
   CloudQueue({
     required this.storage,
     required this.stateService,
@@ -83,6 +87,7 @@ class CloudQueue {
   final StudentStateCloudFunctions cloudFunctions;
   final int Function()? now;
   bool draining = false;
+  final Map<String, Timer> _retryTimers = {};
 
   int get _now => now?.call() ?? DateTime.now().millisecondsSinceEpoch;
 
@@ -164,7 +169,19 @@ class CloudQueue {
 
   Map<String, CloudQueueEntry> getQueueSnapshot() => storage.readQueue();
 
-  void wireCloudQueueLifecycle() {}
+  void wireCloudQueueLifecycle() {
+    WidgetsBinding.instance.addObserver(this);
+    Future.delayed(const Duration(seconds: 1), () => drainQueue());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      drainQueue(force: true);
+    }
+  }
 
   void _remove(String lessonLocalId) {
     final bag = storage.readQueue()..remove(lessonLocalId);
@@ -181,6 +198,11 @@ class CloudQueue {
       nextRetryAt: _now + delay,
     );
     storage.writeQueue(bag);
+    _retryTimers[entry.lessonLocalId]?.cancel();
+    _retryTimers[entry.lessonLocalId] = Timer(
+      Duration(milliseconds: delay),
+      () => flushOne(entry.lessonLocalId, force: false),
+    );
   }
 }
 

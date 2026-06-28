@@ -1,12 +1,14 @@
 import '../lesson/dopamine_ready_window_engine.dart';
 import '../lesson/lesson_models.dart';
 import '../lesson/student_lesson_material_service.dart';
+import '../media/audio_core.dart';
 import '../state/learning_decision_engine.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import '../state/student_lesson_executor.dart';
 import '../state/mastery_truth_engine.dart';
 import '../state/student_state_store.dart';
+import 'amparo_controller.dart';
 import 'classroom_models.dart';
 import 'lesson_answer_feedback.dart';
 import 'lesson_material_controller.dart';
@@ -18,6 +20,7 @@ class LessonAnswerProgressController {
     required this.materialService,
     required this.materialController,
     this.store,
+    this.audioCore,
     MasteryTruthEngine? truthEngine,
   }) : truthEngine = truthEngine ?? const MasteryTruthEngine();
 
@@ -25,13 +28,16 @@ class LessonAnswerProgressController {
   final StudentLessonMaterialService materialService;
   final LessonMaterialController materialController;
   final StudentStateStore? store;
+  final AudioCore? audioCore;
   final MasteryTruthEngine truthEngine;
+  final AmparoController _amparo = const AmparoController();
 
   void selecionar(LessonPositionState position, AnswerLetter letter) {
     if (position.phase.type != ClassroomPhaseType.lendo &&
         position.phase.type != ClassroomPhaseType.expandida) {
       return;
     }
+    audioCore?.stop();
     position.phase = ClassroomPhase.expanded(letter);
   }
 
@@ -52,6 +58,7 @@ class LessonAnswerProgressController {
       return;
     }
 
+    audioCore?.stop();
     final letter = phase.letter!;
     final correct = letter == content.correctAnswer;
     final questionId = [
@@ -113,8 +120,16 @@ class LessonAnswerProgressController {
         ),
       );
       final savedState = stateService.write(nextState);
-      final evidence = truthEngine.evaluateMarker(savedState, item.marker);
-      final truthState = truthEngine.writeTruthToState(savedState, evidence);
+      final amparoState = _amparo.applyIfNeeded(
+        state: savedState,
+        correct: correct,
+        ts: DateTime.now().millisecondsSinceEpoch,
+      );
+      final savedAfterAmparo = amparoState != savedState
+          ? stateService.write(amparoState)
+          : savedState;
+      final evidence = truthEngine.evaluateMarker(savedAfterAmparo, item.marker);
+      final truthState = truthEngine.writeTruthToState(savedAfterAmparo, evidence);
       final savedTruthState = stateService.write(truthState);
       _appendMasteryEvaluatedEvent(
         lessonLocalId: lessonLocalId,
@@ -356,6 +371,7 @@ class LessonAnswerProgressController {
     required String academic,
   }) async {
     if (position.phase.type != ClassroomPhaseType.concluido) return;
+    audioCore?.stop();
     final item = position.itemAtivo;
     if (item == null) {
       position.phase = const ClassroomPhase.doneEnd();

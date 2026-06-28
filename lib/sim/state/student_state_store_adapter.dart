@@ -8,9 +8,10 @@ import 'student_state_store.dart';
 /// Permite migrar gradualmente os m?dulos existentes sem alterar suas
 /// assinaturas enquanto o StudentStateStore passa a ser a fonte can?nica.
 class StudentStateStoreAdapter implements StudentLearningStateService {
-  StudentStateStoreAdapter(this._store);
+  StudentStateStoreAdapter(this._store, {this.onWrite});
 
   final StudentStateStore _store;
+  void Function(String lessonLocalId)? onWrite;
 
   @override
   StudentLearningState? read(String lessonLocalId) {
@@ -35,7 +36,9 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
 
   @override
   StudentLearningState write(StudentLearningState state) {
-    return _store.writeState(state);
+    final saved = _store.writeState(state);
+    onWrite?.call(saved.lessonLocalId);
+    return saved;
   }
 
   @override

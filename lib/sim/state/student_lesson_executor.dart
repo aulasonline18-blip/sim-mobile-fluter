@@ -154,18 +154,10 @@ StudentLearningState processAnswerWithEngine(
   );
 
   final newErros = correct ? progress.erros : progress.erros + 1;
-  const amparoThreshold = 3;
-  final shouldTriggerAmparo = !correct && newErros >= amparoThreshold;
-  final newAmparoLvl = shouldTriggerAmparo
-      ? (progress.amparoLvl + 1).clamp(1, 3)
-      : progress.amparoLvl;
 
   final progressBeforeDecision = correct
       ? progress
-      : progress.copyWith(
-          erros: shouldTriggerAmparo ? 0 : newErros,
-          amparoLvl: newAmparoLvl,
-        );
+      : progress.copyWith(erros: newErros);
   final synth = state.copyWith(
     progress: progressBeforeDecision,
     attempts: [...state.attempts, attempt],
@@ -179,19 +171,6 @@ StudentLearningState processAnswerWithEngine(
     totalItems: curriculum.items.length,
     marker: item.marker,
   );
-
-  final amparoEvent = shouldTriggerAmparo
-      ? StudentLearningEvent(
-          type: 'AMPARO_TRIGGERED',
-          ts: ts,
-          payload: {
-            'marker': item.marker,
-            'layer': progress.layer.value,
-            'amparoLvl': newAmparoLvl,
-            'errosAtTrigger': newErros,
-          },
-        )
-      : null;
 
   final event = StudentLearningEvent(
     type: applied.applied
@@ -224,7 +203,6 @@ StudentLearningState processAnswerWithEngine(
     attempts: [...state.attempts, attempt],
     events: [
       ...state.events,
-      ?amparoEvent,
       event,
     ],
   );
