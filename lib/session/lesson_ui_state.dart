@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../sim/auxiliary/aux_room_models.dart';
 
 class LessonUiState extends ChangeNotifier {
   String? lessonLocalId;
@@ -8,6 +9,48 @@ class LessonUiState extends ChangeNotifier {
   bool placementDone = false;
   bool doubtOpen = false;
   bool audioEnabled = true;
+
+  ReviewRoomView? reviewRoom;
+  RecoveryRoomView? recoveryRoom;
+
+  void openReviewRoom() {
+    reviewRoom = const ReviewRoomView(
+      status: ReviewRoomStatus.choose,
+      count: 5,
+      queue: [],
+      idx: 0,
+    );
+    notifyListeners();
+  }
+
+  void closeReviewRoom() {
+    reviewRoom = null;
+    notifyListeners();
+  }
+
+  void setReviewRoom(ReviewRoomView view) {
+    reviewRoom = view;
+    notifyListeners();
+  }
+
+  void openRecoveryRoom() {
+    recoveryRoom = const RecoveryRoomView(
+      status: RecoveryRoomStatus.intro,
+      queue: [],
+      idx: 0,
+    );
+    notifyListeners();
+  }
+
+  void closeRecoveryRoom() {
+    recoveryRoom = null;
+    notifyListeners();
+  }
+
+  void setRecoveryRoom(RecoveryRoomView view) {
+    recoveryRoom = view;
+    notifyListeners();
+  }
   bool audioPlaying = false;
   bool audioLoading = false;
   String? audioError;
