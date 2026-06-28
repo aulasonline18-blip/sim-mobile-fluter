@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../modules/pedagogical_module_contracts.dart';
@@ -31,7 +33,6 @@ class StudentExperienceT00Adapter {
 
     final partialItems = <CurriculumItem>[];
     final bootStartedAt = DateTime.now().millisecondsSinceEpoch;
-    FirstCurriculumItem? first;
 
     args.onStage?.call(StudentExperienceRouteStage.profile);
     writeStudentExperienceSnapshot(
@@ -67,6 +68,28 @@ class StudentExperienceT00Adapter {
       );
     });
 
+    // Completer liberado no primeiro item; stream T00 continua em background.
+    final completer = Completer<FirstCurriculumItem>();
+    unawaited(
+      _drainT00Stream(
+        args: args,
+        topic: topic,
+        bootStartedAt: bootStartedAt,
+        partialItems: partialItems,
+        completer: completer,
+      ),
+    );
+    return completer.future;
+  }
+
+  Future<void> _drainT00Stream({
+    required StudentExperienceArgs args,
+    required String topic,
+    required int bootStartedAt,
+    required List<CurriculumItem> partialItems,
+    required Completer<FirstCurriculumItem> completer,
+  }) async {
+    FirstCurriculumItem? first;
     try {
       await for (final chunk in client.runBootstrap(
         T00BootstrapRequest(
@@ -96,6 +119,7 @@ class StudentExperienceT00Adapter {
               {'hasFichaForNext': chunk.payload['ficha_for_next'] != null},
             );
             break;
+
           case 't00_item_partial':
           case 't01_item_partial':
             final raw = chunk.payload['item'];
@@ -109,9 +133,11 @@ class StudentExperienceT00Adapter {
                 bootStartedAt: bootStartedAt,
               );
               if (result != null && result.count == 1) {
-                final curriculum = service.read(args.lessonLocalId)?.curriculum;
+                final curriculum =
+                    service.read(args.lessonLocalId)?.curriculum;
                 first = curriculum == null ? null : _firstItemFrom(curriculum);
-                debugPrint('[SIM] T00_FIRST_ITEM_RECEIVED marker=${result.marker}');
+                debugPrint(
+                    '[SIM] T00_FIRST_ITEM_RECEIVED marker=${result.marker}');
                 args.onStage?.call(StudentExperienceRouteStage.curriculum);
                 writeStudentExperienceSnapshot(
                   service,
@@ -126,12 +152,16 @@ class StudentExperienceT00Adapter {
                   StudentExperienceEventType.t00FirstItemReceived,
                   {'marker': result.marker},
                 );
+                // Libera o fast-path; T00 continua em background.
+                if (!completer.isCompleted && first != null) {
+                  completer.complete(first);
+                }
               }
             }
             break;
+
           case 't00_final':
           case 't01_final':
-          case 'done':
             final rawCurriculum =
                 chunk.payload['curriculo'] ?? chunk.payload['curriculum'];
             final finalItems = normalizeCurriculumItems(rawCurriculum);
@@ -151,7 +181,8 @@ class StudentExperienceT00Adapter {
                     expansionStatus: CurriculumStatusValue.expanded,
                     updatedAt: DateTime.now().toIso8601String(),
                     objectiveKey: normalizeStudyKey(topic),
-                    initialCount: partialItems.isEmpty ? 1 : partialItems.length,
+                    initialCount:
+                        partialItems.isEmpty ? 1 : partialItems.length,
                     totalCount: finalItems.length,
                   ),
                   profile: state.profile.copyWith(
@@ -170,18 +201,34 @@ class StudentExperienceT00Adapter {
               );
               first ??= _firstItemFrom(curriculum);
             }
+            if (!completer.isCompleted && first != null) {
+              completer.complete(first);
+            }
             break;
+
+          case 'done':
+            // Sinaliza fim do stream; sem payload de currículo.
+            if (!completer.isCompleted && first != null) {
+              completer.complete(first);
+            }
+            break;
+
           case 'fatal':
             throw Exception(chunk.payload['error'] ?? 'erro fatal');
         }
-
-        if (first != null) return first;
       }
 
-      final fallback = service.read(args.lessonLocalId)?.curriculum;
-      final fallbackFirst = fallback == null ? null : _firstItemFrom(fallback);
-      if (fallbackFirst != null) return fallbackFirst;
-      throw Exception('curriculo sem primeiro item');
+      // Stream encerrou — se ainda não completamos, tenta fallback.
+      if (!completer.isCompleted) {
+        final fallback = service.read(args.lessonLocalId)?.curriculum;
+        final fallbackFirst =
+            fallback == null ? null : _firstItemFrom(fallback);
+        if (fallbackFirst != null) {
+          completer.complete(fallbackFirst);
+        } else {
+          completer.completeError(Exception('curriculo sem primeiro item'));
+        }
+      }
     } catch (error) {
       service.mutate(args.lessonLocalId, (state) {
         return state.copyWith(
@@ -193,27 +240,31 @@ class StudentExperienceT00Adapter {
           ),
         );
       });
-      if (partialItems.isNotEmpty) {
-        final partial = service.read(args.lessonLocalId)?.curriculum;
-        final partialFirst = partial == null ? null : _firstItemFrom(partial);
-        if (partialFirst != null) {
-          writeStudentExperienceSnapshot(
-            service,
-            lessonLocalId: args.lessonLocalId,
-            state: StudentExperienceState.providerFailedAfterPartial,
-            startMarker: partialFirst.marker,
-            startItemIndex: partialFirst.itemIndex,
-          );
-          publishStudentExperienceEvent(
-            service,
-            args.lessonLocalId,
-            StudentExperienceEventType.t00ProviderFailedAfterPartial,
-            {'items': partialItems.length, 'error': error.toString()},
-          );
-          return partialFirst;
+      if (!completer.isCompleted) {
+        if (partialItems.isNotEmpty) {
+          final partial = service.read(args.lessonLocalId)?.curriculum;
+          final partialFirst =
+              partial == null ? null : _firstItemFrom(partial);
+          if (partialFirst != null) {
+            writeStudentExperienceSnapshot(
+              service,
+              lessonLocalId: args.lessonLocalId,
+              state: StudentExperienceState.providerFailedAfterPartial,
+              startMarker: partialFirst.marker,
+              startItemIndex: partialFirst.itemIndex,
+            );
+            publishStudentExperienceEvent(
+              service,
+              args.lessonLocalId,
+              StudentExperienceEventType.t00ProviderFailedAfterPartial,
+              {'items': partialItems.length, 'error': error.toString()},
+            );
+            completer.complete(partialFirst);
+            return;
+          }
         }
+        completer.completeError(error);
       }
-      rethrow;
     }
   }
 

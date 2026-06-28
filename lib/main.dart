@@ -8,6 +8,7 @@ import 'sim/billing/sim_server_billing_clients.dart';
 import 'sim/cloud/sim_server_cloud_functions.dart';
 import 'sim/cloud/supabase_flutter_session_provider.dart';
 import 'sim/cloud/supabase_student_state_cloud_storage.dart';
+import 'sim/config/sim_environment.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
 import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
@@ -33,10 +34,7 @@ const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 const simSupabaseAnonKey =
     'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
-const simApiBaseUrl = String.fromEnvironment(
-  'SIM_SERVER_URL',
-  defaultValue: 'http://167.179.109.137:3000',
-);
+const simApiBaseUrl = SimEnvironment.apiBaseUrl;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

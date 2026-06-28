@@ -44,14 +44,10 @@ class StudentExperienceT02Adapter {
       },
     );
 
-    // Mesclar ficha_for_next do perfil no envelope pedagógico.
-    // persistT00ProfileEvent escreve ficha_for_next diretamente no state.profile,
-    // então lemos dali para garantir que os campos cheguem ao T02.
     final stateProfile = service.read(args.lessonLocalId)?.profile.toJson() ?? {};
     final mergedOnboarding = <String, dynamic>{
       ...stateProfile,
       ...args.onboarding,
-      // Garantir que guidance_for_T02 do perfil não seja sobrescrito pelo onboarding vazio
       if (stateProfile['guidance_for_T02'] != null &&
           args.onboarding['guidance_for_T02'] == null)
         'guidance_for_T02': stateProfile['guidance_for_T02'],

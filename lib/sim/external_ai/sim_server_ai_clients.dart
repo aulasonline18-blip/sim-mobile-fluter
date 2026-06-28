@@ -37,7 +37,7 @@ class SimServerT00Client implements T00BootstrapClient {
     };
     final body = {'ficha': ficha, 'timeoutMs': timeout.inMilliseconds};
     await for (final line in transport.postEventStream(
-      config.uri(simT00BootstrapPath),
+      config.uri(config.t00Path ?? simT00BootstrapPath),
       headers: await config.streamHeaders(),
       body: body,
       timeout: timeout,
