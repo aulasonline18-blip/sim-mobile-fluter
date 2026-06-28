@@ -2810,23 +2810,60 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                   // Active content card
                   if (session.aulaRuntimeLoading && content == null) ...[
                     const SizedBox(height: 20),
-                    const StatusLine(
-                      icon: Icons.auto_awesome_outlined,
-                      text: 'Preparando sua aula...',
-                      loading: true,
+                    // AUL-3: Loading phase — glass-soft card
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: simBorder),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0F111827),
+                            blurRadius: 16,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: simDark,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            t('preparing_lesson'),
+                            style: const TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (session.aulaRuntimeError != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              session.aulaRuntimeError!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SecondaryWideButton(
+                              label: t('aula_try_again_2'),
+                              onTap: () => unawaited(session.openAulaRuntime()),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                    if (session.aulaRuntimeError != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        session.aulaRuntimeError!,
-                        style: const TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 12),
-                      SecondaryWideButton(
-                        label: 'Tentar novamente',
-                        onTap: () => unawaited(session.openAulaRuntime()),
-                      ),
-                    ],
                   ] else if (content != null) ...[
                     SimCard(
                       child: Column(
