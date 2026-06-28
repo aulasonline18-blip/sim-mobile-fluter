@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -248,12 +249,29 @@ class LabSession extends ChangeNotifier {
 
   Future<void> signOutReal() => authSession.signOutReal();
 
+  Future<void> _warmUpServer() async {
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 8);
+      final req = await client
+          .getUrl(Uri.parse('$simApiBaseUrl/health'))
+          .timeout(const Duration(seconds: 8));
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      await res.drain<void>();
+      client.close();
+    } catch (_) {}
+  }
+
   void start() {
     if (!authed) {
       goLogin(target: '/');
       return;
     }
-    if (credits <= 0) return;
+    if (credits <= 0) {
+      openCredits();
+      return;
+    }
+    unawaited(_warmUpServer());
     entryForm.resetLanguage();
     navigationState.openRoute('/cyber/idioma');
   }

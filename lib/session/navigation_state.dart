@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 String safeNavigationReturnTo(String raw) {
   if (!raw.startsWith('/')) return '/';
@@ -35,5 +36,9 @@ class NavigationState extends ChangeNotifier {
   void openExternalDoor(String url) {
     externalDoorOpened = url;
     notifyListeners();
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }

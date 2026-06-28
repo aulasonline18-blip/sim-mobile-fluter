@@ -196,6 +196,12 @@ class DopamineReadyWindowEngine {
             firstItemMarker: slot.marker,
             firstLessonMaterialKey: firstLessonMaterialKey(slot.marker),
           );
+          _event(lessonLocalId, 'DOPAMINE_SLOT_FAILED', {
+            'source': source,
+            'slot': slot.slot,
+            'error': error.toString(),
+          });
+          rethrow;
         }
         _event(lessonLocalId, 'DOPAMINE_SLOT_FAILED', {
           'source': source,
