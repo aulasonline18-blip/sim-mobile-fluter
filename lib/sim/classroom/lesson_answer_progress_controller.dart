@@ -47,7 +47,7 @@ class LessonAnswerProgressController {
     required LessonPositionState position,
     required DecisionSignal signal,
     required List<PlannedItem> baseItems,
-  }) {
+  }) async {
     final phase = position.phase;
     final content = position.conteudo;
     final item = position.itemAtivo;
