@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 typedef AudioPreferenceListener = void Function(bool enabled);
 
 const String audioPreferenceStorageKey = 'sim-audio-enabled-v1';
@@ -17,6 +19,26 @@ class MemoryAudioPreferenceStorage implements AudioPreferenceStorage {
   @override
   void write(String key, String value) {
     _values[key] = value;
+  }
+}
+
+/// SharedPreferences-backed storage — persists across app restarts.
+class SharedPrefsAudioPreferenceStorage implements AudioPreferenceStorage {
+  SharedPrefsAudioPreferenceStorage(this._prefs);
+
+  final SharedPreferences _prefs;
+
+  @override
+  String? read(String key) => _prefs.getString(key);
+
+  @override
+  void write(String key, String value) {
+    _prefs.setString(key, value);
+  }
+
+  static Future<SharedPrefsAudioPreferenceStorage> create() async {
+    final prefs = await SharedPreferences.getInstance();
+    return SharedPrefsAudioPreferenceStorage(prefs);
   }
 }
 

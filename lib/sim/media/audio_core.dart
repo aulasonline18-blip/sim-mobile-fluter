@@ -5,7 +5,7 @@ class SpeakOptions {
     this.lang,
     this.rate = 1,
     this.lessonKey,
-    this.voice = 'cedar',
+    this.voice = 'Charon',
     this.onStart,
     this.onEnd,
   });

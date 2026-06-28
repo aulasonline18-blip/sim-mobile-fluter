@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../lesson/lesson_models.dart';
 import '../state/student_learning_state.dart';
 import 'audio_preference.dart';
@@ -13,7 +14,12 @@ class LessonAudioController {
   final String lessonLocalId;
   final StudentLessonMediaService mediaService;
   final AudioPreference preference;
-  bool falando = false;
+
+  /// Reactive speaking state — UI can listen via ValueListenableBuilder.
+  final ValueNotifier<bool> falandoNotifier = ValueNotifier(false);
+
+  bool get falando => falandoNotifier.value;
+  set falando(bool v) => falandoNotifier.value = v;
 
   Future<bool> playConteudo(
     LessonContent? conteudo,
