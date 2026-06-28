@@ -3337,6 +3337,8 @@ class AuxRoomCard extends StatelessWidget {
   }
 }
 
+// AUL-1: Fixed header — 36×36 hamburger with 3px bars, badge 10px mono,
+// audio toggle, Revisão button. Height 64, white bg, 1px bottom border.
 class AulaTopBar extends StatelessWidget {
   const AulaTopBar({required this.session, this.doubtEnabled = false, super.key});
 
@@ -3345,48 +3347,141 @@ class AulaTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = session.stableLang ?? 'SIM';
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: simBorder)),
+        border: const Border(bottom: BorderSide(color: simBorder, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF111827).withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          RoundIconButton(
-            icon: Icons.menu,
-            tooltip: 'Menu',
-            onTap: () => showAulaMenu(context, session),
-          ),
+          // 36×36 hamburger with 3px bars + glow
+          _HamburgerBtn(onTap: () => showAulaMenu(context, session)),
           const SizedBox(width: 8),
-          Expanded(
+          // Badge: language label, 10px mono
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: simLight,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: simBorder),
+            ),
             child: Text(
-              session.stableLang ?? 'SIM',
-              style: const TextStyle(
-                color: simDark,
-                fontSize: 16,
+              lang.toUpperCase(),
+              style: TextStyle(
+                fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+                fontSize: 10,
                 fontWeight: FontWeight.w700,
+                color: simMuted,
+                letterSpacing: 0.5,
               ),
             ),
           ),
-          Opacity(
-            opacity: doubtEnabled ? 1.0 : 0.35,
-            child: RoundIconButton(
-              icon: Icons.help_outline,
-              tooltip: 'Dúvida',
-              onTap: doubtEnabled ? session.toggleDoubt : () {},
+          const Spacer(),
+          // Revisão button
+          if (doubtEnabled) ...[
+            GestureDetector(
+              onTap: session.toggleDoubt,
+              child: Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: simBorder),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  t('aux_review_button'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: simDark,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          // Audio toggle
+          GestureDetector(
+            onTap: session.toggleAudio,
+            child: SizedBox(
+              width: 36,
+              height: 36,
+              child: Center(
+                child: Icon(
+                  session.audioEnabled
+                      ? Icons.volume_up_outlined
+                      : Icons.volume_off_outlined,
+                  color: simDark,
+                  size: 22,
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          RoundIconButton(
-            icon: session.audioEnabled
-                ? Icons.volume_up_outlined
-                : Icons.volume_off_outlined,
-            tooltip: 'Áudio',
-            onTap: session.toggleAudio,
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _HamburgerBtn extends StatelessWidget {
+  const _HamburgerBtn({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: simBorder),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14111827),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            for (int i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(height: 4),
+              Container(
+                width: 18,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: simDark,
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF111827).withOpacity(0.15),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
