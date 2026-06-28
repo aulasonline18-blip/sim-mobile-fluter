@@ -5,7 +5,7 @@ class AppModeConfig {
 
   static const String raw = String.fromEnvironment(
     'FLUTTER_APP_MODE',
-    defaultValue: 'laboratory',
+    defaultValue: 'production',
   );
 
   static AppMode get current => parse(raw);

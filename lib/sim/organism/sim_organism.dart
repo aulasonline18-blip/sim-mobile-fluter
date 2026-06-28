@@ -42,6 +42,7 @@ import '../cloud/supabase_flutter_session_provider.dart';
 import '../external_ai/sim_ai_server_config.dart';
 import '../external_ai/sim_server_ai_clients.dart';
 import '../state/shared_prefs_state_storage.dart';
+import '../media/platform_audio_adapter.dart';
 import 'sim_laboratory_adapters.dart';
 import 'sim_organism_health.dart';
 import 'sim_organism_router.dart';
@@ -363,7 +364,7 @@ class SimOrganism {
     final audioPreference = AudioPreference();
     final audioCore = AudioCore(
       preference: audioPreference,
-      playback: NoopAudioPlaybackAdapter(),
+      playback: PlatformAudioAdapter(),
       generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
       stableLangProvider: () =>
           stateService.read(lessonLocalId)?.profile.stableLang ?? '',
