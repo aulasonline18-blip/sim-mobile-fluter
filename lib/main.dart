@@ -949,86 +949,45 @@ class PortalScreen extends StatelessWidget {
   }
 
   void _showLabDrawer(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Menu',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: simDark,
-              ),
-            ),
-            const SizedBox(height: 10),
-            _PortalDrawerBody(session: session),
-          ],
-        ),
-      ),
-    );
+    _showSimDrawer(context, session: session, body: (ctx) => _PortalDrawerBody(session: session, ctx: ctx));
   }
 }
 
 class _PortalDrawerBody extends StatelessWidget {
-  const _PortalDrawerBody({required this.session});
+  const _PortalDrawerBody({required this.session, required this.ctx});
 
   final LabSession session;
+  final BuildContext ctx;
 
   @override
   Widget build(BuildContext context) {
+    void close() => Navigator.of(ctx).pop();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         MenuLine(
           label: 'Abrir aula',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/cyber/aula');
-          },
+          onTap: () { close(); session.openSupport('/cyber/aula'); },
         ),
         MenuLine(
-          label: 'Créditos',
-          onTap: () {
-            Navigator.pop(context);
-            session.openCredits();
-          },
+          label: t('recarregar_creditos'),
+          onTap: () { close(); session.openCredits(); },
         ),
         MenuLine(
           label: 'Painel do Pai',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/pai');
-          },
+          onTap: () { close(); session.openSupport('/pai'); },
         ),
         MenuLine(
           label: 'Privacidade',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/privacidade');
-          },
+          onTap: () { close(); session.openSupport('/privacidade'); },
         ),
         MenuLine(
           label: 'Termos',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/termos');
-          },
+          onTap: () { close(); session.openSupport('/termos'); },
         ),
         MenuLine(
           label: 'Solicitar exclusão da conta',
-          onTap: () {
-            Navigator.pop(context);
-            session.openSupport('/conta/deletar');
-          },
+          onTap: () { close(); session.openSupport('/conta/deletar'); },
         ),
       ],
     );
@@ -3953,55 +3912,101 @@ class AnswerButton extends StatelessWidget {
 }
 
 void showAulaMenu(BuildContext context, LabSession session) {
-  showModalBottomSheet<void>(
+  _showSimDrawer(context, session: session, body: (ctx) {
+    void close() => Navigator.of(ctx).pop();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MenuLine(label: t('recarregar_creditos'), onTap: () { close(); session.openCredits(); }),
+        MenuLine(label: 'Painel do Pai',          onTap: () { close(); session.openSupport('/pai'); }),
+        MenuLine(label: 'Privacidade',            onTap: () { close(); session.openSupport('/privacidade'); }),
+        MenuLine(label: 'Termos',                 onTap: () { close(); session.openSupport('/termos'); }),
+        MenuLine(label: 'Solicitar exclusão da conta', onTap: () { close(); session.openSupport('/conta/deletar'); }),
+      ],
+    );
+  });
+}
+
+// DR-1..DR-6: Left-side panel drawer (88vw max 360, bg #F0F0F0)
+void _showSimDrawer(
+  BuildContext context, {
+  required LabSession session,
+  required Widget Function(BuildContext ctx) body,
+}) {
+  showGeneralDialog<void>(
     context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-    ),
-    builder: (context) => Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MenuLine(
-            label: 'Recarregar créditos',
-            onTap: () {
-              Navigator.pop(context);
-              session.openCredits();
-            },
+    barrierDismissible: true,
+    barrierLabel: 'menu',
+    barrierColor: Colors.black.withOpacity(0.35),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (ctx, anim1, anim2) {
+      final sw = MediaQuery.of(ctx).size.width;
+      final drawerW = (sw * 0.88).clamp(0.0, 360.0);
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: AnimatedBuilder(
+          animation: anim1,
+          builder: (_, child) => Transform.translate(
+            offset: Offset(-drawerW * (1 - anim1.value), 0),
+            child: child,
           ),
-          MenuLine(
-            label: 'Painel do Pai',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/pai');
-            },
+          child: Material(
+            color: const Color(0xFFF0F0F0),
+            child: SizedBox(
+              width: drawerW,
+              height: double.infinity,
+              child: SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header: MENU label + close
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 16, 4),
+                      child: Row(
+                        children: [
+                          Text(
+                            t('menu'),
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => Navigator.of(ctx).pop(),
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                '✕',
+                                style: TextStyle(
+                                  color: simDark,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(color: Color(0xFFD1D5DB), height: 1),
+                    const SizedBox(height: 8),
+                    // Body content
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: body(ctx),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          MenuLine(
-            label: 'Privacidade',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/privacidade');
-            },
-          ),
-          MenuLine(
-            label: 'Termos',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/termos');
-            },
-          ),
-          MenuLine(
-            label: 'Solicitar exclusão da conta',
-            onTap: () {
-              Navigator.pop(context);
-              session.openSupport('/conta/deletar');
-            },
-          ),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
+    transitionBuilder: (ctx, anim1, anim2, child) => child,
   );
 }
 
