@@ -9,11 +9,13 @@ class AmparoController {
     required StudentLearningState state,
     required bool correct,
     required int ts,
+    int signalThreeCount = 0,
   }) {
-    if (correct) return state;
     final progress = state.progress;
     if (progress == null) return state;
-    if (progress.erros < amparoThreshold) return state;
+    final shouldTriggerByErrors = !correct && progress.erros >= amparoThreshold;
+    final shouldTriggerBySignal = signalThreeCount >= amparoThreshold;
+    if (!shouldTriggerByErrors && !shouldTriggerBySignal) return state;
 
     final curriculum = state.curriculum;
     final idx = progress.itemIdx;
@@ -29,6 +31,8 @@ class AmparoController {
         'layer': progress.layer.value,
         'amparoLvl': newAmparoLvl,
         'errosAtTrigger': progress.erros,
+        'signalThreeCount': signalThreeCount,
+        'trigger': shouldTriggerBySignal ? 'signal_tracker' : 'errors',
       },
     );
     return state.copyWith(

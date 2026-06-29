@@ -31,18 +31,20 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
     _shadowDecisionRunner = runner;
   }
 
-  void _notifyWrite(String lessonLocalId) {
+  void _notifyWrite(String lessonLocalId, {bool scheduleShadow = true}) {
     final state = _store.readState(lessonLocalId);
     if (_isDeleted(state)) return;
 
-    _shadowThrottle[lessonLocalId]?.cancel();
-    _shadowThrottle[lessonLocalId] = Timer(
-      const Duration(milliseconds: 250),
-      () {
-        _shadowThrottle.remove(lessonLocalId);
-        _shadowDecisionRunner?.call(lessonLocalId);
-      },
-    );
+    if (scheduleShadow) {
+      _shadowThrottle[lessonLocalId]?.cancel();
+      _shadowThrottle[lessonLocalId] = Timer(
+        const Duration(milliseconds: 250),
+        () {
+          _shadowThrottle.remove(lessonLocalId);
+          _shadowDecisionRunner?.call(lessonLocalId);
+        },
+      );
+    }
 
     for (final cb in List.of(_writeListeners)) {
       try {
@@ -73,22 +75,27 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
   }
 
   @override
-  StudentLearningState write(StudentLearningState state) {
+  StudentLearningState write(
+    StudentLearningState state, {
+    bool scheduleShadow = true,
+  }) {
     _knownLessonIds.add(state.lessonLocalId);
     final saved = _store.writeState(state);
     onWrite?.call(saved.lessonLocalId);
-    _notifyWrite(saved.lessonLocalId);
+    _notifyWrite(saved.lessonLocalId, scheduleShadow: scheduleShadow);
     return saved;
   }
 
   @override
   StudentLearningState mutate(
     String lessonLocalId,
-    StudentStateMutator mutator,
-  ) {
+    StudentStateMutator mutator, {
+    bool scheduleShadow = true,
+  }) {
     _knownLessonIds.add(lessonLocalId);
     final saved = _store.patchState(lessonLocalId, mutator);
-    _notifyWrite(lessonLocalId);
+    onWrite?.call(saved.lessonLocalId);
+    _notifyWrite(lessonLocalId, scheduleShadow: scheduleShadow);
     return saved;
   }
 
@@ -97,15 +104,30 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
     String lessonLocalId,
     StudentLearningEvent event, {
     int maxEvents = 500,
+    bool scheduleShadow = true,
   }) {
-    _store.appendEvent(
-      lessonLocalId: lessonLocalId,
-      type: event.type,
-      payload: event.payload,
-      source: 'legacy-adapter',
-      userId: _store.readState(lessonLocalId).userId,
+    return appendEvents(
+      lessonLocalId,
+      [event],
+      maxEvents: maxEvents,
+      scheduleShadow: scheduleShadow,
     );
-    return _trimLegacyEventsIfNeeded(lessonLocalId, maxEvents);
+  }
+
+  @override
+  StudentLearningState appendEvents(
+    String lessonLocalId,
+    List<StudentLearningEvent> events, {
+    int maxEvents = 500,
+    bool scheduleShadow = true,
+  }) {
+    return mutate(lessonLocalId, (state) {
+      final nextEvents = [...state.events, ...events];
+      final trimmed = nextEvents.length > maxEvents
+          ? nextEvents.sublist(nextEvents.length - maxEvents)
+          : nextEvents;
+      return state.copyWith(events: trimmed);
+    }, scheduleShadow: scheduleShadow);
   }
 
   @override
@@ -177,18 +199,5 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
         state.progress == null &&
         state.events.isEmpty &&
         state.attempts.isEmpty;
-  }
-
-  StudentLearningState _trimLegacyEventsIfNeeded(
-    String lessonLocalId,
-    int maxEvents,
-  ) {
-    final state = _store.readState(lessonLocalId);
-    if (state.events.length <= maxEvents) return state;
-    return _store.writeState(
-      state.copyWith(
-        events: state.events.sublist(state.events.length - maxEvents),
-      ),
-    );
   }
 }

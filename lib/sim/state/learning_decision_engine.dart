@@ -179,40 +179,52 @@ void runShadowDecision(
   final tsNow = DateTime.now().millisecondsSinceEpoch;
   final progress = state.progress;
   final current = state.current;
-  service.appendEvent(
-    lessonLocalId,
-    StudentLearningEvent(
-      type: 'DECISION_ENGINE_SUGGESTED',
-      ts: tsNow,
-      payload: {
-        'action': decision.actionType.name,
-        'reason': decision.reason,
-        'confidence': decision.confidence.name,
-        'proposedItemIdx': decision.proposedItemIdx,
-        'proposedLayer': decision.proposedLayer?.value,
-        'proposedMarker': decision.proposedMarker,
-        'currentItemIdx': progress?.itemIdx ?? current?.itemIdx ?? 0,
-        'currentLayer': progress?.layer.value ?? current?.layer.value ?? 1,
-      },
-    ),
+  final suggested = StudentLearningEvent(
+    type: 'DECISION_ENGINE_SUGGESTED',
+    ts: tsNow,
+    payload: {
+      'action': decision.actionType.name,
+      'reason': decision.reason,
+      'confidence': decision.confidence.name,
+      'proposedItemIdx': decision.proposedItemIdx,
+      'proposedLayer': decision.proposedLayer?.value,
+      'proposedMarker': decision.proposedMarker,
+      'currentItemIdx': progress?.itemIdx ?? current?.itemIdx ?? 0,
+      'currentLayer': progress?.layer.value ?? current?.layer.value ?? 1,
+    },
   );
   final currentAction = _inferCurrentAction(state);
-  service.appendEvent(
+  final compared = StudentLearningEvent(
+    type: 'DECISION_ENGINE_COMPARED',
+    ts: tsNow,
+    payload: {
+      'suggestedAction': decision.actionType.name,
+      'currentAction': currentAction,
+      'match': decision.actionType.name == currentAction,
+      'confidence': decision.confidence.name,
+    },
+  );
+  service.appendEvents(
     lessonLocalId,
-    StudentLearningEvent(
-      type: 'DECISION_ENGINE_COMPARED',
-      ts: tsNow,
-      payload: {
-        'suggestedAction': decision.actionType.name,
-        'currentAction': currentAction,
-        'match': decision.actionType.name == currentAction,
-        'confidence': decision.confidence.name,
-      },
-    ),
+    [suggested, compared],
+    scheduleShadow: false,
   );
 }
 
 String _inferCurrentAction(StudentLearningState state) {
+  for (final event in state.events.reversed) {
+    if (event.type == 'STUDENT_DECISION_APPLIED' ||
+        event.type == 'STUDENT_DECISION_REJECTED' ||
+        event.type == 'STUDENT_EXECUTOR_APPLIED' ||
+        event.type == 'STUDENT_EXECUTOR_REJECTED') {
+      final raw = event.payload['decision'];
+      if (raw is String && raw.isNotEmpty) return raw;
+    }
+    if (event.type == 'NEXT_ACTION_DECIDED') {
+      final raw = event.payload['action'];
+      if (raw is String && raw.isNotEmpty) return raw;
+    }
+  }
   final progress = state.progress;
   if (progress == null) return 'unknown';
   final total = state.curriculum?.items.length ?? 0;

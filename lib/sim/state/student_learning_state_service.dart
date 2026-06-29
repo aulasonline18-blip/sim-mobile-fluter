@@ -120,7 +120,7 @@ class StudentLearningStateService {
   }
 
   // F1.3: filtra tombstone + F1.4: throttle shadow decision
-  void _notifyWrite(String lessonLocalId) {
+  void _notifyWrite(String lessonLocalId, {bool scheduleShadow = true}) {
     final state = _states[lessonLocalId];
     if (state != null) {
       if (state.extra['deletedAt'] != null) return;
@@ -130,14 +130,16 @@ class StudentLearningStateService {
       }
     }
 
-    _shadowThrottle[lessonLocalId]?.cancel();
-    _shadowThrottle[lessonLocalId] = Timer(
-      const Duration(milliseconds: 250),
-      () {
-        _shadowThrottle.remove(lessonLocalId);
-        _shadowDecisionRunner?.call(lessonLocalId);
-      },
-    );
+    if (scheduleShadow) {
+      _shadowThrottle[lessonLocalId]?.cancel();
+      _shadowThrottle[lessonLocalId] = Timer(
+        const Duration(milliseconds: 250),
+        () {
+          _shadowThrottle.remove(lessonLocalId);
+          _shadowDecisionRunner?.call(lessonLocalId);
+        },
+      );
+    }
 
     for (final cb in List.of(_writeListeners)) {
       try {
@@ -160,26 +162,31 @@ class StudentLearningStateService {
     );
   }
 
-  StudentLearningState write(StudentLearningState state) {
+  StudentLearningState write(
+    StudentLearningState state, {
+    bool scheduleShadow = true,
+  }) {
     _states[state.lessonLocalId] = state.copyWith(
       updatedAt: DateTime.now().millisecondsSinceEpoch,
     );
-    _notifyWrite(state.lessonLocalId);
+    _notifyWrite(state.lessonLocalId, scheduleShadow: scheduleShadow);
     return _states[state.lessonLocalId]!;
   }
 
   StudentLearningState mutate(
     String lessonLocalId,
-    StudentStateMutator mutator,
-  ) {
+    StudentStateMutator mutator, {
+    bool scheduleShadow = true,
+  }) {
     final current = ensure(lessonLocalId: lessonLocalId);
-    return write(mutator(current));
+    return write(mutator(current), scheduleShadow: scheduleShadow);
   }
 
   StudentLearningState appendEvent(
     String lessonLocalId,
     StudentLearningEvent event, {
     int maxEvents = 500,
+    bool scheduleShadow = true,
   }) {
     return mutate(lessonLocalId, (state) {
       final nextEvents = [...state.events, event];
@@ -187,7 +194,22 @@ class StudentLearningStateService {
           ? nextEvents.sublist(nextEvents.length - maxEvents)
           : nextEvents;
       return state.copyWith(events: trimmed);
-    });
+    }, scheduleShadow: scheduleShadow);
+  }
+
+  StudentLearningState appendEvents(
+    String lessonLocalId,
+    List<StudentLearningEvent> events, {
+    int maxEvents = 500,
+    bool scheduleShadow = true,
+  }) {
+    return mutate(lessonLocalId, (state) {
+      final nextEvents = [...state.events, ...events];
+      final trimmed = nextEvents.length > maxEvents
+          ? nextEvents.sublist(nextEvents.length - maxEvents)
+          : nextEvents;
+      return state.copyWith(events: trimmed);
+    }, scheduleShadow: scheduleShadow);
   }
 
   StudentLearningState appendAttempt(

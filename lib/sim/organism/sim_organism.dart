@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../billing/account_deletion.dart';
@@ -130,7 +128,7 @@ class SimOrganism {
     final t00Client = SimServerT00Client(config: aiConfig);
     final t02Client = SimServerT02Client(config: aiConfig);
     final cache = LessonMaterialCache();
-    unawaited(cache.hydrate());
+    cache.hydrateFromPreferences(prefs);
     final eventBus = LessonEventBus();
     final orchestrator = LessonOrchestrator(
       t02Client: t02Client,

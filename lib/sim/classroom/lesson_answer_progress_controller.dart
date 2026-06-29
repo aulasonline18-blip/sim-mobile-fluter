@@ -69,6 +69,11 @@ class LessonAnswerProgressController {
       layer: position.layer,
       sinal: signal,
     );
+    final signalThreeCount = signalTracker.getSignalCount(
+      marker: item.marker,
+      layer: position.layer,
+      sinal: DecisionSignal.three,
+    );
     final correct = letter == content.correctAnswer;
     final questionId = [
       item.marker,
@@ -137,6 +142,7 @@ class LessonAnswerProgressController {
         state: savedState,
         correct: correct,
         ts: DateTime.now().millisecondsSinceEpoch,
+        signalThreeCount: signalThreeCount,
       );
       final savedAfterAmparo = amparoState != savedState
           ? stateService.write(amparoState)

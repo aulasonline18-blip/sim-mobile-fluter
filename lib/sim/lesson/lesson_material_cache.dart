@@ -34,29 +34,36 @@ class LessonMaterialCache {
   Future<void> hydrate() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_kCacheKey);
-      if (raw == null || raw.trim().isEmpty) return;
-      dynamic decoded;
-      try {
-        decoded = jsonDecode(raw);
-      } catch (_) {
-        return;
-      }
-      if (decoded is! Map) return;
-      final now = DateTime.now().millisecondsSinceEpoch;
-      for (final entry in decoded.entries) {
-        final key = entry.key as String;
-        final value = entry.value;
-        if (value is! Map) continue;
-        final savedAt = (value['savedAt'] as num?)?.toInt() ?? 0;
-        if (now - savedAt > ttlMs) continue;
-        final lessonRaw = value['lesson'];
-        if (lessonRaw is! Map) continue;
-        final lesson = _lessonFromJson(Map<String, dynamic>.from(lessonRaw));
-        if (lesson == null) continue;
-        _memory[key] = _CacheEntry(lesson: lesson, savedAt: savedAt);
-      }
+      hydrateFromPreferences(prefs);
     } catch (_) {}
+  }
+
+  void hydrateFromPreferences(SharedPreferences prefs) {
+    final raw = prefs.getString(_kCacheKey);
+    if (raw == null || raw.trim().isEmpty) return;
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } catch (_) {
+      return;
+    }
+    if (decoded is! Map) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final entry in decoded.entries) {
+      final key = entry.key as String;
+      final value = entry.value;
+      if (value is! Map) continue;
+      final savedAt = (value['savedAt'] as num?)?.toInt() ?? 0;
+      if (now - savedAt > ttlMs) continue;
+      final lessonRaw = value['lesson'];
+      if (lessonRaw is! Map) continue;
+      final lesson = _lessonFromJson(Map<String, dynamic>.from(lessonRaw));
+      if (lesson == null) continue;
+      _memory[key] = _CacheEntry(lesson: lesson, savedAt: savedAt);
+    }
+    while (_memory.length > maxLessons) {
+      _memory.remove(_memory.keys.first);
+    }
   }
 
   // Peek sem promover LRU — não altera ordem de evicção.
