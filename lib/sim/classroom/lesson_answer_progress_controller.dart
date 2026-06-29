@@ -24,7 +24,7 @@ class LessonAnswerProgressController {
     this.audioCore,
     SignalTracker? signalTracker,
     MasteryTruthEngine? truthEngine,
-  }) : signalTracker = signalTracker ?? SignalTracker(),
+  }) : signalTracker = signalTracker ?? SignalTracker(stateService),
        truthEngine = truthEngine ?? const MasteryTruthEngine();
 
   final StudentLearningStateService stateService;
@@ -64,16 +64,15 @@ class LessonAnswerProgressController {
 
     audioCore?.stop();
     final letter = phase.letter!;
-    signalTracker.recordSignal(
-      marker: item.marker,
-      layer: position.layer,
-      sinal: signal,
-    );
-    final signalThreeCount = signalTracker.getSignalCount(
-      marker: item.marker,
-      layer: position.layer,
-      sinal: DecisionSignal.three,
-    );
+    final signalThreeCount = stateService
+            .read(lessonLocalId)
+            ?.attempts
+            .where(
+              (a) =>
+                  a.marker == item.marker && a.sinal == DecisionSignal.three,
+            )
+            .length ??
+        0;
     final correct = letter == content.correctAnswer;
     final questionId = [
       item.marker,

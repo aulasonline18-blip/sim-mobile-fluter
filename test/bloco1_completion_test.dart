@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/sim/classroom/amparo_controller.dart';
-import 'package:sim_mobile/sim/core/signal_tracker.dart';
 import 'package:sim_mobile/sim/lesson/lesson_material_cache.dart';
 import 'package:sim_mobile/sim/lesson/lesson_models.dart';
 import 'package:sim_mobile/sim/state/learning_decision_engine.dart';
@@ -123,24 +122,28 @@ void main() {
   });
 
   test('SignalTracker com tres sinais 3 dispara amparo real', () {
-    final tracker = SignalTracker();
-    for (var i = 0; i < 3; i++) {
-      tracker.recordSignal(
+    final attempts = List.generate(
+      3,
+      (_) => LessonAttempt(
         marker: 'M1',
         layer: LessonLayer.l1,
+        letra: AnswerLetter.A,
         sinal: DecisionSignal.three,
-      );
-    }
+        correct: false,
+        ts: 0,
+      ),
+    );
+    final signalThreeCount = attempts
+        .where(
+          (a) => a.marker == 'M1' && a.sinal == DecisionSignal.three,
+        )
+        .length;
 
     final next = const AmparoController().applyIfNeeded(
       state: _state(),
       correct: true,
       ts: 100,
-      signalThreeCount: tracker.getSignalCount(
-        marker: 'M1',
-        layer: LessonLayer.l1,
-        sinal: DecisionSignal.three,
-      ),
+      signalThreeCount: signalThreeCount,
     );
 
     expect(next.progress!.amparoLvl, 1);
