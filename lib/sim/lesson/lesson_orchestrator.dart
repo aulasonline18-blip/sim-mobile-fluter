@@ -1,4 +1,6 @@
 // MIRROR OF: src/cyber/lesson-orchestrator.ts (Web, source of truth)
+import '../media/math_templates/math_templates.dart';
+import '../media/s12_visual_pipeline.dart';
 import '../modules/pedagogical_module_contracts.dart';
 import '../state/student_learning_state.dart';
 import 'lesson_event_bus.dart';
@@ -58,12 +60,45 @@ class LessonOrchestrator {
     return future;
   }
 
-  // Part III.6: image pipeline hook — runs sequentially after text arrives.
-  // Image fetching (paid AI, SVG, math templates) not yet implemented; no-op.
+  // D2.1: image pipeline — SVG math templates (free) + S12 software route.
+  // Paid AI images handled by PaidImageService after offer accepted.
   Future<void> _fetchImage(
     CompleteLessonParams params,
     CompleteLesson lesson,
-  ) async {}
+  ) async {
+    final key = lessonKeyFor(params);
+    final vt = lesson.conteudo.visualTrigger;
+
+    // Caminho 1: math template (SVG puro, custo zero)
+    final mathSvg = tryRenderMathTemplate(vt);
+    if (mathSvg != null) {
+      final updated = CompleteLesson(
+        conteudo: lesson.conteudo,
+        imagem: mathSvg,
+        audioText: lesson.audioText,
+      );
+      cache.put(key, updated);
+      bus.notify(key, updated);
+      return;
+    }
+
+    // Caminho 2: S12 software route (SVG inline, custo zero)
+    final decision = decideVisualGeneration(
+      vt != null ? Map<String, dynamic>.from(vt) : null,
+      const VisualDecisionContext(allowPaidImages: false),
+    );
+    if (decision.svg != null) {
+      final updated = CompleteLesson(
+        conteudo: lesson.conteudo,
+        imagem: decision.svg,
+        audioText: lesson.audioText,
+      );
+      cache.put(key, updated);
+      bus.notify(key, updated);
+    }
+    // Se decision.generate == true e allowPaidImages==false → PaidImageService
+    // emite oferta separada. Orchestrator não cobra crédito aqui.
+  }
 
   Future<CompleteLesson> _fetchText(CompleteLessonParams params) async {
     final material = await t02Client.completeLesson(

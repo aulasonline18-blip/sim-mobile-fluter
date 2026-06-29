@@ -134,20 +134,59 @@ ApplyDecisionResult applyStudentDecision(
   }
 }
 
+// D3: helper que monta STUDENT_EXECUTOR_ERROR
+StudentLearningEvent _executorError(
+  StudentLearningState state,
+  String stage,
+  int ts, [
+  Map<String, Object?>? extra,
+]) {
+  return StudentLearningEvent(
+    type: 'STUDENT_EXECUTOR_ERROR',
+    ts: ts,
+    payload: {
+      'stage': stage,
+      'lessonLocalId': state.lessonLocalId,
+      'itemIdx': state.progress?.itemIdx,
+      'layer': state.progress?.layer.value,
+      if (extra != null) ...extra,
+    },
+  );
+}
+
 StudentLearningState processAnswerWithEngine(
   StudentLearningState state,
   AnswerContext context, {
   int? now,
 }) {
+  final ts = now ?? DateTime.now().millisecondsSinceEpoch;
   final curriculum = state.curriculum;
   final progress = state.progress;
-  if (curriculum == null || progress == null) return state;
+
+  // D3 stage: no-active-lesson
+  if (curriculum == null || progress == null) {
+    return state.copyWith(
+      events: [
+        ...state.events,
+        _executorError(state, 'no-active-lesson', ts),
+      ],
+    );
+  }
+
   final idx = progress.itemIdx;
-  if (idx < 0 || idx >= curriculum.items.length) return state;
+
+  // D3 stage: no-item
+  if (idx < 0 || idx >= curriculum.items.length) {
+    return state.copyWith(
+      events: [
+        ...state.events,
+        _executorError(state, 'no-item', ts, {'idx': idx}),
+      ],
+    );
+  }
 
   final item = curriculum.items[idx];
   final correct = context.letra == context.correctAnswer;
-  final ts = now ?? DateTime.now().millisecondsSinceEpoch;
   final attempt = LessonAttempt(
     marker: item.marker,
     layer: progress.layer,
@@ -170,15 +209,39 @@ StudentLearningState processAnswerWithEngine(
     progress: progressBeforeDecision,
     attempts: [...state.attempts, attempt],
   );
-  final decision = decideNextActionFromState(synth);
-  final applied = applyStudentDecision(
-    progressBeforeDecision,
-    decision,
-    itemIdx: idx,
-    layer: progress.layer,
-    totalItems: curriculum.items.length,
-    marker: item.marker,
-  );
+
+  // D3 stage: decideNextActionFromState
+  DecisionResult decision;
+  try {
+    decision = decideNextActionFromState(synth);
+  } catch (e) {
+    return state.copyWith(
+      events: [
+        ...state.events,
+        _executorError(state, 'decideNextActionFromState', ts, {'error': e.toString()}),
+      ],
+    );
+  }
+
+  // D3 stage: recordAttempt — apply decision
+  ApplyDecisionResult applied;
+  try {
+    applied = applyStudentDecision(
+      progressBeforeDecision,
+      decision,
+      itemIdx: idx,
+      layer: progress.layer,
+      totalItems: curriculum.items.length,
+      marker: item.marker,
+    );
+  } catch (e) {
+    return state.copyWith(
+      events: [
+        ...state.events,
+        _executorError(state, 'recordAttempt', ts, {'error': e.toString()}),
+      ],
+    );
+  }
 
   final decisionPayload = {
     'decision': decision.actionType.name,
@@ -218,18 +281,28 @@ StudentLearningState processAnswerWithEngine(
       ? rawEvents.sublist(rawEvents.length - maxEventsCap)
       : rawEvents;
 
-  return state.copyWith(
-    updatedAt: ts,
-    progress: applied.nextProgress,
-    current: LessonCurrent(
-      itemIdx: applied.nextProgress.itemIdx,
-      marker: applied.nextProgress.itemIdx < curriculum.items.length
-          ? curriculum.items[applied.nextProgress.itemIdx].marker
-          : null,
-      layer: applied.nextProgress.layer,
-      amparoLvl: applied.nextProgress.amparoLvl,
-    ),
-    attempts: cappedAttempts,
-    events: cappedEvents,
-  );
+  // D3 stage: upsertActive
+  try {
+    return state.copyWith(
+      updatedAt: ts,
+      progress: applied.nextProgress,
+      current: LessonCurrent(
+        itemIdx: applied.nextProgress.itemIdx,
+        marker: applied.nextProgress.itemIdx < curriculum.items.length
+            ? curriculum.items[applied.nextProgress.itemIdx].marker
+            : null,
+        layer: applied.nextProgress.layer,
+        amparoLvl: applied.nextProgress.amparoLvl,
+      ),
+      attempts: cappedAttempts,
+      events: cappedEvents,
+    );
+  } catch (e) {
+    return state.copyWith(
+      events: [
+        ...state.events,
+        _executorError(state, 'upsertActive', ts, {'error': e.toString()}),
+      ],
+    );
+  }
 }

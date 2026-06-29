@@ -260,4 +260,39 @@ class StudentLessonMaterialService {
       );
     });
   }
+  // D4: Resume Instantâneo — lê da fonte única (StudentLearningState) diretamente.
+  // Planta-Mãe §10: student_state > cache > T02.
+  CompleteLesson? readReadyLessonMaterialFromStudentState(
+    ResolveLessonMaterialInput input,
+  ) {
+    final content = _readReadyFromStudentState(input);
+    if (content == null) return null;
+    // Log Resume Instantâneo
+    stateService.appendEvent(
+      input.lessonLocalId,
+      StudentLearningEvent(
+        type: 'LESSON_TEXT_READY',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: {
+          'lessonLocalId': input.lessonLocalId,
+          'itemIdx': input.itemIdx,
+          'marker': input.marker,
+          'layer': input.layer.value,
+          'source': 'state',
+          'resume_instantaneo': true,
+        },
+      ),
+    );
+    return CompleteLesson(
+      conteudo: content,
+      imagem: null,
+      audioText: content.audioText,
+    );
+  }
+
+  // D4: Pergunta "tem material pronto?" sem buscar T02 (síncrono, sem custo).
+  bool isLessonMaterialReadyInStateOrCache(ResolveLessonMaterialInput input) {
+    if (_readReadyFromStudentState(input) != null) return true;
+    return orchestrator.peekCachedLesson(lessonKeyFor(input.params)) != null;
+  }
 }
