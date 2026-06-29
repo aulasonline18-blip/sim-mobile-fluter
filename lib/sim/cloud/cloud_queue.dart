@@ -1,7 +1,6 @@
 // MIRROR OF: src/sim/state/cloudQueue.ts (Web, source of truth)
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../state/student_learning_state.dart';
@@ -200,8 +199,8 @@ class CloudQueue with WidgetsBindingObserver {
 
   void _scheduleRetry(CloudQueueEntry entry) {
     final attempts = entry.attempts + 1;
-    final delay = retryDelaysMs[
-        (attempts - 1).clamp(0, retryDelaysMs.length - 1)];
+    final delay =
+        retryDelaysMs[(attempts - 1).clamp(0, retryDelaysMs.length - 1)];
     // F3.7: avisa quando atinge limite de tentativas
     if (attempts >= maxAttempts) {
       debugPrint(

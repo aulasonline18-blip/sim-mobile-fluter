@@ -4,22 +4,20 @@ import 'dart:async';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 
-typedef ReadyWindowWorkerProcessor = Future<List<bool>> Function({
-  required String lessonLocalId,
-  required String source,
-  int? maxSlots,
-  bool returnMode,
-  int? itemIdx,
-  LessonLayer? layer,
-  String? marker,
-  String? topic,
-});
+typedef ReadyWindowWorkerProcessor =
+    Future<List<bool>> Function({
+      required String lessonLocalId,
+      required String source,
+      int? maxSlots,
+      bool returnMode,
+      int? itemIdx,
+      LessonLayer? layer,
+      String? marker,
+      String? topic,
+    });
 
 class ReadyWindowWorker {
-  ReadyWindowWorker({
-    required this.service,
-    required this.processor,
-  });
+  ReadyWindowWorker({required this.service, required this.processor});
 
   final StudentLearningStateService service;
   final ReadyWindowWorkerProcessor processor;
@@ -36,7 +34,9 @@ class ReadyWindowWorker {
   void startReadyWindowWorker({String? activeLessonLocalId}) {
     _activeLessonLocalId = activeLessonLocalId;
     _unsubscribe?.call();
-    debugLog('READY_WINDOW_WORKER_STARTED activeLessonLocalId=$activeLessonLocalId');
+    debugLog(
+      'READY_WINDOW_WORKER_STARTED activeLessonLocalId=$activeLessonLocalId',
+    );
     _unsubscribe = service.subscribe((id) {
       _scheduleConditionalDrain(id);
     });
@@ -53,28 +53,34 @@ class ReadyWindowWorker {
     final now = DateTime.now().millisecondsSinceEpoch;
     final jobs = List<JsonMap>.from(state.queuedActions);
 
-    final hasActiveReady = jobs.any((job) =>
-        job['type'] == 'PREPARE_READY_WINDOW' &&
-        job['status'] == 'queued' &&
-        job['priority'] == 'active' &&
-        ((job['next_retry_at'] as num?)?.toInt() ?? 0) <= now);
+    final hasActiveReady = jobs.any(
+      (job) =>
+          job['type'] == 'PREPARE_READY_WINDOW' &&
+          job['status'] == 'queued' &&
+          job['priority'] == 'active' &&
+          ((job['next_retry_at'] as num?)?.toInt() ?? 0) <= now,
+    );
 
-    final hasBackgroundReady = jobs.any((job) =>
-        job['type'] == 'PREPARE_READY_WINDOW' &&
-        job['status'] == 'queued' &&
-        job['priority'] == 'background' &&
-        ((job['next_retry_at'] as num?)?.toInt() ?? 0) <= now);
+    final hasBackgroundReady = jobs.any(
+      (job) =>
+          job['type'] == 'PREPARE_READY_WINDOW' &&
+          job['status'] == 'queued' &&
+          job['priority'] == 'background' &&
+          ((job['next_retry_at'] as num?)?.toInt() ?? 0) <= now,
+    );
 
-    if (hasActiveReady ||
-        (hasBackgroundReady && id == _activeLessonLocalId)) {
+    if (hasActiveReady || (hasBackgroundReady && id == _activeLessonLocalId)) {
       drainReadyWindowJobs(id);
     } else {
-      final nextJob = jobs.where((job) =>
-          job['type'] == 'PREPARE_READY_WINDOW' &&
-          job['status'] == 'queued').firstOrNull;
+      final nextJob = jobs
+          .where(
+            (job) =>
+                job['type'] == 'PREPARE_READY_WINDOW' &&
+                job['status'] == 'queued',
+          )
+          .firstOrNull;
       if (nextJob != null) {
-        final retryAt =
-            (nextJob['next_retry_at'] as num?)?.toInt() ?? now;
+        final retryAt = (nextJob['next_retry_at'] as num?)?.toInt() ?? now;
         final delay = retryAt - now;
         if (delay > 0) {
           Timer(Duration(milliseconds: delay), () {
@@ -219,7 +225,6 @@ class ReadyWindowWorker {
           Timer(Duration(milliseconds: retryDelayMs), () {
             drainReadyWindowJobs(lessonLocalId);
           });
-          break;
         }
       }
     }
@@ -229,17 +234,20 @@ class ReadyWindowWorker {
   JsonMap? _eligibleJob(List<JsonMap> jobs) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final queued = jobs
-        .where((job) =>
-            job['type'] == 'PREPARE_READY_WINDOW' &&
-            job['status'] == 'queued' &&
-            ((job['next_retry_at'] as num?)?.toInt() ?? 0) <= now)
+        .where(
+          (job) =>
+              job['type'] == 'PREPARE_READY_WINDOW' &&
+              job['status'] == 'queued' &&
+              ((job['next_retry_at'] as num?)?.toInt() ?? 0) <= now,
+        )
         .toList();
     queued.sort((a, b) {
       final ap = a['priority'] == 'active' ? 0 : 1;
       final bp = b['priority'] == 'active' ? 0 : 1;
       if (ap != bp) return ap.compareTo(bp);
-      return ((a['created_at'] as num?)?.toInt() ?? 0)
-          .compareTo((b['created_at'] as num?)?.toInt() ?? 0);
+      return ((a['created_at'] as num?)?.toInt() ?? 0).compareTo(
+        (b['created_at'] as num?)?.toInt() ?? 0,
+      );
     });
     return queued.isEmpty ? null : queued.first;
   }

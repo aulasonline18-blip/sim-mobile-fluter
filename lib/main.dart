@@ -44,8 +44,7 @@ const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 // JetBrains Mono font family name — used instead of _kMono
 // so TextStyle objects can remain const.
 const String _kMono = 'JetBrains Mono';
-const simSupabaseAnonKey =
-    'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
+const simSupabaseAnonKey = 'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
 const simApiBaseUrl = SimEnvironment.apiBaseUrl;
 
@@ -72,16 +71,16 @@ Future<void> main() async {
 }
 
 // §1 tokens globais — hex exatos do SIM Web (src/styles.css :root)
-const simDark = Color(0xFF111827);      // foreground / primary
-const simMid = Color(0xFF374151);       // success / primary_glow
-const simLight = Color(0xFFF3F4F6);    // secondary / muted / accent
-const simCard = Color(0xFFF9FAFB);     // card background
-const simMuted = Color(0xFF6B7280);    // muted_foreground / warn
-const simBorder = Color(0xFFD1D5DB);   // border / input
-const simDestructive = Color(0xFF000000);   // destructive (preto)
+const simDark = Color(0xFF111827); // foreground / primary
+const simMid = Color(0xFF374151); // success / primary_glow
+const simLight = Color(0xFFF3F4F6); // secondary / muted / accent
+const simCard = Color(0xFFF9FAFB); // card background
+const simMuted = Color(0xFF6B7280); // muted_foreground / warn
+const simBorder = Color(0xFFD1D5DB); // border / input
+const simDestructive = Color(0xFF000000); // destructive (preto)
 const simDestructiveFg = Color(0xFFFFFFFF); // destructive_fg
-const simSuccess = Color(0xFF374151);  // success = #374151 (cinza-escuro)
-const simWarn = Color(0xFF6B7280);     // warn = #6B7280 (cinza-médio)
+const simSuccess = Color(0xFF374151); // success = #374151 (cinza-escuro)
+const simWarn = Color(0xFF6B7280); // warn = #6B7280 (cinza-médio)
 
 // gradient_primary: LinearGradient 135° #FFFFFF → #F3F4F6 ("papel premium")
 const simGradientPrimary = LinearGradient(
@@ -98,11 +97,7 @@ const simGradientBg = LinearGradient(
 
 // shadow helpers
 const simShadowGlow = [
-  BoxShadow(
-    color: Color(0xFFFFFFFF),
-    offset: Offset(0, 1),
-    blurRadius: 0,
-  ),
+  BoxShadow(color: Color(0xFFFFFFFF), offset: Offset(0, 1), blurRadius: 0),
   BoxShadow(
     color: Color(0x2E111827),
     offset: Offset(0, 6),
@@ -136,10 +131,8 @@ class LabSession extends ChangeNotifier {
   LabSession({
     StudentStateStore? canonicalStore,
     this._attachmentClient,
-    SharedPreferences? prefs,
-  }) : // ignore: prefer_initializing_formals — param nomeado 'prefs' não pode ser 'this._prefs'
-       _prefs = prefs,
-       canonicalStore =
+    this._prefs,
+  }) : canonicalStore =
            canonicalStore ??
            StudentStateStore(local: MemoryStudentStateLocalStorage()) {
     entryForm.addListener(_notifyFromChild);
@@ -490,10 +483,7 @@ class LabSession extends ChangeNotifier {
     canonicalStore?.appendEvent(
       lessonLocalId: id,
       type: 'STUDENT_FORM_SUBMITTED',
-      payload: {
-        'objective_length': objective.length,
-        'language': language,
-      },
+      payload: {'objective_length': objective.length, 'language': language},
       source: 'lab_session',
       userId: userId,
     );
@@ -607,19 +597,22 @@ class LabSession extends ChangeNotifier {
     _activeOrganism = organism;
     return organism;
   }
-  LessonContent _devLessonContent() => const LessonContent(
-        explanation:
-            'Vamos estudar frações equivalentes com uma explicação curta antes do desafio.',
-        question: 'Qual alternativa representa uma fração equivalente a 1/2?',
-        options: {
-          AnswerLetter.A: '1/3',
-          AnswerLetter.B: '2/4',
-          AnswerLetter.C: '3/5',
-        },
-        correctAnswer: AnswerLetter.B,
-      );
 
-  LessonRuntimeSnapshot _devAulaSnapshot({ClassroomPhase phase = const ClassroomPhase.reading()}) {
+  LessonContent _devLessonContent() => const LessonContent(
+    explanation:
+        'Vamos estudar frações equivalentes com uma explicação curta antes do desafio.',
+    question: 'Qual alternativa representa uma fração equivalente a 1/2?',
+    options: {
+      AnswerLetter.A: '1/3',
+      AnswerLetter.B: '2/4',
+      AnswerLetter.C: '3/5',
+    },
+    correctAnswer: AnswerLetter.B,
+  );
+
+  LessonRuntimeSnapshot _devAulaSnapshot({
+    ClassroomPhase phase = const ClassroomPhase.reading(),
+  }) {
     final content = _devLessonContent();
     return LessonRuntimeSnapshot(
       authReady: authReady,
@@ -630,13 +623,25 @@ class LabSession extends ChangeNotifier {
         progress: 0,
         headerLabel: 'aula_item_of:1/1:aula_layer_1',
         options: [
-          LessonOptionModel(letter: AnswerLetter.A, text: content.options[AnswerLetter.A] ?? ''),
-          LessonOptionModel(letter: AnswerLetter.B, text: content.options[AnswerLetter.B] ?? ''),
-          LessonOptionModel(letter: AnswerLetter.C, text: content.options[AnswerLetter.C] ?? ''),
+          LessonOptionModel(
+            letter: AnswerLetter.A,
+            text: content.options[AnswerLetter.A] ?? '',
+          ),
+          LessonOptionModel(
+            letter: AnswerLetter.B,
+            text: content.options[AnswerLetter.B] ?? '',
+          ),
+          LessonOptionModel(
+            letter: AnswerLetter.C,
+            text: content.options[AnswerLetter.C] ?? '',
+          ),
         ],
-        locked: phase.type == ClassroomPhaseType.processando ||
+        locked:
+            phase.type == ClassroomPhaseType.processando ||
             phase.type == ClassroomPhaseType.concluido,
-        nextLabel: phase.type == ClassroomPhaseType.concluido ? 'aula_next' : '',
+        nextLabel: phase.type == ClassroomPhaseType.concluido
+            ? 'aula_next'
+            : '',
       ),
       phase: phase,
       history: const [],
@@ -874,10 +879,7 @@ class SimMobileApp extends StatefulWidget {
 class _SimMobileAppState extends State<SimMobileApp> {
   late final LabSession session =
       widget.initialSession ??
-      LabSession(
-        canonicalStore: widget.canonicalStore,
-        prefs: widget.prefs,
-      );
+      LabSession(canonicalStore: widget.canonicalStore, prefs: widget.prefs);
 
   @override
   void initState() {
@@ -1042,7 +1044,11 @@ class PortalScreen extends StatelessWidget {
   }
 
   void _showLabDrawer(BuildContext context) {
-    _showSimDrawer(context, session: session, body: (ctx) => _PortalDrawerBody(session: session, ctx: ctx));
+    _showSimDrawer(
+      context,
+      session: session,
+      body: (ctx) => _PortalDrawerBody(session: session, ctx: ctx),
+    );
   }
 }
 
@@ -1060,27 +1066,45 @@ class _PortalDrawerBody extends StatelessWidget {
       children: [
         MenuLine(
           label: 'Abrir aula',
-          onTap: () { close(); session.openSupport('/cyber/aula'); },
+          onTap: () {
+            close();
+            session.openSupport('/cyber/aula');
+          },
         ),
         MenuLine(
           label: t('recarregar_creditos'),
-          onTap: () { close(); session.openCredits(); },
+          onTap: () {
+            close();
+            session.openCredits();
+          },
         ),
         MenuLine(
           label: 'Painel do Pai',
-          onTap: () { close(); session.openSupport('/pai'); },
+          onTap: () {
+            close();
+            session.openSupport('/pai');
+          },
         ),
         MenuLine(
           label: 'Privacidade',
-          onTap: () { close(); session.openSupport('/privacidade'); },
+          onTap: () {
+            close();
+            session.openSupport('/privacidade');
+          },
         ),
         MenuLine(
           label: 'Termos',
-          onTap: () { close(); session.openSupport('/termos'); },
+          onTap: () {
+            close();
+            session.openSupport('/termos');
+          },
         ),
         MenuLine(
           label: 'Solicitar exclusão da conta',
-          onTap: () { close(); session.openSupport('/conta/deletar'); },
+          onTap: () {
+            close();
+            session.openSupport('/conta/deletar');
+          },
         ),
       ],
     );
@@ -1194,7 +1218,7 @@ class PortalHeroCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  TextSpan(text: '${t('portal_statement_p2')}'),
+                  TextSpan(text: t('portal_statement_p2')),
                   TextSpan(text: '${t('portal_statement_p3')} '),
                   TextSpan(
                     text: t('portal_statement_real_progress'),
@@ -1250,7 +1274,9 @@ class PortalHeroCard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        session.authed ? t('portal_btn_start') : t('portal_btn_signin'),
+                        session.authed
+                            ? t('portal_btn_start')
+                            : t('portal_btn_signin'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1832,11 +1858,7 @@ class _IdiomaScreenState extends State<IdiomaScreen> {
           const SizedBox(height: 12),
           const Text(
             'SIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.',
-            style: TextStyle(
-              color: simMuted,
-              fontSize: 18,
-              height: 1.45,
-            ),
+            style: TextStyle(color: simMuted, fontSize: 18, height: 1.45),
           ),
           const SizedBox(height: 28),
           for (final language in supportedLangs) ...[
@@ -2039,270 +2061,239 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
             ),
           ),
           const SizedBox(height: 24),
-                      SimCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CardTitle(
-                              icon: Icons.chat_bubble_outline,
-                              title: 'What should SIM help with?',
+          SimCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CardTitle(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'What should SIM help with?',
+                ),
+                AttachmentPreviewList(
+                  attachments: widget.session.attachments,
+                  onRemove: (index) =>
+                      setState(() => widget.session.removeAttachment(index)),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: simBorder),
+                  ),
+                  child: Stack(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Campo obrigatório',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.4,
                             ),
-                            AttachmentPreviewList(
-                              attachments: widget.session.attachments,
-                              onRemove: (index) => setState(
-                                () => widget.session.removeAttachment(index),
-                              ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Escreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
+                            style: TextStyle(
+                              color: simMuted,
+                              fontSize: 13,
+                              height: 1.35,
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: simBorder),
-                              ),
-                              child: Stack(
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Campo obrigatório',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.4,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      const Text(
-                                        'Escreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
-                                        style: TextStyle(
-                                          color: simMuted,
-                                          fontSize: 13,
-                                          height: 1.35,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      TextField(
-                                        controller: objectiveController,
-                                        minLines: 6,
-                                        maxLines: 8,
-                                        maxLength: maxFreeText,
-                                        decoration: const InputDecoration(
-                                          hintText:
-                                              'Ex: Quero estudar essa lista para a prova.',
-                                          border: InputBorder.none,
-                                          counterText: '',
-                                          contentPadding: EdgeInsets.only(
-                                            bottom: 48,
-                                          ),
-                                        ),
-                                        style: const TextStyle(
-                                          color: simDark,
-                                          fontSize: 16,
-                                          height: 1.4,
-                                        ),
-                                        onChanged: (value) {
-                                          widget.session.setFreeText(value);
-                                          if (error ==
-                                                  objectiveRequiredMessage ||
-                                              error ==
-                                                  objectiveRequiredWithAttachmentMessage) {
-                                            setState(() => error = null);
-                                          } else {
-                                            setState(() {});
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  Positioned(
-                                    left: 0,
-                                    bottom: 0,
-                                    child: IconButton(
-                                      tooltip: 'Abrir menu de anexos',
-                                      onPressed: () => setState(
-                                        () => attachmentMenuOpen =
-                                            !attachmentMenuOpen,
-                                      ),
-                                      icon: const Icon(
-                                        Icons.attach_file,
-                                        color: simDark,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    right: 4,
-                                    bottom: 12,
-                                    child: Text(
-                                      '${widget.session.freeText.length}/$maxFreeText',
-                                      style: const TextStyle(
-                                        color: simMuted,
-                                        fontSize: 12,
-                                        fontFamily: _kMono,
-                                      ),
-                                    ),
-                                  ),
-                                  if (attachmentMenuOpen)
-                                    Positioned(
-                                      left: 4,
-                                      bottom: 46,
-                                      child: AttachmentMenu(
-                                        onPick: addAttachment,
-                                      ),
-                                    ),
-                                ],
-                              ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: objectiveController,
+                            minLines: 6,
+                            maxLines: 8,
+                            maxLength: maxFreeText,
+                            decoration: const InputDecoration(
+                              hintText:
+                                  'Ex: Quero estudar essa lista para a prova.',
+                              border: InputBorder.none,
+                              counterText: '',
+                              contentPadding: EdgeInsets.only(bottom: 48),
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Conte do seu jeito: idade, série, matéria, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
-                              style: TextStyle(
-                                color: simMuted,
-                                fontSize: 13,
-                                height: 1.35,
-                              ),
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 16,
+                              height: 1.4,
                             ),
-                            if (widget.session.attachments.isNotEmpty &&
-                                objectiveTooShort) ...[
-                              const SizedBox(height: 8),
-                              const Text(
-                                objectiveRequiredWithAttachmentMessage,
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                            if (remaining < 0) ...[
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Texto muito longo.',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                            onChanged: (value) {
+                              widget.session.setFreeText(value);
+                              if (error == objectiveRequiredMessage ||
+                                  error ==
+                                      objectiveRequiredWithAttachmentMessage) {
+                                setState(() => error = null);
+                              } else {
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      SimCard(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const CircleIcon(
-                              icon: Icons.person_outline,
-                              top: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    t('objeto_preferred_name'),
-                                    style: const TextStyle(
-                                      color: simDark,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  SimInput(
-                                    hint: t('objeto_name_placeholder'),
-                                    controller: nameController,
-                                    onChanged: widget.session.setPreferredName,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (error != null) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          error!,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 14,
+                      Positioned(
+                        left: 0,
+                        bottom: 0,
+                        child: IconButton(
+                          tooltip: 'Abrir menu de anexos',
+                          onPressed: () => setState(
+                            () => attachmentMenuOpen = !attachmentMenuOpen,
+                          ),
+                          icon: const Icon(
+                            Icons.attach_file,
+                            color: simDark,
+                            size: 24,
                           ),
                         ),
-                      ],
-                      const SizedBox(height: 18),
-                      GestureDetector(
-                        onTap: () {
-                          if (!canContinue && !waitingAttachment) {
-                            showObjectiveRequired();
-                          }
-                        },
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 64,
-                          child: DecoratedBox(
-                            decoration: primaryButtonDecoration(radius: 16),
-                            child: TextButton(
-                              onPressed: canContinue ? saveAndContinue : null,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  if (sending)
-                                    const Positioned(
-                                      left: 16,
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: simDark,
-                                        ),
-                                      ),
-                                    ),
-                                  if (!sending &&
-                                      !waitingAttachment &&
-                                      !objectiveTooShort)
-                                    const Positioned(
-                                      right: 16,
-                                      child: Icon(
-                                        Icons.arrow_forward,
-                                        color: simDark,
-                                      ),
-                                    ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 42,
-                                    ),
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        sending
-                                            ? t('objetivo_reading')
-                                            : waitingAttachment
-                                            ? 'Aguardando leitura do anexo...'
-                                            : objectiveTooShort
-                                            ? t('objeto_helper')
-                                            : t('objeto_save_continue'),
-                                        style: const TextStyle(
-                                          color: simDark,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      ),
+                      Positioned(
+                        right: 4,
+                        bottom: 12,
+                        child: Text(
+                          '${widget.session.freeText.length}/$maxFreeText',
+                          style: const TextStyle(
+                            color: simMuted,
+                            fontSize: 12,
+                            fontFamily: _kMono,
+                          ),
+                        ),
+                      ),
+                      if (attachmentMenuOpen)
+                        Positioned(
+                          left: 4,
+                          bottom: 46,
+                          child: AttachmentMenu(onPick: addAttachment),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Conte do seu jeito: idade, série, matéria, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
+                  style: TextStyle(color: simMuted, fontSize: 13, height: 1.35),
+                ),
+                if (widget.session.attachments.isNotEmpty &&
+                    objectiveTooShort) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    objectiveRequiredWithAttachmentMessage,
+                    style: TextStyle(color: Colors.black, fontSize: 13),
+                  ),
+                ],
+                if (remaining < 0) ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Texto muito longo.',
+                    style: TextStyle(color: Colors.black, fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SimCard(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleIcon(icon: Icons.person_outline, top: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        t('objeto_preferred_name'),
+                        style: const TextStyle(
+                          color: simDark,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SimInput(
+                        hint: t('objeto_name_placeholder'),
+                        controller: nameController,
+                        onChanged: widget.session.setPreferredName,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              error!,
+              style: const TextStyle(color: Colors.black, fontSize: 14),
+            ),
+          ],
+          const SizedBox(height: 18),
+          GestureDetector(
+            onTap: () {
+              if (!canContinue && !waitingAttachment) {
+                showObjectiveRequired();
+              }
+            },
+            child: SizedBox(
+              width: double.infinity,
+              height: 64,
+              child: DecoratedBox(
+                decoration: primaryButtonDecoration(radius: 16),
+                child: TextButton(
+                  onPressed: canContinue ? saveAndContinue : null,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (sending)
+                        const Positioned(
+                          left: 16,
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: simDark,
+                            ),
+                          ),
+                        ),
+                      if (!sending && !waitingAttachment && !objectiveTooShort)
+                        const Positioned(
+                          right: 16,
+                          child: Icon(Icons.arrow_forward, color: simDark),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 42),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            sending
+                                ? t('objetivo_reading')
+                                : waitingAttachment
+                                ? 'Aguardando leitura do anexo...'
+                                : objectiveTooShort
+                                ? t('objeto_helper')
+                                : t('objeto_save_continue'),
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2477,24 +2468,25 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
   }
 
   String _toSimStage(String status) => switch (status) {
-        'pedido_recebido' => 'profile',
-        't00_running'     => 'curriculum',
-        't02_running'     => 'lesson',
-        'placement'       => 'placement',
-        'primeira_aula_pronta' => 'done',
-        'erro'            => 'error',
-        _                 => 'generic',
-      };
+    'pedido_recebido' => 'profile',
+    't00_running' => 'curriculum',
+    't02_running' => 'lesson',
+    'placement' => 'placement',
+    'primeira_aula_pronta' => 'done',
+    'erro' => 'error',
+    _ => 'generic',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final status  = widget.session.entryStatus;
-    final error   = widget.session.entryError;
+    final status = widget.session.entryStatus;
+    final error = widget.session.entryError;
     final isError = status == 'erro';
-    final isCredits = error?.toLowerCase().contains('crédito') == true ||
+    final isCredits =
+        error?.toLowerCase().contains('crédito') == true ||
         error?.toLowerCase().contains('credit') == true;
-    final simStage  = _toSimStage(status);
-    final isReady   = status == 'primeira_aula_pronta';
+    final simStage = _toSimStage(status);
+    final isReady = status == 'primeira_aula_pronta';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -2547,7 +2539,8 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                           ),
                         const SizedBox(height: 12),
                         GestureDetector(
-                          onTap: () => widget.session.openSupport('/cyber/objeto'),
+                          onTap: () =>
+                              widget.session.openSupport('/cyber/objeto'),
                           child: const Text(
                             'Trocar objetivo',
                             style: TextStyle(
@@ -2564,17 +2557,26 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                 ),
               )
             : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 24,
+                ),
                 child: Column(
                   children: [
                     // invisible debug labels
                     Text(
                       widget.session.route,
-                      style: const TextStyle(color: Colors.transparent, fontSize: 1),
+                      style: const TextStyle(
+                        color: Colors.transparent,
+                        fontSize: 1,
+                      ),
                     ),
                     Text(
                       'entry.status: $status',
-                      style: const TextStyle(color: Colors.transparent, fontSize: 1),
+                      style: const TextStyle(
+                        color: Colors.transparent,
+                        fontSize: 1,
+                      ),
                     ),
                     Expanded(
                       child: widget.session._prefs == null
@@ -2618,38 +2620,42 @@ class _PlacementLabScreenState extends State<PlacementLabScreen> {
   void _goToQuestion() async {
     setState(() => _preparing = true);
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    if (mounted) setState(() { _subStep = 3; _preparing = false; });
+    if (mounted) {
+      setState(() {
+        _subStep = 3;
+        _preparing = false;
+      });
+    }
   }
+
   void _goToResult() => setState(() => _subStep = 4);
 
   @override
   Widget build(BuildContext context) {
-    return CyberStepShell(
-      step: _subStep,
-      total: 4,
-      child: _buildSubStep(),
-    );
+    return CyberStepShell(step: _subStep, total: 4, child: _buildSubStep());
   }
 
   Widget _buildSubStep() {
     switch (_subStep) {
-      case 1: return _PlacementChoice(
-        onBeginning: widget.session.skipPlacement,
-        onQuick: _goToIntro,
-      );
-      case 2: return _PlacementIntro(
-        onStart: _preparing ? null : _goToQuestion,
-        preparing: _preparing,
-      );
-      case 3: return _PlacementQuestion(
-        session: widget.session,
-        onDone: _goToResult,
-      );
-      case 4: return _PlacementResult(
-        session: widget.session,
-        onContinue: widget.session.finishPlacement,
-      );
-      default: return const SizedBox.shrink();
+      case 1:
+        return _PlacementChoice(
+          onBeginning: widget.session.skipPlacement,
+          onQuick: _goToIntro,
+        );
+      case 2:
+        return _PlacementIntro(
+          onStart: _preparing ? null : _goToQuestion,
+          preparing: _preparing,
+        );
+      case 3:
+        return _PlacementQuestion(session: widget.session, onDone: _goToResult);
+      case 4:
+        return _PlacementResult(
+          session: widget.session,
+          onContinue: widget.session.finishPlacement,
+        );
+      default:
+        return const SizedBox.shrink();
     }
   }
 }
@@ -2668,7 +2674,10 @@ class _PlacementChoice extends StatelessWidget {
         Text(
           t('placement_choice_h1'),
           style: const TextStyle(
-            color: simDark, fontSize: 28, height: 1.12, fontWeight: FontWeight.w700,
+            color: simDark,
+            fontSize: 28,
+            height: 1.12,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 12),
@@ -2677,7 +2686,10 @@ class _PlacementChoice extends StatelessWidget {
           style: const TextStyle(color: simMuted, fontSize: 17, height: 1.45),
         ),
         const SizedBox(height: 32),
-        PrimaryWideButton(label: t('placement_start_beginning'), onTap: onBeginning),
+        PrimaryWideButton(
+          label: t('placement_start_beginning'),
+          onTap: onBeginning,
+        ),
         const SizedBox(height: 12),
         SecondaryWideButton(label: t('placement_take_quick'), onTap: onQuick),
       ],
@@ -2699,7 +2711,10 @@ class _PlacementIntro extends StatelessWidget {
         Text(
           t('placement_intro_h1'),
           style: const TextStyle(
-            color: simDark, fontSize: 28, height: 1.12, fontWeight: FontWeight.w700,
+            color: simDark,
+            fontSize: 28,
+            height: 1.12,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 12),
@@ -2741,7 +2756,10 @@ class _PlacementQuestion extends StatelessWidget {
         const Text(
           'Qual alternativa descreve melhor seu conhecimento atual?',
           style: TextStyle(
-            color: simDark, fontSize: 20, height: 1.3, fontWeight: FontWeight.w700,
+            color: simDark,
+            fontSize: 20,
+            height: 1.3,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 24),
@@ -2769,7 +2787,10 @@ class _PlacementResult extends StatelessWidget {
         Text(
           t('placement_result_h1'),
           style: const TextStyle(
-            color: simDark, fontSize: 28, height: 1.12, fontWeight: FontWeight.w700,
+            color: simDark,
+            fontSize: 28,
+            height: 1.12,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 12),
@@ -2786,15 +2807,42 @@ class _PlacementResult extends StatelessWidget {
 
 // Loading card copy — mirrors entryLoadingCopy() in LessonMainScreen.tsx
 (String, String) _loadingCopy(String status) => switch (status) {
-  'pedido_recebido'  => ('Recebi seu pedido.', 'A sala já abriu. Estou começando a entender seu objetivo.'),
-  't00_running'      => ('Entendendo seu objetivo...', 'Estou montando seu perfil e procurando o primeiro tema.'),
-  'first_item_ready' => ('Primeiro tema encontrado.', 'Já tenho o ponto inicial. Agora vou preparar a primeira explicação.'),
-  't02_running' || 't02_first_lesson_running' => ('Preparando sua primeira aula...', 'O professor já recebeu o primeiro tema e está escrevendo a explicação.'),
-  'primeira_aula_pronta' || 'first_lesson_ready' => ('A primeira aula chegou.', 'Estou abrindo o material.'),
-  'failed_t00' => ('Não consegui entender o objetivo.', 'Tente novamente com uma descrição um pouco mais direta do que deseja estudar.'),
-  'failed_t02' => ('Não consegui preparar a aula.', 'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponível.'),
-  'blocked_credits' => ('Créditos insuficientes.', 'Adicione créditos para gerar a próxima aula real.'),
-  _                  => (t('preparing_lesson'), 'A sala já abriu. Estou buscando a explicação do primeiro tema.'),
+  'pedido_recebido' => (
+    'Recebi seu pedido.',
+    'A sala já abriu. Estou começando a entender seu objetivo.',
+  ),
+  't00_running' => (
+    'Entendendo seu objetivo...',
+    'Estou montando seu perfil e procurando o primeiro tema.',
+  ),
+  'first_item_ready' => (
+    'Primeiro tema encontrado.',
+    'Já tenho o ponto inicial. Agora vou preparar a primeira explicação.',
+  ),
+  't02_running' || 't02_first_lesson_running' => (
+    'Preparando sua primeira aula...',
+    'O professor já recebeu o primeiro tema e está escrevendo a explicação.',
+  ),
+  'primeira_aula_pronta' || 'first_lesson_ready' => (
+    'A primeira aula chegou.',
+    'Estou abrindo o material.',
+  ),
+  'failed_t00' => (
+    'Não consegui entender o objetivo.',
+    'Tente novamente com uma descrição um pouco mais direta do que deseja estudar.',
+  ),
+  'failed_t02' => (
+    'Não consegui preparar a aula.',
+    'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponível.',
+  ),
+  'blocked_credits' => (
+    'Créditos insuficientes.',
+    'Adicione créditos para gerar a próxima aula real.',
+  ),
+  _ => (
+    t('preparing_lesson'),
+    'A sala já abriu. Estou buscando a explicação do primeiro tema.',
+  ),
 };
 
 String _feedbackText(String key) => switch (key) {
@@ -2852,7 +2900,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   bool _doubtSheetOpen = false;
   String? _theoryDoneKey;
   AnswerLetter? _localAnswerSel;
-  bool _localExpanded = false;
+  final bool _localExpanded = false;
 
   @override
   void initState() {
@@ -2954,7 +3002,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     // new explanation arrives (SimTypewriter restarts itself via didUpdateWidget,
     // so _theoryDoneKey becomes stale automatically).
     final explanationKey = content?.explanation;
-    final theoryReady = session._prefs == null ? content != null : explanationKey != null && _theoryDoneKey == explanationKey;
+    final theoryReady = session._prefs == null
+        ? content != null
+        : explanationKey != null && _theoryDoneKey == explanationKey;
 
     if (isDone) {
       return _LessonDoneScreen(session: session);
@@ -2977,38 +3027,48 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 112, 16, 128),
               children: [
-                  // Past answered questions — dimmed, non-interactive
-                  for (final entry in history)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Opacity(
-                        opacity: 0.6,
-                        child: IgnorePointer(child: _QuestionHistoryBlock(entry: entry)),
+                // Past answered questions — dimmed, non-interactive
+                for (final entry in history)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Opacity(
+                      opacity: 0.6,
+                      child: IgnorePointer(
+                        child: _QuestionHistoryBlock(entry: entry),
                       ),
                     ),
+                  ),
 
-                  // Active content card
-                  if (session.aulaRuntimeLoading && content == null) ...[
-                    const SizedBox(height: 8),
-                    // AUL-3: Loading phase — glass-soft card matching LessonMainScreen.tsx
-                    Container(
-                      constraints: const BoxConstraints(minHeight: 280),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: simBorder),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x0F111827), blurRadius: 16, offset: Offset(0, 4)),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(children: [
+                // Active content card
+                if (session.aulaRuntimeLoading && content == null) ...[
+                  const SizedBox(height: 8),
+                  // AUL-3: Loading phase — glass-soft card matching LessonMainScreen.tsx
+                  Container(
+                    constraints: const BoxConstraints(minHeight: 280),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: simBorder),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0F111827),
+                          blurRadius: 16,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0x1A21B2E9),
                                 borderRadius: BorderRadius.circular(4),
@@ -3024,63 +3084,83 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                                 ),
                               ),
                             ),
-                          ]),
-                          const SizedBox(height: 16),
-                          Builder(builder: (_) {
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Builder(
+                          builder: (_) {
                             final copy = _loadingCopy(session.entryStatus);
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   copy.$1,
-                                  style: const TextStyle(color: simDark, fontSize: 20, fontWeight: FontWeight.w600, height: 1.3),
+                                  style: const TextStyle(
+                                    color: simDark,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.3,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   copy.$2,
-                                  style: const TextStyle(color: simMuted, fontSize: 14, height: 1.5),
+                                  style: const TextStyle(
+                                    color: simMuted,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                  ),
                                 ),
                               ],
                             );
-                          }),
-                          const SizedBox(height: 20),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Container(
-                              height: 8,
-                              color: const Color(0x14000000),
-                              child: const _PulseBar(),
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            height: 8,
+                            color: const Color(0x14000000),
+                            child: const _PulseBar(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () => unawaited(session.openAulaRuntime()),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0x0F000000),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: simBorder),
+                            ),
+                            child: Text(
+                              t('aula_try_again_2'),
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          GestureDetector(
-                            onTap: () => unawaited(session.openAulaRuntime()),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0x0F000000),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: simBorder),
-                              ),
-                              child: Text(
-                                t('aula_try_again_2'),
-                                style: const TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ],
 
-                  // Theory card — only when content is loaded
-                  if (content != null) ...[
-                    SimCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // AUL-4: TEORIA section label
-                          Row(children: [
+                // Theory card — only when content is loaded
+                if (content != null) ...[
+                  SimCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // AUL-4: TEORIA section label
+                        Row(
+                          children: [
                             Text(
                               t('aula_theory'),
                               style: TextStyle(
@@ -3098,298 +3178,350 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                                   '· ${_headerLabelText(viewModel.headerLabel)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: simMuted, fontSize: 11),
+                                  style: const TextStyle(
+                                    color: simMuted,
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ),
                             ],
-                          ]),
-                          const SizedBox(height: 8),
-                          if (session._prefs == null)
-                            Text(
-                              content.explanation,
-                              style: const TextStyle(
-                                color: simDark,
-                                fontSize: 15,
-                                height: 1.45,
-                              ),
-                            )
-                          else
-                            SimTypewriter(
-                              text: content.explanation,
-                              style: const TextStyle(
-                                color: simDark,
-                                fontSize: 15,
-                                height: 1.45,
-                              ),
-                              onTick: _scrollToBottom,
-                              onDone: () {
-                        setState(() => _theoryDoneKey = content.explanation);
-                        _scrollToBottom();
-                      },
-                            ),
-                          // Doubt: processing → progress bar
-                          if (session.doubt.status == DoubtStatus.processing) ...[
-                            const SizedBox(height: 12),
-                            DoubtProgressBar(
-                              progress: session.doubt.progress.toDouble(),
-                              label: 'Analisando sua dúvida...',
-                            ),
                           ],
-                          // Doubt: explaining / error → explanation card
-                          if (session.doubt.status == DoubtStatus.explaining ||
-                              session.doubt.status == DoubtStatus.error) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: simBorder),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x59111827),
-                                    blurRadius: 30,
-                                    spreadRadius: -24,
-                                    offset: Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Explicação da sua dúvida',
-                                    style: TextStyle(
-                                      color: simDark,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  if (session.doubt.error != null)
-                                    Text(
-                                      session.doubt.error!,
-                                      style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4),
-                                    )
-                                  else if (session.doubt.response != null)
-                                    Text(
-                                      session.doubt.response!.explanation,
-                                      style: const TextStyle(color: simDark, fontSize: 14, height: 1.5),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 14),
-                          LessonImagePanel(session: session),
-                          const SizedBox(height: 8),
-                          if (session.audioLoading) ...[
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando audio da aula...',
-                              loading: true,
-                            ),
-                          ] else if (session.audioError != null) ...[
-                            StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
-                          ] else if (session.audioEnabled) ...[
-                            StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Audio da aula ligado',
-                              onTap: session.toggleAudio,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-
-                  if (content == null) ...[
-                    SimCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LessonImagePanel(session: session),
-                          const SizedBox(height: 8),
-                          if (session.audioLoading) ...[
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando audio da aula...',
-                              loading: true,
-                            ),
-                          ] else if (session.audioError != null) ...[
-                            StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
-                          ] else if (session.audioEnabled) ...[
-                            StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Audio da aula ligado',
-                              onTap: session.toggleAudio,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-
-                  // Challenge/question block — hidden while doubt sheet is open to avoid duplicate B. finders
-                  if (!session.doubtOpen && theoryReady && content != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          const Expanded(child: Divider(color: simBorder)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              t('aula_challenge'),
-                              style: TextStyle(
-                                fontFamily: _kMono,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: simMuted,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ),
-                          const Expanded(child: Divider(color: simBorder)),
-                        ],
-                      ),
-                    ),
-                    SimCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                        ),
+                        const SizedBox(height: 8),
+                        if (session._prefs == null)
                           Text(
-                            content.question,
-                            style: const TextStyle(color: simDark, fontSize: 15, height: 1.4, fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 10),
-                          AnswerButton(
-                            label: 'A.',
-                            text: content.options[AnswerLetter.A] ?? '',
-                            active: effectiveSelected == AnswerLetter.A,
-                            enabled: !locked,
-                            onTap: () => session.chooseAulaAnswer('A'),
-                          ),
-                          AnswerButton(
-                            label: 'B.',
-                            text: content.options[AnswerLetter.B] ?? '',
-                            active: effectiveSelected == AnswerLetter.B,
-                            enabled: !locked,
-                            onTap: () => session.chooseAulaAnswer('B'),
-                          ),
-                          AnswerButton(
-                            label: 'C.',
-                            text: content.options[AnswerLetter.C] ?? '',
-                            active: effectiveSelected == AnswerLetter.C,
-                            enabled: !locked,
-                            onTap: () => session.chooseAulaAnswer('C'),
-                          ),
-
-                          // Sinal 1/2/3 — appears after A/B/C selection
-                          if (effectiveExpanded) ...[
-                            const SizedBox(height: 14),
-                            _SinalRow(onSignal: session.submitAulaSignal),
-                          ],
-
-                          if (isProcessing) ...[
-                            const SizedBox(height: 14),
-                            const StatusLine(
-                              icon: Icons.auto_awesome_outlined,
-                              text: 'Registrando...',
-                              loading: true,
+                            content.explanation,
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 15,
+                              height: 1.45,
                             ),
-                          ],
+                          )
+                        else
+                          SimTypewriter(
+                            text: content.explanation,
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 15,
+                              height: 1.45,
+                            ),
+                            onTick: _scrollToBottom,
+                            onDone: () {
+                              setState(
+                                () => _theoryDoneKey = content.explanation,
+                              );
+                              _scrollToBottom();
+                            },
+                          ),
+                        // Doubt: processing → progress bar
+                        if (session.doubt.status == DoubtStatus.processing) ...[
+                          const SizedBox(height: 12),
+                          DoubtProgressBar(
+                            progress: session.doubt.progress.toDouble(),
+                            label: 'Analisando sua dúvida...',
+                          ),
                         ],
-                      ),
-                    ),
-                  ], // end challenge block
-
-                  // FeedbackBox + Dúvida button + Próximo
-                  if (isCompleted && feedbackKey != null) ...[
-                      const SizedBox(height: 10),
-                      // "Dúvida" button (spec: concluido state, before FeedbackBox)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: session.doubt.status != DoubtStatus.processing
-                              ? session.toggleDoubt
-                              : null,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        // Doubt: explaining / error → explanation card
+                        if (session.doubt.status == DoubtStatus.explaining ||
+                            session.doubt.status == DoubtStatus.error) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: simBorder),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Color(0x47111827),
-                                  blurRadius: 20,
-                                  spreadRadius: -16,
-                                  offset: Offset(0, 8),
+                                  color: Color(0x59111827),
+                                  blurRadius: 30,
+                                  spreadRadius: -24,
+                                  offset: Offset(0, 10),
                                 ),
                               ],
                             ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Explicação da sua dúvida',
+                                  style: TextStyle(
+                                    color: simDark,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                if (session.doubt.error != null)
+                                  Text(
+                                    session.doubt.error!,
+                                    style: const TextStyle(
+                                      color: simMuted,
+                                      fontSize: 14,
+                                      height: 1.4,
+                                    ),
+                                  )
+                                else if (session.doubt.response != null)
+                                  Text(
+                                    session.doubt.response!.explanation,
+                                    style: const TextStyle(
+                                      color: simDark,
+                                      fontSize: 14,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        LessonImagePanel(session: session),
+                        const SizedBox(height: 8),
+                        if (session.audioLoading) ...[
+                          const StatusLine(
+                            icon: Icons.volume_up_outlined,
+                            text: 'Preparando audio da aula...',
+                            loading: true,
+                          ),
+                        ] else if (session.audioError != null) ...[
+                          StatusLine(
+                            icon: Icons.volume_off_outlined,
+                            text: session.audioError!,
+                          ),
+                        ] else if (session.audioEnabled) ...[
+                          StatusLine(
+                            icon: Icons.volume_up_outlined,
+                            text: 'Audio da aula ligado',
+                            onTap: session.toggleAudio,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                if (content == null) ...[
+                  SimCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LessonImagePanel(session: session),
+                        const SizedBox(height: 8),
+                        if (session.audioLoading) ...[
+                          const StatusLine(
+                            icon: Icons.volume_up_outlined,
+                            text: 'Preparando audio da aula...',
+                            loading: true,
+                          ),
+                        ] else if (session.audioError != null) ...[
+                          StatusLine(
+                            icon: Icons.volume_off_outlined,
+                            text: session.audioError!,
+                          ),
+                        ] else if (session.audioEnabled) ...[
+                          StatusLine(
+                            icon: Icons.volume_up_outlined,
+                            text: 'Audio da aula ligado',
+                            onTap: session.toggleAudio,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // Challenge/question block — hidden while doubt sheet is open to avoid duplicate B. finders
+                if (!session.doubtOpen && theoryReady && content != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        const Expanded(child: Divider(color: simBorder)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            t('aula_challenge'),
+                            style: TextStyle(
+                              fontFamily: _kMono,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: simMuted,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider(color: simBorder)),
+                      ],
+                    ),
+                  ),
+                  SimCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          content.question,
+                          style: const TextStyle(
+                            color: simDark,
+                            fontSize: 15,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        AnswerButton(
+                          label: 'A.',
+                          text: content.options[AnswerLetter.A] ?? '',
+                          active: effectiveSelected == AnswerLetter.A,
+                          enabled: !locked,
+                          onTap: () => session.chooseAulaAnswer('A'),
+                        ),
+                        AnswerButton(
+                          label: 'B.',
+                          text: content.options[AnswerLetter.B] ?? '',
+                          active: effectiveSelected == AnswerLetter.B,
+                          enabled: !locked,
+                          onTap: () => session.chooseAulaAnswer('B'),
+                        ),
+                        AnswerButton(
+                          label: 'C.',
+                          text: content.options[AnswerLetter.C] ?? '',
+                          active: effectiveSelected == AnswerLetter.C,
+                          enabled: !locked,
+                          onTap: () => session.chooseAulaAnswer('C'),
+                        ),
+
+                        // Sinal 1/2/3 — appears after A/B/C selection
+                        if (effectiveExpanded) ...[
+                          const SizedBox(height: 14),
+                          _SinalRow(onSignal: session.submitAulaSignal),
+                        ],
+
+                        if (isProcessing) ...[
+                          const SizedBox(height: 14),
+                          const StatusLine(
+                            icon: Icons.auto_awesome_outlined,
+                            text: 'Registrando...',
+                            loading: true,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ], // end challenge block
+                // FeedbackBox + Dúvida button + Próximo
+                if (isCompleted && feedbackKey != null) ...[
+                  const SizedBox(height: 10),
+                  // "Dúvida" button (spec: concluido state, before FeedbackBox)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: session.doubt.status != DoubtStatus.processing
+                          ? session.toggleDoubt
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: simBorder),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x47111827),
+                              blurRadius: 20,
+                              spreadRadius: -16,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          session.doubt.status == DoubtStatus.processing
+                              ? 'Dúvida...'
+                              : 'Dúvida',
+                          style: TextStyle(
+                            color:
+                                session.doubt.status == DoubtStatus.processing
+                                ? simMuted
+                                : simDark,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _FeedbackBox(
+                    isCorrect: wasCorrect ?? false,
+                    message: _feedbackText(feedbackKey),
+                    nextLabel: _nextBtnText(nextKey),
+                    nextReady:
+                        !locked &&
+                        session.doubt.status != DoubtStatus.processing,
+                    onNext: () => unawaited(session.advanceAula()),
+                  ),
+                ],
+                if (isEngineError) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: simWarn),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t('aula_gen_fail'),
+                          style: const TextStyle(
+                            color: simWarn,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (phase?.message != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            phase!.message!,
+                            style: const TextStyle(
+                              color: simMuted,
+                              fontSize: 14,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () => unawaited(session.openAulaRuntime()),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: simDark,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             child: Text(
-                              session.doubt.status == DoubtStatus.processing
-                                  ? 'Dúvida...'
-                                  : 'Dúvida',
-                              style: TextStyle(
-                                color: session.doubt.status == DoubtStatus.processing
-                                    ? simMuted
-                                    : simDark,
+                              t('aula_try_again_2'),
+                              style: const TextStyle(
+                                color: Colors.white,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      _FeedbackBox(
-                        isCorrect: wasCorrect ?? false,
-                        message: _feedbackText(feedbackKey),
-                        nextLabel: _nextBtnText(nextKey),
-                        nextReady:
-                            !locked && session.doubt.status != DoubtStatus.processing,
-                        onNext: () => unawaited(session.advanceAula()),
-                      ),
-                    ],
-                  if (isEngineError) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: simWarn),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(t('aula_gen_fail'), style: const TextStyle(color: simWarn, fontSize: 15, fontWeight: FontWeight.w700)),
-                          if (phase?.message != null) ...[
-                            const SizedBox(height: 8),
-                            Text(phase!.message!, style: const TextStyle(color: simMuted, fontSize: 14, height: 1.4)),
-                          ],
-                          const SizedBox(height: 16),
-                          GestureDetector(
-                            onTap: () => unawaited(session.openAulaRuntime()),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: simDark,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(t('aula_try_again_2'), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-
+                  ),
+                ],
               ],
             ),
           ),
@@ -3401,7 +3533,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               session: session,
               showReviewButton: true,
               progress: viewModel?.progress.toDouble(),
-              headerLabel: viewModel != null ? _headerLabelText(viewModel.headerLabel) : null,
+              headerLabel: viewModel != null
+                  ? _headerLabelText(viewModel.headerLabel)
+                  : null,
             ),
           ),
           // FixedBubble — fixed bottom-center overlay while audio plays
@@ -3440,77 +3574,95 @@ class _QuestionHistoryBlock extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 320, maxHeight: 160),
               color: Colors.white,
               padding: const EdgeInsets.all(4),
-              child: Image.network(
-                entry.imageUrl!,
-                fit: BoxFit.contain,
-              ),
+              child: Image.network(entry.imageUrl!, fit: BoxFit.contain),
             ),
           ),
           const SizedBox(height: 12),
         ],
         Text(
           entry.text,
-          style: const TextStyle(color: simDark, fontSize: 18, height: 1.3, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: simDark,
+            fontSize: 18,
+            height: 1.3,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 14),
         for (final opt in entry.options) ...[
-          Builder(builder: (context) {
-            final chosen = opt.id == entry.chosenOptionId;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: chosen ? simDark : simBorder,
-                  width: chosen ? 1.5 : 1,
+          Builder(
+            builder: (context) {
+              final chosen = opt.id == entry.chosenOptionId;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
                 ),
-                boxShadow: chosen
-                    ? [const BoxShadow(color: simDark, blurRadius: 0, spreadRadius: 1)]
-                    : null,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: chosen ? simDark : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      opt.id.name.toUpperCase(),
-                      style: TextStyle(
-                        fontFamily: 'JetBrainsMono',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: chosen ? Colors.white : simDark,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: chosen ? simDark : simBorder,
+                    width: chosen ? 1.5 : 1,
+                  ),
+                  boxShadow: chosen
+                      ? [
+                          const BoxShadow(
+                            color: simDark,
+                            blurRadius: 0,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: chosen
+                            ? simDark
+                            : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        opt.id.name.toUpperCase(),
+                        style: TextStyle(
+                          fontFamily: 'JetBrainsMono',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: chosen ? Colors.white : simDark,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(opt.text, style: const TextStyle(color: simDark, fontSize: 15)),
-                  ),
-                  if (chosen) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      entry.correct ? 'ok' : 'x',
-                      style: TextStyle(
-                        fontFamily: 'JetBrainsMono',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: simDark,
-                        letterSpacing: 0.18 * 11,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        opt.text,
+                        style: const TextStyle(color: simDark, fontSize: 15),
                       ),
                     ),
+                    if (chosen) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        entry.correct ? 'ok' : 'x',
+                        style: TextStyle(
+                          fontFamily: 'JetBrainsMono',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: simDark,
+                          letterSpacing: 0.18 * 11,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            );
-          }),
+                ),
+              );
+            },
+          ),
         ],
       ],
     );
@@ -3547,12 +3699,14 @@ class _FeedbackBoxState extends State<_FeedbackBox>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 260))
-      ..forward();
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    )..forward();
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _slide = Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
+    _slide = Tween(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
   @override
@@ -3609,7 +3763,10 @@ class _FeedbackBoxState extends State<_FeedbackBox>
                 GestureDetector(
                   onTap: widget.nextReady ? widget.onNext : null,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       gradient: widget.nextReady ? simGradientPrimary : null,
                       color: widget.nextReady ? null : simLight,
@@ -3659,7 +3816,11 @@ class _SinalRowState extends State<_SinalRow> {
       children: [
         const Text(
           'Como ficou este ponto para voce?',
-          style: TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: simDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 10),
         Container(
@@ -3676,7 +3837,10 @@ class _SinalRowState extends State<_SinalRow> {
                   child: GestureDetector(
                     onTap: () => setState(() => _selected = labels[i].$1),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0x14111827),
                         borderRadius: BorderRadius.circular(12),
@@ -3733,6 +3897,7 @@ class _SinalRowState extends State<_SinalRow> {
     );
   }
 }
+
 // Loading pulse bar — animates w-1/2 pulse, matches loading card bar in LessonMainScreen.tsx
 class _PulseBar extends StatefulWidget {
   const _PulseBar();
@@ -3740,25 +3905,35 @@ class _PulseBar extends StatefulWidget {
   State<_PulseBar> createState() => _PulseBarState();
 }
 
-class _PulseBarState extends State<_PulseBar> with SingleTickerProviderStateMixin {
+class _PulseBarState extends State<_PulseBar>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _opacity;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.4, end: 1.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _opacity,
-      builder: (_, __) => Opacity(
+      builder: (_, _) => Opacity(
         opacity: _opacity.value,
         child: FractionallySizedBox(
           widthFactor: 0.5,
@@ -3783,7 +3958,8 @@ class _FixedBubble extends StatefulWidget {
   State<_FixedBubble> createState() => _FixedBubbleState();
 }
 
-class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderStateMixin {
+class _FixedBubbleState extends State<_FixedBubble>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
   late final Animation<double> _opacity;
@@ -3795,7 +3971,10 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    final curved = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
     _scale = Tween<double>(begin: 1.0, end: 1.08).animate(curved);
     _opacity = Tween<double>(begin: 1.0, end: 0.85).animate(curved);
   }
@@ -3835,6 +4014,7 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
         ),
       );
     }
+
     if (reducedMotion) return bubble();
     return AnimatedBuilder(
       animation: _controller,
@@ -3924,7 +4104,10 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                         onTap: () => setState(() => _showSignal = true),
                         child: Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 14,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
@@ -3932,7 +4115,11 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                           ),
                           child: Text(
                             '$letter. $text',
-                            style: const TextStyle(color: simDark, fontSize: 14, height: 1.35),
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 14,
+                              height: 1.35,
+                            ),
                           ),
                         ),
                       ),
@@ -4062,7 +4249,11 @@ class _AuxQuestionScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: simBorder),
                         ),
-                        child: const Icon(Icons.arrow_back, color: simDark, size: 20),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: simDark,
+                          size: 20,
+                        ),
                       ),
                     )
                   else
@@ -4078,11 +4269,17 @@ class _AuxQuestionScreen extends StatelessWidget {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: FractionallySizedBox(
-                              widthFactor: (progressWidth! / 100).clamp(0.0, 1.0),
+                              widthFactor: (progressWidth! / 100).clamp(
+                                0.0,
+                                1.0,
+                              ),
                               child: Container(
                                 decoration: const BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [Color(0xFFFFFFFF), Color(0xFFF3F4F6)],
+                                    colors: [
+                                      Color(0xFFFFFFFF),
+                                      Color(0xFFF3F4F6),
+                                    ],
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
                                   ),
@@ -4147,7 +4344,11 @@ class _AuxQuestionScreen extends StatelessWidget {
                     ],
                     const SizedBox(height: 20),
                     // A/B/C options
-                    for (final opt in [AnswerLetter.A, AnswerLetter.B, AnswerLetter.C]) ...[
+                    for (final opt in [
+                      AnswerLetter.A,
+                      AnswerLetter.B,
+                      AnswerLetter.C,
+                    ]) ...[
                       _AuxOptionTile(
                         letter: opt,
                         text: conteudo.options[opt] ?? '',
@@ -4253,7 +4454,13 @@ class _AuxOptionTile extends StatelessWidget {
                   width: selected ? 1.5 : 1.0,
                 ),
                 boxShadow: selected
-                    ? [const BoxShadow(color: Color(0x14111827), blurRadius: 12, offset: Offset(0, 4))]
+                    ? [
+                        const BoxShadow(
+                          color: Color(0x14111827),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
                     : null,
               ),
               child: Row(
@@ -4345,7 +4552,9 @@ class _AuxFeedbackBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: correct ? const Color(0xFFF0FDF4) : const Color(0xFFFFF1F1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: correct ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5)),
+        border: Border.all(
+          color: correct ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5),
+        ),
       ),
       child: Row(
         children: [
@@ -4366,7 +4575,11 @@ class _AuxFeedbackBox extends StatelessWidget {
               ),
               child: const Text(
                 '▶',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -4426,7 +4639,10 @@ class _ReviewRoomScreen extends StatelessWidget {
                               ),
                             ),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
                                 color: simDark,
                                 borderRadius: BorderRadius.circular(12),
@@ -4462,7 +4678,8 @@ class _ReviewRoomScreen extends StatelessWidget {
       );
     }
 
-    if (status == ReviewRoomStatus.preparing || status == ReviewRoomStatus.ready) {
+    if (status == ReviewRoomStatus.preparing ||
+        status == ReviewRoomStatus.ready) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
@@ -4518,7 +4735,10 @@ class _ReviewRoomScreen extends StatelessWidget {
                     GestureDetector(
                       onTap: session.closeReviewRoom,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: simDark,
                           borderRadius: BorderRadius.circular(12),
@@ -4572,38 +4792,46 @@ class _ReviewRoomScreen extends StatelessWidget {
       );
     }
 
-    final progressWidth = review.count > 0 ? (review.idx / review.count) * 100.0 : 0.0;
+    final progressWidth = review.count > 0
+        ? (review.idx / review.count) * 100.0
+        : 0.0;
     return _AuxQuestionScreen(
       mode: 'review',
       conteudo: review.conteudo!,
       selected: review.letra,
       status: status.name,
-      headerLabel: '${t('aux_review_button')} ${review.idx + 1}/${review.count}',
+      headerLabel:
+          '${t('aux_review_button')} ${review.idx + 1}/${review.count}',
       progressWidth: progressWidth,
       resultCorrect: review.resultCorrect,
       resultMsg: review.resultMsg,
       onBack: session.closeReviewRoom,
-      onSelect: (letter) => session.setReviewRoom(review.copyWith(letra: letter)),
+      onSelect: (letter) =>
+          session.setReviewRoom(review.copyWith(letra: letter)),
       onSignal: (signal) {
         final correct = review.letra == review.conteudo!.correctAnswer;
-        session.setReviewRoom(review.copyWith(
-          sinal: signal,
-          status: ReviewRoomStatus.result,
-          resultCorrect: correct,
-          resultMsg: correct ? t('aula_fb_correct') : t('aula_fb_redo'),
-        ));
+        session.setReviewRoom(
+          review.copyWith(
+            sinal: signal,
+            status: ReviewRoomStatus.result,
+            resultCorrect: correct,
+            resultMsg: correct ? t('aula_fb_correct') : t('aula_fb_redo'),
+          ),
+        );
       },
       onNext: () {
         final nextIdx = review.idx + 1;
         if (nextIdx >= review.count) {
           session.setReviewRoom(review.copyWith(status: ReviewRoomStatus.done));
         } else {
-          session.setReviewRoom(ReviewRoomView(
-            status: ReviewRoomStatus.preparing,
-            count: review.count,
-            queue: review.queue,
-            idx: nextIdx,
-          ));
+          session.setReviewRoom(
+            ReviewRoomView(
+              status: ReviewRoomStatus.preparing,
+              count: review.count,
+              queue: review.queue,
+              idx: nextIdx,
+            ),
+          );
         }
       },
     );
@@ -4659,7 +4887,10 @@ class _RecoveryRoomScreen extends StatelessWidget {
                     GestureDetector(
                       onTap: session.closeRecoveryRoom,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: simDark,
                           borderRadius: BorderRadius.circular(12),
@@ -4683,7 +4914,8 @@ class _RecoveryRoomScreen extends StatelessWidget {
       );
     }
 
-    if (status == RecoveryRoomStatus.intro || status == RecoveryRoomStatus.preparing) {
+    if (status == RecoveryRoomStatus.intro ||
+        status == RecoveryRoomStatus.preparing) {
       return Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
@@ -4738,26 +4970,33 @@ class _RecoveryRoomScreen extends StatelessWidget {
       headerLabel: t('aux_recovery_preparing_title'),
       resultCorrect: recovery.resultCorrect,
       resultMsg: recovery.resultMsg,
-      onSelect: (letter) => session.setRecoveryRoom(recovery.copyWith(letra: letter)),
+      onSelect: (letter) =>
+          session.setRecoveryRoom(recovery.copyWith(letra: letter)),
       onSignal: (signal) {
         final correct = recovery.letra == recovery.conteudo!.correctAnswer;
-        session.setRecoveryRoom(recovery.copyWith(
-          sinal: signal,
-          status: RecoveryRoomStatus.result,
-          resultCorrect: correct,
-          resultMsg: correct ? t('aula_fb_correct') : t('aula_fb_redo'),
-        ));
+        session.setRecoveryRoom(
+          recovery.copyWith(
+            sinal: signal,
+            status: RecoveryRoomStatus.result,
+            resultCorrect: correct,
+            resultMsg: correct ? t('aula_fb_correct') : t('aula_fb_redo'),
+          ),
+        );
       },
       onNext: () {
         final nextIdx = recovery.idx + 1;
         if (nextIdx >= recovery.queue.length) {
-          session.setRecoveryRoom(recovery.copyWith(status: RecoveryRoomStatus.done));
+          session.setRecoveryRoom(
+            recovery.copyWith(status: RecoveryRoomStatus.done),
+          );
         } else {
-          session.setRecoveryRoom(RecoveryRoomView(
-            status: RecoveryRoomStatus.preparing,
-            queue: recovery.queue,
-            idx: nextIdx,
-          ));
+          session.setRecoveryRoom(
+            RecoveryRoomView(
+              status: RecoveryRoomStatus.preparing,
+              queue: recovery.queue,
+              idx: nextIdx,
+            ),
+          );
         }
       },
     );
@@ -4790,10 +5029,16 @@ class AulaTopBar extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.96),
-            border: const Border(bottom: BorderSide(color: simBorder, width: 1)),
+            color: Colors.white.withValues(alpha: 0.96),
+            border: const Border(
+              bottom: BorderSide(color: simBorder, width: 1),
+            ),
             boxShadow: const [
-              BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 2)),
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 12,
+                offset: Offset(0, 2),
+              ),
             ],
           ),
           child: SafeArea(
@@ -4825,7 +5070,12 @@ class AulaTopBar extends StatelessWidget {
                           child: Container(
                             decoration: const BoxDecoration(
                               gradient: simGradientPrimary,
-                              boxShadow: [BoxShadow(color: Color(0x2E111827), blurRadius: 10)],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x2E111827),
+                                  blurRadius: 10,
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -4837,17 +5087,25 @@ class AulaTopBar extends StatelessWidget {
                     flex: 0,
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 82),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: simBorder),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+                          BoxShadow(
+                            color: Color(0x1F000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
                         ],
                       ),
                       child: Text(
-                        (headerLabel ?? (session.stableLang ?? 'SIM')).toUpperCase(),
+                        (headerLabel ?? (session.stableLang ?? 'SIM'))
+                            .toUpperCase(),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                         style: TextStyle(
@@ -4862,7 +5120,9 @@ class AulaTopBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   _HeaderIconCard(
-                    icon: session.audioEnabled ? Icons.volume_up : Icons.volume_off_outlined,
+                    icon: session.audioEnabled
+                        ? Icons.volume_up
+                        : Icons.volume_off_outlined,
                     color: session.audioEnabled ? simDark : simMuted,
                     onTap: session.toggleAudio,
                   ),
@@ -4888,7 +5148,11 @@ class AulaTopBar extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.menu_book_outlined, color: simDark, size: 14),
+                            const Icon(
+                              Icons.menu_book_outlined,
+                              color: simDark,
+                              size: 14,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               t('aux_review_button').toUpperCase(),
@@ -4938,7 +5202,11 @@ class _HeaderIconCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: simBorder),
           boxShadow: const [
-            BoxShadow(color: Color(0x26000000), blurRadius: 8, offset: Offset(0, 2)),
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
         child: Icon(icon, color: color, size: 16),
@@ -4946,6 +5214,7 @@ class _HeaderIconCard extends StatelessWidget {
     );
   }
 }
+
 class _HamburgerBtn extends StatelessWidget {
   const _HamburgerBtn({required this.onTap});
   final VoidCallback onTap;
@@ -4983,7 +5252,7 @@ class _HamburgerBtn extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF111827).withOpacity(0.15),
+                      color: const Color(0xFF111827).withValues(alpha: 0.15),
                       blurRadius: 3,
                       offset: const Offset(0, 1),
                     ),
@@ -5027,7 +5296,10 @@ class LessonImagePanel extends StatelessWidget {
               const SizedBox(
                 width: 34,
                 height: 34,
-                child: CircularProgressIndicator(strokeWidth: 2, color: simDark),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: simDark,
+                ),
               )
             else if (ready)
               const Icon(Icons.image, size: 46, color: simDark)
@@ -5581,10 +5853,7 @@ class AnswerButton extends StatelessWidget {
 }
 
 class _PressScale extends StatefulWidget {
-  const _PressScale({
-    required this.child,
-    this.enabled = true,
-  });
+  const _PressScale({required this.child, this.enabled = true});
 
   final Widget child;
   final bool enabled;
@@ -5599,10 +5868,15 @@ class _PressScaleState extends State<_PressScale> {
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
-      onPointerUp: widget.enabled ? (_) => setState(() => _pressed = false) : null,
-      onPointerCancel:
-          widget.enabled ? (_) => setState(() => _pressed = false) : null,
+      onPointerDown: widget.enabled
+          ? (_) => setState(() => _pressed = true)
+          : null,
+      onPointerUp: widget.enabled
+          ? (_) => setState(() => _pressed = false)
+          : null,
+      onPointerCancel: widget.enabled
+          ? (_) => setState(() => _pressed = false)
+          : null,
       child: AnimatedScale(
         duration: const Duration(milliseconds: 90),
         scale: _pressed ? 0.99 : 1,
@@ -5617,7 +5891,7 @@ void showAulaMenu(BuildContext context, LabSession session) {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'menu',
-    barrierColor: Colors.black.withOpacity(0.5),
+    barrierColor: Colors.black.withValues(alpha: 0.5),
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (ctx, anim1, anim2) {
       final sw = MediaQuery.of(ctx).size.width;
@@ -5636,7 +5910,10 @@ void showAulaMenu(BuildContext context, LabSession session) {
               width: drawerW,
               height: double.infinity,
               child: SafeArea(
-                child: _AulaDrawerContent(session: session, onClose: () => Navigator.of(ctx).pop()),
+                child: _AulaDrawerContent(
+                  session: session,
+                  onClose: () => Navigator.of(ctx).pop(),
+                ),
               ),
             ),
           ),
@@ -5692,7 +5969,9 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
 
     final session = widget.session;
     final lessonId = session.lessonLocalId;
-    final state = lessonId != null ? session.canonicalStore?.readState(lessonId) : null;
+    final state = lessonId != null
+        ? session.canonicalStore?.readState(lessonId)
+        : null;
     final total = state?.curriculum?.totalItems ?? 0;
     final advances = state?.progress?.itemIdx ?? 0;
     final pct = total > 0 ? ((advances / total) * 100).round() : 0;
@@ -5730,7 +6009,11 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   alignment: Alignment.center,
                   child: const Text(
                     '✕',
-                    style: TextStyle(color: text, fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -5751,17 +6034,27 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                 onTap: _handleNovaAula,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: simDark,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
-                      BoxShadow(color: Color(0x2E111827), blurRadius: 12, offset: Offset(0, 4)),
+                      BoxShadow(
+                        color: Color(0x2E111827),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Row(
                     children: [
-                      const Text('＋', style: TextStyle(color: Colors.white, fontSize: 18)),
+                      const Text(
+                        '＋',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
                       const SizedBox(width: 12),
                       Text(
                         t('nova_aula'),
@@ -5778,10 +6071,16 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               const SizedBox(height: 8),
               // Recarregar créditos
               GestureDetector(
-                onTap: () { widget.onClose(); session.openCredits(); },
+                onTap: () {
+                  widget.onClose();
+                  session.openCredits();
+                },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 11,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -5856,7 +6155,10 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                         hintText: t('drawer_search_placeholder'),
                         hintStyle: const TextStyle(color: muted, fontSize: 14),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ),
@@ -5945,11 +6247,20 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               // Export / Import / Status
               Row(
                 children: [
-                  _DrawerFooterBtn(label: '⤓ ${t("exportar")}', onTap: () => _flash('Em breve')),
+                  _DrawerFooterBtn(
+                    label: '⤓ ${t("exportar")}',
+                    onTap: () => _flash('Em breve'),
+                  ),
                   const SizedBox(width: 6),
-                  _DrawerFooterBtn(label: '⤒ ${t("importar")}', onTap: () => _flash('Em breve')),
+                  _DrawerFooterBtn(
+                    label: '⤒ ${t("importar")}',
+                    onTap: () => _flash('Em breve'),
+                  ),
                   const SizedBox(width: 6),
-                  _DrawerFooterBtn(label: 'ⓘ ${t("status")}',  onTap: () => _flash('Em breve')),
+                  _DrawerFooterBtn(
+                    label: 'ⓘ ${t("status")}',
+                    onTap: () => _flash('Em breve'),
+                  ),
                 ],
               ),
               if (_feedback != null) ...[
@@ -5991,7 +6302,10 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               ),
               const SizedBox(height: 6),
               GestureDetector(
-                onTap: () { widget.onClose(); session.openSupport('/conta/deletar'); },
+                onTap: () {
+                  widget.onClose();
+                  session.openSupport('/conta/deletar');
+                },
                 child: Text(
                   'Solicitar exclusão da conta',
                   textAlign: TextAlign.center,
@@ -6060,7 +6374,7 @@ void _showSimDrawer(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'menu',
-    barrierColor: Colors.black.withOpacity(0.35),
+    barrierColor: Colors.black.withValues(alpha: 0.35),
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (ctx, anim1, anim2) {
       final sw = MediaQuery.of(ctx).size.width;
@@ -6184,9 +6498,7 @@ class LanguageButton extends StatelessWidget {
           gradient: active ? simGradientPrimary : null,
           color: active ? null : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: active ? simDark : simBorder,
-          ),
+          border: Border.all(color: active ? simDark : simBorder),
           boxShadow: active
               ? const [
                   BoxShadow(
@@ -6534,7 +6846,8 @@ class _RadialRingsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0x14111827) // rgba(17,24,39,0.08)
+      ..color =
+          const Color(0x14111827) // rgba(17,24,39,0.08)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final cx = size.width / 2;

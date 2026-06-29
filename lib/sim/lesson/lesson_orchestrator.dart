@@ -38,22 +38,22 @@ class LessonOrchestrator {
     if (existing != null && !forceRefresh) return existing;
 
     // Part III.4: route by priority — active runs immediately, background goes through semaphore
-    Future<CompleteLesson> Function() fetchFn = () => _fetchText(params);
-    final queued = priority == 'active'
-        ? fetchFn()
-        : _bgText.run(fetchFn);
+    Future<CompleteLesson> fetchFn() => _fetchText(params);
+    final queued = priority == 'active' ? fetchFn() : _bgText.run(fetchFn);
 
-    final future = queued.then((lesson) {
-      cache.put(key, lesson);
-      bus.notify(key, lesson);
-      if (_textInflight[key] != null) _textInflight.remove(key);
-      // Part III.6: dispatch image sequentially in background
-      _imageQueue.run(() => _fetchImage(params, lesson));
-      return lesson;
-    }).catchError((Object error) {
-      if (_textInflight[key] != null) _textInflight.remove(key);
-      throw error;
-    });
+    final future = queued
+        .then((lesson) {
+          cache.put(key, lesson);
+          bus.notify(key, lesson);
+          if (_textInflight[key] != null) _textInflight.remove(key);
+          // Part III.6: dispatch image sequentially in background
+          _imageQueue.run(() => _fetchImage(params, lesson));
+          return lesson;
+        })
+        .catchError((Object error) {
+          if (_textInflight[key] != null) _textInflight.remove(key);
+          throw error;
+        });
     _textInflight[key] = future;
     return future;
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../billing/account_deletion.dart';
@@ -13,7 +15,6 @@ import '../classroom/lesson_session_engine.dart';
 import '../cloud/cloud_queue.dart';
 import '../cloud/lesson_cloud_bootstrap.dart';
 import '../cloud/lesson_curriculum_sync_engine.dart';
-import '../cloud/supabase_client_contract.dart';
 import '../cloud/student_learning_sync.dart';
 import '../experience/student_experience_engine.dart';
 import '../experience/student_experience_t00_adapter.dart';
@@ -34,6 +35,7 @@ import '../placement/placement_store.dart';
 import '../placement/placement_t02_caller.dart';
 import '../placement/student_placement_service.dart';
 import '../state/student_learning_state.dart';
+import '../state/learning_decision_engine.dart';
 import '../state/student_learning_state_service.dart';
 import '../state/student_state_store.dart';
 import '../state/student_state_store_adapter.dart';
@@ -106,7 +108,6 @@ class SimOrganism {
     return stateService.ensure(lessonLocalId: lessonLocalId);
   }
 
-
   static SimOrganism production({
     required String lessonLocalId,
     required SimAiServerConfig aiConfig,
@@ -129,6 +130,7 @@ class SimOrganism {
     final t00Client = SimServerT00Client(config: aiConfig);
     final t02Client = SimServerT02Client(config: aiConfig);
     final cache = LessonMaterialCache();
+    unawaited(cache.hydrate());
     final eventBus = LessonEventBus();
     final orchestrator = LessonOrchestrator(
       t02Client: t02Client,
@@ -212,11 +214,14 @@ class SimOrganism {
       sessionProvider: sessionProvider,
       cloudFunctions: cloudFunctions,
     );
-    stateAdapter.onWrite = (id) => cloudQueue.enqueueStudentStateSync(lessonLocalId: id);
-    // I.8: readyWindowWorker subscribes to state writes to drain queued jobs
-    stateService.subscribe((id) {
-      Future.microtask(() => readyWindowWorker.drainReadyWindowJobs(id));
-    });
+    stateService.setShadowDecisionRunner(
+      (id) => runShadowDecision(id, stateService),
+    );
+    stateAdapter.onWrite = (id) =>
+        cloudQueue.enqueueStudentStateSync(lessonLocalId: id);
+    readyWindowWorker.startReadyWindowWorker(
+      activeLessonLocalId: lessonLocalId,
+    );
     final sync = StudentLearningSync(cloudQueue);
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
     final curriculumSync = LessonCurriculumSyncEngine(

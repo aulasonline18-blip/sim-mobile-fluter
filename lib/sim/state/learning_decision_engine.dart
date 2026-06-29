@@ -83,10 +83,11 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
     final lastForItem = state.attempts.reversed
         .cast<LessonAttempt?>()
         .firstWhere(
-          (attempt) => attempt?.marker == currentMarker,
+          (attempt) =>
+              attempt?.marker == currentMarker && attempt?.layer == layer,
           orElse: () => null,
         );
-    if (lastForItem != null && lastForItem.layer == layer) {
+    if (lastForItem != null) {
       if (layer == LessonLayer.l3) {
         if (!lastForItem.correct || lastForItem.sinal == DecisionSignal.three) {
           return DecisionResult(

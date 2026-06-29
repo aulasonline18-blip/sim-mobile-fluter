@@ -73,10 +73,9 @@ ApplyDecisionResult applyStudentDecision(
   String? marker,
 }) {
   final concluidos = inputProgress.concluidos;
-  final concluidosWithCurrent =
-      marker != null && !concluidos.contains(marker)
-          ? [...concluidos, marker]
-          : concluidos;
+  final concluidosWithCurrent = marker != null && !concluidos.contains(marker)
+      ? [...concluidos, marker]
+      : concluidos;
 
   switch (decision.actionType) {
     case DecisionActionType.showCompletion:
@@ -100,8 +99,10 @@ ApplyDecisionResult applyStudentDecision(
             layer: LessonLayer.l1,
             erros: 0,
             concluidos: concluidosWithCurrent,
-            mainAdvances: [inputProgress.mainAdvances + 1, proposed]
-                .reduce((a, b) => a > b ? a : b),
+            mainAdvances: [
+              inputProgress.mainAdvances + 1,
+              proposed,
+            ].reduce((a, b) => a > b ? a : b),
             pctAvanco: totalItems == 0
                 ? 0
                 : ((proposed / totalItems) * 100).round(),
@@ -114,10 +115,7 @@ ApplyDecisionResult applyStudentDecision(
       final proposedLayer = decision.proposedLayer;
       if (proposedLayer != null) {
         return ApplyDecisionResult(
-          nextProgress: inputProgress.copyWith(
-            layer: proposedLayer,
-            erros: 0,
-          ),
+          nextProgress: inputProgress.copyWith(layer: proposedLayer, erros: 0),
           applied: true,
         );
       }
@@ -182,24 +180,31 @@ StudentLearningState processAnswerWithEngine(
     marker: item.marker,
   );
 
-  // F2.3: STUDENT_DECISION_APPLIED/REJECTED conforme nomenclatura Web
-  final event = StudentLearningEvent(
+  final decisionPayload = {
+    'decision': decision.actionType.name,
+    'appliedProgress': applied.nextProgress.toJson(),
+    'ts': ts,
+    'reason': decision.reason,
+    'fromItemIdx': idx,
+    'fromLayer': progress.layer.value,
+    'toItemIdx': applied.nextProgress.itemIdx,
+    'toLayer': applied.nextProgress.layer.value,
+    'correct': correct,
+    'sinal': context.sinal.value,
+  };
+  final decisionEvent = StudentLearningEvent(
     type: applied.applied
         ? 'STUDENT_DECISION_APPLIED'
         : 'STUDENT_DECISION_REJECTED',
     ts: ts,
-    payload: {
-      'decision': decision.actionType.name,
-      'appliedProgress': applied.nextProgress.toJson(),
-      'ts': ts,
-      'reason': decision.reason,
-      'fromItemIdx': idx,
-      'fromLayer': progress.layer.value,
-      'toItemIdx': applied.nextProgress.itemIdx,
-      'toLayer': applied.nextProgress.layer.value,
-      'correct': correct,
-      'sinal': context.sinal.value,
-    },
+    payload: decisionPayload,
+  );
+  final executorEvent = StudentLearningEvent(
+    type: applied.applied
+        ? 'STUDENT_EXECUTOR_APPLIED'
+        : 'STUDENT_EXECUTOR_REJECTED',
+    ts: ts,
+    payload: decisionPayload,
   );
 
   const maxAttemptsCap = 300;
@@ -208,7 +213,7 @@ StudentLearningState processAnswerWithEngine(
   final cappedAttempts = rawAttempts.length > maxAttemptsCap
       ? rawAttempts.sublist(rawAttempts.length - maxAttemptsCap)
       : rawAttempts;
-  final rawEvents = [...state.events, event];
+  final rawEvents = [...state.events, decisionEvent, executorEvent];
   final cappedEvents = rawEvents.length > maxEventsCap
       ? rawEvents.sublist(rawEvents.length - maxEventsCap)
       : rawEvents;

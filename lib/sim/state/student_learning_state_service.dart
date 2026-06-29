@@ -3,9 +3,8 @@ import 'dart:async';
 
 import 'student_learning_state.dart';
 
-typedef StudentStateMutator = StudentLearningState Function(
-  StudentLearningState state,
-);
+typedef StudentStateMutator =
+    StudentLearningState Function(StudentLearningState state);
 
 // Resumo de aula para o drawer lateral (espelha CyberLessonSummary do Web)
 class CyberLessonSummary {
@@ -42,21 +41,21 @@ class CyberLessonSummary {
   final int? updatedAt;
 
   JsonMap toJson() => {
-        'lessonLocalId': lessonLocalId,
-        'lessonCloudId': lessonCloudId,
-        'tema': tema,
-        'idioma': idioma,
-        'nivel': nivel,
-        'totalItens': totalItens,
-        'itemIdx': itemIdx,
-        'layer': layer,
-        'concluidos': concluidos,
-        'finalizada': finalizada,
-        'deleted': deleted,
-        'markerAtual': markerAtual,
-        'createdAt': createdAt,
-        'updatedAt': updatedAt,
-      };
+    'lessonLocalId': lessonLocalId,
+    'lessonCloudId': lessonCloudId,
+    'tema': tema,
+    'idioma': idioma,
+    'nivel': nivel,
+    'totalItens': totalItens,
+    'itemIdx': itemIdx,
+    'layer': layer,
+    'concluidos': concluidos,
+    'finalizada': finalizada,
+    'deleted': deleted,
+    'markerAtual': markerAtual,
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+  };
 }
 
 CyberLessonSummary? buildCyberLessonSummary(StudentLearningState state) {
@@ -67,7 +66,8 @@ CyberLessonSummary? buildCyberLessonSummary(StudentLearningState state) {
   final items = curriculum?.items ?? const <CurriculumItem>[];
   final rawIdx = progress?.itemIdx ?? current?.itemIdx ?? 0;
   final itemIdx = rawIdx < 0 ? 0 : rawIdx;
-  final deleted = state.extra['deletedAt'] != null ||
+  final deleted =
+      state.extra['deletedAt'] != null ||
       (state.extra['syncInfo'] is Map &&
           (state.extra['syncInfo'] as Map)['deletedAt'] != null);
   final concluidosCount = [
@@ -87,10 +87,9 @@ CyberLessonSummary? buildCyberLessonSummary(StudentLearningState state) {
     layer: progress?.layer.value ?? current?.layer.value ?? 1,
     concluidos: concluidosCount,
     finalizada: state.extra['finalizada'] == true,
-    markerAtual: current?.marker ??
-        (itemIdx >= 0 && itemIdx < items.length
-            ? items[itemIdx].marker
-            : null),
+    markerAtual:
+        current?.marker ??
+        (itemIdx >= 0 && itemIdx < items.length ? items[itemIdx].marker : null),
     deleted: deleted,
     createdAt: state.createdAt > 0 ? state.createdAt : null,
     updatedAt: state.updatedAt > 0 ? state.updatedAt : null,
@@ -99,7 +98,7 @@ CyberLessonSummary? buildCyberLessonSummary(StudentLearningState state) {
 
 class StudentLearningStateService {
   StudentLearningStateService({Map<String, StudentLearningState>? seed})
-      : _states = Map.of(seed ?? const {});
+    : _states = Map.of(seed ?? const {});
 
   final Map<String, StudentLearningState> _states;
   final List<void Function(String)> _writeListeners = [];
@@ -126,7 +125,9 @@ class StudentLearningStateService {
     if (state != null) {
       if (state.extra['deletedAt'] != null) return;
       if (state.extra['syncInfo'] is Map &&
-          (state.extra['syncInfo'] as Map)['deletedAt'] != null) return;
+          (state.extra['syncInfo'] as Map)['deletedAt'] != null) {
+        return;
+      }
     }
 
     _shadowThrottle[lessonLocalId]?.cancel();
@@ -149,10 +150,7 @@ class StudentLearningStateService {
 
   List<String> listLessonIds() => _states.keys.toList(growable: false);
 
-  StudentLearningState ensure({
-    required String lessonLocalId,
-    String? userId,
-  }) {
+  StudentLearningState ensure({required String lessonLocalId, String? userId}) {
     return _states.putIfAbsent(
       lessonLocalId,
       () => StudentLearningState.empty(
@@ -215,17 +213,15 @@ class StudentLearningStateService {
     };
   }
 
-  StudentLearningState commitOnboarding(
-    String lessonLocalId,
-    String draftId,
-  ) {
+  StudentLearningState commitOnboarding(String lessonLocalId, String draftId) {
     final draft = _onboardingDrafts[draftId] ?? const {};
     return mutate(lessonLocalId, (state) {
       return state.copyWith(
         profile: state.profile.copyWith(
           objetivo: draft['objetivo'] as String? ?? state.profile.objetivo,
           language: draft['language'] as String? ?? state.profile.language,
-          stableLang: draft['stableLang'] as String? ??
+          stableLang:
+              draft['stableLang'] as String? ??
               draft['language'] as String? ??
               state.profile.stableLang,
           nivel: draft['nivel'] as String? ?? state.profile.nivel,
@@ -288,10 +284,7 @@ class StudentLearningStateService {
         progress.layer.value * 100;
   }
 
-  static int compareRank(
-    StudentLearningState a,
-    StudentLearningState b,
-  ) {
+  static int compareRank(StudentLearningState a, StudentLearningState b) {
     final diff = progressRank(a.progress) - progressRank(b.progress);
     if (diff != 0) return diff;
     return a.updatedAt - b.updatedAt;

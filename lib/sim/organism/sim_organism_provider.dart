@@ -7,10 +7,9 @@ import 'sim_organism.dart';
 class SimOrganismProvider {
   SimOrganismProvider({
     required this.canonicalStore,
-    required SimAiServerConfig aiConfig,
-    required SharedPreferences prefs,
-  })  : _aiConfig = aiConfig,
-        _prefs = prefs;
+    required this._aiConfig,
+    required this._prefs,
+  });
 
   final StudentStateStore canonicalStore;
   final SimAiServerConfig _aiConfig;

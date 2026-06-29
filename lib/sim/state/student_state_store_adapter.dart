@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'student_learning_state.dart';
 import 'student_learning_state_service.dart';
 import 'student_state_store.dart';
@@ -13,6 +15,10 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
   final StudentStateStore _store;
   void Function(String lessonLocalId)? onWrite;
   final List<void Function(String)> _writeListeners = [];
+  final Set<String> _knownLessonIds = {};
+  final Map<String, JsonMap> _onboardingDrafts = {};
+  final Map<String, Timer> _shadowThrottle = {};
+  void Function(String lessonLocalId)? _shadowDecisionRunner;
 
   @override
   void Function() subscribe(void Function(String lessonLocalId) cb) {
@@ -20,7 +26,24 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
     return () => _writeListeners.remove(cb);
   }
 
+  @override
+  void setShadowDecisionRunner(void Function(String lessonLocalId) runner) {
+    _shadowDecisionRunner = runner;
+  }
+
   void _notifyWrite(String lessonLocalId) {
+    final state = _store.readState(lessonLocalId);
+    if (_isDeleted(state)) return;
+
+    _shadowThrottle[lessonLocalId]?.cancel();
+    _shadowThrottle[lessonLocalId] = Timer(
+      const Duration(milliseconds: 250),
+      () {
+        _shadowThrottle.remove(lessonLocalId);
+        _shadowDecisionRunner?.call(lessonLocalId);
+      },
+    );
+
     for (final cb in List.of(_writeListeners)) {
       try {
         cb(lessonLocalId);
@@ -30,6 +53,7 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
 
   @override
   StudentLearningState? read(String lessonLocalId) {
+    _knownLessonIds.add(lessonLocalId);
     final state = _store.readState(lessonLocalId);
     if (_isCompatiblyEmpty(state)) return null;
     return state;
@@ -37,13 +61,12 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
 
   @override
   List<String> listLessonIds() {
-    // O ?ndice local entra na fase de sync/listagem. Por enquanto, manter
-    // compatibilidade com chamadas que toleram lista vazia.
-    return const [];
+    return _knownLessonIds.toList(growable: false);
   }
 
   @override
   StudentLearningState ensure({required String lessonLocalId, String? userId}) {
+    _knownLessonIds.add(lessonLocalId);
     final state = _store.readState(lessonLocalId);
     if (userId == null || state.userId == userId) return state;
     return _store.writeState(state.copyWith(userId: userId));
@@ -51,6 +74,7 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
 
   @override
   StudentLearningState write(StudentLearningState state) {
+    _knownLessonIds.add(state.lessonLocalId);
     final saved = _store.writeState(state);
     onWrite?.call(saved.lessonLocalId);
     _notifyWrite(saved.lessonLocalId);
@@ -62,6 +86,7 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
     String lessonLocalId,
     StudentStateMutator mutator,
   ) {
+    _knownLessonIds.add(lessonLocalId);
     final saved = _store.patchState(lessonLocalId, mutator);
     _notifyWrite(lessonLocalId);
     return saved;
@@ -96,6 +121,54 @@ class StudentStateStoreAdapter implements StudentLearningStateService {
           : nextAttempts;
       return state.copyWith(attempts: trimmed);
     });
+  }
+
+  @override
+  void upsertOnboardingDraft(String draftId, JsonMap draft) {
+    _onboardingDrafts[draftId] = {
+      ...(_onboardingDrafts[draftId] ?? const {}),
+      ...draft,
+    };
+  }
+
+  @override
+  StudentLearningState commitOnboarding(String lessonLocalId, String draftId) {
+    final draft = _onboardingDrafts[draftId] ?? const {};
+    return mutate(lessonLocalId, (state) {
+      return state.copyWith(
+        profile: state.profile.copyWith(
+          objetivo: draft['objetivo'] as String? ?? state.profile.objetivo,
+          language: draft['language'] as String? ?? state.profile.language,
+          stableLang:
+              draft['stableLang'] as String? ??
+              draft['language'] as String? ??
+              state.profile.stableLang,
+          nivel: draft['nivel'] as String? ?? state.profile.nivel,
+          academicLevel:
+              draft['academicLevel'] as String? ?? state.profile.academicLevel,
+          preferredName:
+              draft['preferredName'] as String? ?? state.profile.preferredName,
+          targetTopic:
+              draft['targetTopic'] as String? ?? state.profile.targetTopic,
+        ),
+      );
+    });
+  }
+
+  @override
+  List<CyberLessonSummary> buildAllSummaries() {
+    return listLessonIds()
+        .map(read)
+        .whereType<StudentLearningState>()
+        .map(buildCyberLessonSummary)
+        .whereType<CyberLessonSummary>()
+        .toList();
+  }
+
+  bool _isDeleted(StudentLearningState state) {
+    if (state.extra['deletedAt'] != null) return true;
+    final syncInfo = state.extra['syncInfo'];
+    return syncInfo is Map && syncInfo['deletedAt'] != null;
   }
 
   bool _isCompatiblyEmpty(StudentLearningState state) {

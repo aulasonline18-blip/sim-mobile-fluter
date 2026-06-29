@@ -1,3 +1,4 @@
+import '../core/signal_tracker.dart';
 import '../lesson/dopamine_ready_window_engine.dart';
 import '../lesson/lesson_models.dart';
 import '../lesson/student_lesson_material_service.dart';
@@ -21,14 +22,17 @@ class LessonAnswerProgressController {
     required this.materialController,
     this.store,
     this.audioCore,
+    SignalTracker? signalTracker,
     MasteryTruthEngine? truthEngine,
-  }) : truthEngine = truthEngine ?? const MasteryTruthEngine();
+  }) : signalTracker = signalTracker ?? SignalTracker(),
+       truthEngine = truthEngine ?? const MasteryTruthEngine();
 
   final StudentLearningStateService stateService;
   final StudentLessonMaterialService materialService;
   final LessonMaterialController materialController;
   final StudentStateStore? store;
   final AudioCore? audioCore;
+  final SignalTracker signalTracker;
   final MasteryTruthEngine truthEngine;
   final AmparoController _amparo = const AmparoController();
 
@@ -60,6 +64,11 @@ class LessonAnswerProgressController {
 
     audioCore?.stop();
     final letter = phase.letter!;
+    signalTracker.recordSignal(
+      marker: item.marker,
+      layer: position.layer,
+      sinal: signal,
+    );
     final correct = letter == content.correctAnswer;
     final questionId = [
       item.marker,
@@ -88,10 +97,10 @@ class LessonAnswerProgressController {
       imageUrl: position.imagem,
     );
     // Prevent double-tap (only block if the immediately preceding entry is identical)
-    final _lastEntry = position.history.isEmpty ? null : position.history.last;
-    if (_lastEntry == null ||
-        _lastEntry.id != entry.id ||
-        _lastEntry.chosenOptionId != entry.chosenOptionId) {
+    final lastEntry = position.history.isEmpty ? null : position.history.last;
+    if (lastEntry == null ||
+        lastEntry.id != entry.id ||
+        lastEntry.chosenOptionId != entry.chosenOptionId) {
       final next = [...position.history, entry];
       final firstImageToKeep = (next.length - 4).clamp(0, next.length);
       position.history = next.asMap().entries.map((mapEntry) {
@@ -132,8 +141,14 @@ class LessonAnswerProgressController {
       final savedAfterAmparo = amparoState != savedState
           ? stateService.write(amparoState)
           : savedState;
-      final evidence = truthEngine.evaluateMarker(savedAfterAmparo, item.marker);
-      final truthState = truthEngine.writeTruthToState(savedAfterAmparo, evidence);
+      final evidence = truthEngine.evaluateMarker(
+        savedAfterAmparo,
+        item.marker,
+      );
+      final truthState = truthEngine.writeTruthToState(
+        savedAfterAmparo,
+        evidence,
+      );
       final savedTruthState = stateService.write(truthState);
       _appendMasteryEvaluatedEvent(
         lessonLocalId: lessonLocalId,
@@ -210,7 +225,8 @@ class LessonAnswerProgressController {
     final itemIdx = progress.itemIdx;
     if (itemIdx < 0 || itemIdx >= curriculum.items.length) return state;
     final marker = curriculum.items[itemIdx].marker;
-    final stateForDecision = evidence.status == MasteryStatus.mastered &&
+    final stateForDecision =
+        evidence.status == MasteryStatus.mastered &&
             !(progress.concluidos.contains(marker))
         ? state.copyWith(
             progress: progress.copyWith(

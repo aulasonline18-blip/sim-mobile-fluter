@@ -1,10 +1,8 @@
 // Bateria de paridade T01–T28 (Planta Sala de Aula, seção 18).
 // Cada teste é isolado e roda <50ms.
-import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sim_mobile/sim/classroom/amparo_controller.dart';
 import 'package:sim_mobile/sim/classroom/classroom_models.dart';
 import 'package:sim_mobile/sim/classroom/lesson_answer_progress_controller.dart';
 import 'package:sim_mobile/sim/classroom/lesson_material_controller.dart';
@@ -213,7 +211,10 @@ LessonAnswerProgressController _controller(
     orchestrator: orch,
     readyWindowEngine: rwe,
   );
-  final ctrl = LessonMaterialController(stateService: svc, materialService: mat);
+  final ctrl = LessonMaterialController(
+    stateService: svc,
+    materialService: mat,
+  );
   return LessonAnswerProgressController(
     stateService: svc,
     materialService: mat,
@@ -231,7 +232,12 @@ void main() {
   // T01 – acerto L1 sinal 1 → L3
   // -------------------------------------------------------------------------
   test('T01: answer(A,1,A) em L1 → layer=L3, erros=0, attempts.len=1', () {
-    final next = _answer(_state0(), AnswerLetter.A, DecisionSignal.one, AnswerLetter.A);
+    final next = _answer(
+      _state0(),
+      AnswerLetter.A,
+      DecisionSignal.one,
+      AnswerLetter.A,
+    );
     expect(next.progress?.layer, LessonLayer.l3);
     expect(next.progress?.itemIdx, 0);
     expect(next.progress?.erros, 0);
@@ -241,19 +247,38 @@ void main() {
   // -------------------------------------------------------------------------
   // T02 – erro L1 sinal 1 → L2
   // -------------------------------------------------------------------------
-  test('T02: answer(B,1,A) em L1 → layer=L2, erros=0 (ADVANCE_LAYER resets erros per INV-21)', () {
-    final next = _answer(_state0(), AnswerLetter.B, DecisionSignal.one, AnswerLetter.A);
-    expect(next.progress?.layer, LessonLayer.l2);
-    expect(next.progress?.itemIdx, 0);
-    expect(next.progress?.erros, 0);
-  });
+  test(
+    'T02: answer(B,1,A) em L1 → layer=L2, erros=0 (ADVANCE_LAYER resets erros per INV-21)',
+    () {
+      final next = _answer(
+        _state0(),
+        AnswerLetter.B,
+        DecisionSignal.one,
+        AnswerLetter.A,
+      );
+      expect(next.progress?.layer, LessonLayer.l2);
+      expect(next.progress?.itemIdx, 0);
+      expect(next.progress?.erros, 0);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // T03 – T01 depois acerto L3 sinal 1 → avança item
   // -------------------------------------------------------------------------
   test('T03: T01→answer(A,1,A) em L3 → itemIdx=1, concluidos=[M-1]', () {
-    final after01 = _answer(_state0(), AnswerLetter.A, DecisionSignal.one, AnswerLetter.A);
-    final next = _answer(after01, AnswerLetter.A, DecisionSignal.one, AnswerLetter.A, now: 2);
+    final after01 = _answer(
+      _state0(),
+      AnswerLetter.A,
+      DecisionSignal.one,
+      AnswerLetter.A,
+    );
+    final next = _answer(
+      after01,
+      AnswerLetter.A,
+      DecisionSignal.one,
+      AnswerLetter.A,
+      now: 2,
+    );
     expect(next.progress?.itemIdx, 1);
     expect(next.progress?.layer, LessonLayer.l1);
     expect(next.progress?.erros, 0);
@@ -265,7 +290,12 @@ void main() {
   // -------------------------------------------------------------------------
   test('T04: answer(A,3,A) em L3 → itemIdx=0, layer=L3, reinforce', () {
     final stateL3 = _state0(layer: LessonLayer.l3);
-    final next = _answer(stateL3, AnswerLetter.A, DecisionSignal.three, AnswerLetter.A);
+    final next = _answer(
+      stateL3,
+      AnswerLetter.A,
+      DecisionSignal.three,
+      AnswerLetter.A,
+    );
     expect(next.progress?.itemIdx, 0);
     expect(next.progress?.layer, LessonLayer.l3);
   });
@@ -274,7 +304,12 @@ void main() {
   // T05 – acerto L1 sinal 2 → L2
   // -------------------------------------------------------------------------
   test('T05: answer(A,2,A) em L1 → layer=L2', () {
-    final next = _answer(_state0(), AnswerLetter.A, DecisionSignal.two, AnswerLetter.A);
+    final next = _answer(
+      _state0(),
+      AnswerLetter.A,
+      DecisionSignal.two,
+      AnswerLetter.A,
+    );
     expect(next.progress?.layer, LessonLayer.l2);
     expect(next.progress?.itemIdx, 0);
   });
@@ -284,7 +319,12 @@ void main() {
   // -------------------------------------------------------------------------
   test('T06: answer(A,2,A) em L2 → layer=L3', () {
     final stateL2 = _state0(layer: LessonLayer.l2);
-    final next = _answer(stateL2, AnswerLetter.A, DecisionSignal.two, AnswerLetter.A);
+    final next = _answer(
+      stateL2,
+      AnswerLetter.A,
+      DecisionSignal.two,
+      AnswerLetter.A,
+    );
     expect(next.progress?.layer, LessonLayer.l3);
   });
 
@@ -293,7 +333,12 @@ void main() {
   // -------------------------------------------------------------------------
   test('T07: answer(B,3,A) em L2 → layer=L2 reinforce', () {
     final stateL2 = _state0(layer: LessonLayer.l2);
-    final next = _answer(stateL2, AnswerLetter.B, DecisionSignal.three, AnswerLetter.A);
+    final next = _answer(
+      stateL2,
+      AnswerLetter.B,
+      DecisionSignal.three,
+      AnswerLetter.A,
+    );
     expect(next.progress?.layer, LessonLayer.l2);
     expect(next.progress?.itemIdx, 0);
   });
@@ -303,7 +348,12 @@ void main() {
   // -------------------------------------------------------------------------
   test('T08: itemIdx=2, answer(A,1,A) em L3 → SHOW_COMPLETION', () {
     final stateLast = _state0(itemIdx: 2, layer: LessonLayer.l3);
-    final next = _answer(stateLast, AnswerLetter.A, DecisionSignal.one, AnswerLetter.A);
+    final next = _answer(
+      stateLast,
+      AnswerLetter.A,
+      DecisionSignal.one,
+      AnswerLetter.A,
+    );
     expect(next.progress?.itemIdx, 3);
     expect(next.progress?.mainAdvances, greaterThanOrEqualTo(3));
     expect(next.progress?.pctAvanco, 100);
@@ -338,11 +388,16 @@ void main() {
   // -------------------------------------------------------------------------
   // T10 – layer inválida → NO_SAFE_DECISION
   // -------------------------------------------------------------------------
-  test('T10: layer inválida (sem tentativas correspondentes) → showCurrentLesson', () {
-    // A engine não tem enum layer=99; testa com layer normal mas sem tentativa → showCurrentLesson
-    final decision = decideNextActionFromState(_state0(layer: LessonLayer.l2));
-    expect(decision.actionType, DecisionActionType.showCurrentLesson);
-  });
+  test(
+    'T10: layer inválida (sem tentativas correspondentes) → showCurrentLesson',
+    () {
+      // A engine não tem enum layer=99; testa com layer normal mas sem tentativa → showCurrentLesson
+      final decision = decideNextActionFromState(
+        _state0(layer: LessonLayer.l2),
+      );
+      expect(decision.actionType, DecisionActionType.showCurrentLesson);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // T11 – curriculum vazio → NO_SAFE_DECISION
@@ -368,31 +423,48 @@ void main() {
   // T13 – dois answers seguidos
   // -------------------------------------------------------------------------
   test('T13: dois answers A1ok→L3, A1ok→item2; mainAdvances=1', () {
-    final a1 = _answer(_state0(), AnswerLetter.A, DecisionSignal.one, AnswerLetter.A, now: 1);
-    final a2 = _answer(a1, AnswerLetter.A, DecisionSignal.one, AnswerLetter.A, now: 2);
+    final a1 = _answer(
+      _state0(),
+      AnswerLetter.A,
+      DecisionSignal.one,
+      AnswerLetter.A,
+      now: 1,
+    );
+    final a2 = _answer(
+      a1,
+      AnswerLetter.A,
+      DecisionSignal.one,
+      AnswerLetter.A,
+      now: 2,
+    );
     expect(a2.progress?.itemIdx, 1);
     expect(a2.progress?.mainAdvances, greaterThanOrEqualTo(1));
     expect(a2.progress?.concluidos, contains('M-1'));
-    final appliedEvents = a2.events.where((e) => e.type == 'STUDENT_EXECUTOR_APPLIED');
+    final appliedEvents = a2.events.where(
+      (e) => e.type == 'STUDENT_EXECUTOR_APPLIED',
+    );
     expect(appliedEvents.length, greaterThanOrEqualTo(2));
   });
 
   // -------------------------------------------------------------------------
   // T14 – gabarito null tratado como acerto (AnswerLetter.A == AnswerLetter.A)
   // -------------------------------------------------------------------------
-  test('T14: answer(A,1,A) com correctAnswer=A → correto (fallback implícito)', () {
-    final next = processAnswerWithEngine(
-      _state0(),
-      const AnswerContext(
-        letra: AnswerLetter.A,
-        sinal: DecisionSignal.one,
-        correctAnswer: AnswerLetter.A,
-      ),
-      now: 1,
-    );
-    expect(next.attempts.first.correct, isTrue);
-    expect(next.progress?.layer, LessonLayer.l3);
-  });
+  test(
+    'T14: answer(A,1,A) com correctAnswer=A → correto (fallback implícito)',
+    () {
+      final next = processAnswerWithEngine(
+        _state0(),
+        const AnswerContext(
+          letra: AnswerLetter.A,
+          sinal: DecisionSignal.one,
+          correctAnswer: AnswerLetter.A,
+        ),
+        now: 1,
+      );
+      expect(next.attempts.first.correct, isTrue);
+      expect(next.progress?.layer, LessonLayer.l3);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // T15 – histórico 5 questões: só últimas 4 têm imagem
@@ -493,30 +565,37 @@ void main() {
   // -------------------------------------------------------------------------
   // T18 – flushOne rejeitado com remote_state → merge + re-enqueue
   // -------------------------------------------------------------------------
-  test('T18: flushOne rejected com remoteState → estado mergeado + re-enqueue', () async {
-    final localState = _state0();
-    final remoteState = _state0(itemIdx: 1, layer: LessonLayer.l3, mainAdvances: 1);
-
-    final svc = StudentLearningStateService(seed: {'L1': localState});
-    final cloud = _FakeCloudFunctions()
-      ..nextResult = PersistStudentStateResult.rejectedRegression(
-        remoteState: remoteState,
-        remoteHighWaterMark: 999,
+  test(
+    'T18: flushOne rejected com remoteState → estado mergeado + re-enqueue',
+    () async {
+      final localState = _state0();
+      final remoteState = _state0(
+        itemIdx: 1,
+        layer: LessonLayer.l3,
+        mainAdvances: 1,
       );
-    final queue = CloudQueue(
-      storage: MemoryCloudQueueStorage(),
-      stateService: svc,
-      sessionProvider: _FakeSession(),
-      cloudFunctions: cloud,
-      now: () => 1000,
-    );
 
-    queue.enqueueStudentStateSync(lessonLocalId: 'L1');
-    await queue.flushOne('L1', force: true);
+      final svc = StudentLearningStateService(seed: {'L1': localState});
+      final cloud = _FakeCloudFunctions()
+        ..nextResult = PersistStudentStateResult.rejectedRegression(
+          remoteState: remoteState,
+          remoteHighWaterMark: 999,
+        );
+      final queue = CloudQueue(
+        storage: MemoryCloudQueueStorage(),
+        stateService: svc,
+        sessionProvider: _FakeSession(),
+        cloudFunctions: cloud,
+        now: () => 1000,
+      );
 
-    expect(svc.read('L1')?.progress?.itemIdx, 1);
-    expect(queue.getQueueSnapshot(), contains('L1'));
-  });
+      queue.enqueueStudentStateSync(lessonLocalId: 'L1');
+      await queue.flushOne('L1', force: true);
+
+      expect(svc.read('L1')?.progress?.itemIdx, 1);
+      expect(queue.getQueueSnapshot(), contains('L1'));
+    },
+  );
 
   // -------------------------------------------------------------------------
   // T19 – max attempts (10) → nextRetryAt = +300000ms
@@ -694,26 +773,29 @@ void main() {
   // -------------------------------------------------------------------------
   // T23 – readyWindow com 3 itens → prepara 3 slots
   // -------------------------------------------------------------------------
-  test('T23: readyWindow (idx=0,L1) com 3 items → 3 slots preparados', () async {
-    final svc = StudentLearningStateService(seed: {'L1': _state0()});
-    final t02 = _FakeT02();
-    final orch = LessonOrchestrator(
-      t02Client: t02,
-      cache: LessonMaterialCache(),
-      bus: LessonEventBus(),
-    );
-    final rwe = DopamineReadyWindowEngine(service: svc, orchestrator: orch);
+  test(
+    'T23: readyWindow (idx=0,L1) com 3 items → 3 slots preparados',
+    () async {
+      final svc = StudentLearningStateService(seed: {'L1': _state0()});
+      final t02 = _FakeT02();
+      final orch = LessonOrchestrator(
+        t02Client: t02,
+        cache: LessonMaterialCache(),
+        bus: LessonEventBus(),
+      );
+      final rwe = DopamineReadyWindowEngine(service: svc, orchestrator: orch);
 
-    final result = await rwe.runDopamineReadyWindowFromStudentState(
-      lessonLocalId: 'L1',
-      source: 'test-T23',
-      maxSlots: 3,
-    );
+      final result = await rwe.runDopamineReadyWindowFromStudentState(
+        lessonLocalId: 'L1',
+        source: 'test-T23',
+        maxSlots: 3,
+      );
 
-    expect(result, hasLength(3));
-    expect(result.every((ok) => ok), isTrue);
-    expect(svc.read('L1')?.readyLessonMaterials.length, 3);
-  });
+      expect(result, hasLength(3));
+      expect(result.every((ok) => ok), isTrue);
+      expect(svc.read('L1')?.readyLessonMaterials.length, 3);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // T24 – cross-cancel: stop chamado antes de novo play
