@@ -667,10 +667,23 @@ class LabSession extends ChangeNotifier {
       3 => DecisionSignal.three,
       _ => DecisionSignal.one,
     };
-    unawaited(organism.lessonRuntimeEngine.signal(signal));
-    aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
-    _persistActiveLessonToCloud();
+    unawaited(_doSignal(organism, signal));
+  }
+
+  Future<void> _doSignal(SimOrganism organism, DecisionSignal signal) async {
+    aulaRuntimeLoading = true;
+    aulaRuntimeError = null;
     notifyListeners();
+    try {
+      await organism.lessonRuntimeEngine.signal(signal);
+      aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+      _persistActiveLessonToCloud();
+    } catch (error) {
+      aulaRuntimeError = error.toString();
+    } finally {
+      aulaRuntimeLoading = false;
+      notifyListeners();
+    }
   }
 
   void setDeleteConfirmation(String value) {
@@ -3031,7 +3044,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               height: 1.45,
                             ),
                             onTick: _scrollToBottom,
-                            onDone: () => setState(() => _theoryDoneKey = content.explanation),
+                            onDone: () {
+                      setState(() => _theoryDoneKey = content.explanation);
+                      _scrollToBottom();
+                    },
                           ),
                           // Doubt: processing → progress bar
                           if (session.doubt.status == DoubtStatus.processing) ...[
@@ -3119,7 +3135,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                   const SizedBox(height: 10),
 
                   // Challenge/question block — hidden while doubt sheet is open to avoid duplicate B. finders
-                  if (!session.doubtOpen && (theoryReady || content == null)) ...[
+                  if (!session.doubtOpen && theoryReady && content != null) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -3146,47 +3162,28 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (content != null)
-                            Text(
-                              content.question,
-                              style: const TextStyle(color: simDark, fontSize: 15, height: 1.4, fontWeight: FontWeight.w700),
-                            ),
-                          if (content != null) const SizedBox(height: 10),
+                          Text(
+                            content.question,
+                            style: const TextStyle(color: simDark, fontSize: 15, height: 1.4, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 10),
                           AnswerButton(
                             label: 'A.',
-                            text: content?.options[AnswerLetter.A] ?? '',
+                            text: content.options[AnswerLetter.A] ?? '',
                             active: effectiveSelected == AnswerLetter.A,
-                            onTap: locked ? () {} : () {
-                              if (content != null) {
-                                session.chooseAulaAnswer('A');
-                              } else {
-                                setState(() { _localAnswerSel = AnswerLetter.A; _localExpanded = true; });
-                              }
-                            },
+                            onTap: locked ? () {} : () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B.',
-                            text: content?.options[AnswerLetter.B] ?? '',
+                            text: content.options[AnswerLetter.B] ?? '',
                             active: effectiveSelected == AnswerLetter.B,
-                            onTap: locked ? () {} : () {
-                              if (content != null) {
-                                session.chooseAulaAnswer('B');
-                              } else {
-                                setState(() { _localAnswerSel = AnswerLetter.B; _localExpanded = true; });
-                              }
-                            },
+                            onTap: locked ? () {} : () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C.',
-                            text: content?.options[AnswerLetter.C] ?? '',
+                            text: content.options[AnswerLetter.C] ?? '',
                             active: effectiveSelected == AnswerLetter.C,
-                            onTap: locked ? () {} : () {
-                              if (content != null) {
-                                session.chooseAulaAnswer('C');
-                              } else {
-                                setState(() { _localAnswerSel = AnswerLetter.C; _localExpanded = true; });
-                              }
-                            },
+                            onTap: locked ? () {} : () => session.chooseAulaAnswer('C'),
                           ),
 
                           // Sinal 1/2/3 — appears after A/B/C selection
@@ -3253,7 +3250,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         isCorrect: wasCorrect ?? false,
                         message: _feedbackText(feedbackKey),
                         nextLabel: _nextBtnText(nextKey),
-                        nextReady: !locked,
+                        nextReady: session.doubt.status != DoubtStatus.processing,
                         onNext: () => unawaited(session.advanceAula()),
                       ),
                     ],
@@ -4041,6 +4038,41 @@ class _AuxQuestionScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SinalBtn extends StatelessWidget {
+  const _SinalBtn({required this.n, required this.label, required this.onTap});
+  final int n;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          decoration: BoxDecoration(
+            color: const Color(0x1421B2E9),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: simDark),
+          ),
+          child: Text(
+            '$n. $label',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: _kMono,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: simDark,
+              letterSpacing: 0.3,
+            ),
+          ),
         ),
       ),
     );

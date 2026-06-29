@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 typedef SimAccessTokenProvider = Future<String?> Function();
 
 class SimAiServerConfig {
@@ -23,21 +25,23 @@ class SimAiServerConfig {
 
   Future<Map<String, String>> jsonHeaders() async {
     final token = await accessTokenProvider?.call();
+    final trimmed = (token ?? '').trim();
+    debugPrint('[SIM_CFG] jsonHeaders baseUrl=$baseUrl tokenPresent=${trimmed.isNotEmpty}');
     return {
       'content-type': 'application/json',
       'accept': 'application/json',
-      if (token != null && token.trim().isNotEmpty)
-        'authorization': 'Bearer ${token.trim()}',
+      if (trimmed.isNotEmpty) 'authorization': 'Bearer $trimmed',
     };
   }
 
   Future<Map<String, String>> streamHeaders() async {
     final token = await accessTokenProvider?.call();
+    final trimmed = (token ?? '').trim();
+    debugPrint('[SIM_CFG] streamHeaders baseUrl=$baseUrl tokenPresent=${trimmed.isNotEmpty}');
     return {
       'content-type': 'application/json',
       'accept': 'text/event-stream',
-      if (token != null && token.trim().isNotEmpty)
-        'authorization': 'Bearer ${token.trim()}',
+      if (trimmed.isNotEmpty) 'authorization': 'Bearer $trimmed',
     };
   }
 }

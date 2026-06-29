@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 class SimHttpResponse {
   const SimHttpResponse({
     required this.statusCode,
@@ -63,20 +65,38 @@ class DartIoSimHttpTransport implements SimHttpTransport {
     required Object? body,
     Duration timeout = const Duration(seconds: 45),
   }) async {
-    final request = await client.postUrl(uri).timeout(timeout);
-    headers.forEach(request.headers.set);
-    request.write(jsonEncode(body));
-    final response = await request.close().timeout(timeout);
-    final text = await utf8.decoder.bind(response).join().timeout(timeout);
-    final outHeaders = <String, String>{};
-    response.headers.forEach((name, values) {
-      outHeaders[name] = values.join(',');
-    });
-    return SimHttpResponse(
-      statusCode: response.statusCode,
-      body: text,
-      headers: outHeaders,
-    );
+    debugPrint('[SIM_HTTP] postJson → $uri | tokenPresent=${headers.containsKey('authorization')}');
+    HttpClientRequest? request;
+    try {
+      request = await client.postUrl(uri).timeout(timeout);
+      debugPrint('[SIM_HTTP] postJson tcp abriu');
+      headers.forEach(request.headers.set);
+      debugPrint('[SIM_HTTP] postJson headers ok');
+      final encoded = utf8.encode(jsonEncode(body));
+      debugPrint('[SIM_HTTP] postJson body encoded ${encoded.length} bytes');
+      request.headers.set('content-length', encoded.length.toString());
+      request.add(encoded);
+      debugPrint('[SIM_HTTP] postJson body escrito, fechando');
+      final response = await request.close().timeout(timeout);
+      debugPrint('[SIM_HTTP] postJson status ${response.statusCode}');
+      final text = await utf8.decoder.bind(response).join().timeout(timeout);
+      if (response.statusCode >= 400) {
+        debugPrint('[SIM_HTTP] postJson erro ${response.statusCode}: ${text.length > 500 ? text.substring(0, 500) : text}');
+      }
+      final outHeaders = <String, String>{};
+      response.headers.forEach((name, values) {
+        outHeaders[name] = values.join(',');
+      });
+      return SimHttpResponse(
+        statusCode: response.statusCode,
+        body: text,
+        headers: outHeaders,
+      );
+    } catch (e, st) {
+      debugPrint('[SIM_HTTP] postJson ERRO em $uri: $e');
+      debugPrint('[SIM_HTTP] postJson stacktrace: $st');
+      rethrow;
+    }
   }
 
   @override
@@ -86,12 +106,28 @@ class DartIoSimHttpTransport implements SimHttpTransport {
     required Object? body,
     Duration timeout = const Duration(seconds: 140),
   }) async* {
-    final request = await client.postUrl(uri).timeout(timeout);
-    headers.forEach(request.headers.set);
-    request.write(jsonEncode(body));
-    final response = await request.close().timeout(timeout);
+    debugPrint('[SIM_HTTP] postEventStream → $uri | tokenPresent=${headers.containsKey('authorization')}');
+    final HttpClientResponse response;
+    try {
+      final request = await client.postUrl(uri).timeout(timeout);
+      debugPrint('[SIM_HTTP] postEventStream tcp abriu');
+      headers.forEach(request.headers.set);
+      debugPrint('[SIM_HTTP] postEventStream headers ok');
+      final encoded = utf8.encode(jsonEncode(body));
+      debugPrint('[SIM_HTTP] postEventStream body encoded ${encoded.length} bytes');
+      request.headers.set('content-length', encoded.length.toString());
+      request.add(encoded);
+      debugPrint('[SIM_HTTP] postEventStream body escrito, fechando');
+      response = await request.close().timeout(timeout);
+      debugPrint('[SIM_HTTP] postEventStream status ${response.statusCode}');
+    } catch (e, st) {
+      debugPrint('[SIM_HTTP] postEventStream ERRO em $uri: $e');
+      debugPrint('[SIM_HTTP] postEventStream stacktrace: $st');
+      rethrow;
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final text = await utf8.decoder.bind(response).join().timeout(timeout);
+      debugPrint('[SIM_HTTP] postEventStream erro ${response.statusCode}: ${text.length > 500 ? text.substring(0, 500) : text}');
       throw HttpException('HTTP ${response.statusCode}: $text', uri: uri);
     }
     yield* response
