@@ -1,5 +1,6 @@
 // MIRROR OF: src/sim/state/learningDecisionEngine.ts (Web, source of truth)
 import 'student_learning_state.dart';
+import 'student_learning_state_service.dart';
 
 enum DecisionActionType {
   showCurrentLesson,
@@ -44,13 +45,11 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
     if (curriculum == null || curriculum.items.isEmpty) {
       return _noDecision('sem curriculo valido');
     }
-
     final total = curriculum.items.length;
     final progress = state.progress;
     final current = state.current;
     final itemIdx = progress?.itemIdx ?? current?.itemIdx ?? 0;
     final layer = progress?.layer ?? current?.layer ?? LessonLayer.l1;
-
     if (itemIdx < 0) return _noDecision('itemIdx invalido');
     if (itemIdx >= total) {
       return const DecisionResult(
@@ -59,12 +58,10 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
         confidence: DecisionConfidence.high,
       );
     }
-
     final completed = progress?.concluidos.toSet() ?? <String>{};
     final currentMarker = curriculum.items[itemIdx].marker.isNotEmpty
         ? curriculum.items[itemIdx].marker
         : current?.marker;
-
     if (currentMarker != null && completed.contains(currentMarker)) {
       final nextIdx = itemIdx + 1;
       if (nextIdx >= total) {
@@ -83,14 +80,12 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
         proposedMarker: curriculum.items[nextIdx].marker,
       );
     }
-
     final lastForItem = state.attempts.reversed
         .cast<LessonAttempt?>()
         .firstWhere(
           (attempt) => attempt?.marker == currentMarker,
           orElse: () => null,
         );
-
     if (lastForItem != null && lastForItem.layer == layer) {
       if (layer == LessonLayer.l3) {
         if (!lastForItem.correct || lastForItem.sinal == DecisionSignal.three) {
@@ -120,7 +115,6 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
           proposedMarker: curriculum.items[nextIdx].marker,
         );
       }
-
       if (layer == LessonLayer.l2) {
         if (!lastForItem.correct || lastForItem.sinal == DecisionSignal.three) {
           return DecisionResult(
@@ -141,7 +135,6 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
           proposedMarker: currentMarker,
         );
       }
-
       if (lastForItem.correct && lastForItem.sinal == DecisionSignal.one) {
         return DecisionResult(
           actionType: DecisionActionType.advanceLayer,
@@ -152,7 +145,6 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
           proposedMarker: currentMarker,
         );
       }
-
       return DecisionResult(
         actionType: DecisionActionType.advanceLayer,
         reason: 'L1 precisa de intermediacao -> propor L2',
@@ -162,7 +154,6 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
         proposedMarker: currentMarker,
       );
     }
-
     return DecisionResult(
       actionType: DecisionActionType.showCurrentLesson,
       reason: 'manter posicao corrente (sem evidencia para avancar)',
@@ -176,3 +167,56 @@ DecisionResult decideNextActionFromState(StudentLearningState? state) {
   }
 }
 
+// F2.1: motor sombra — audita se UI/runtime tomou a decisao certa.
+void runShadowDecision(
+  String lessonLocalId,
+  StudentLearningStateService service,
+) {
+  final state = service.read(lessonLocalId);
+  if (state == null) return;
+  final decision = decideNextActionFromState(state);
+  final tsNow = DateTime.now().millisecondsSinceEpoch;
+  final progress = state.progress;
+  final current = state.current;
+  service.appendEvent(
+    lessonLocalId,
+    StudentLearningEvent(
+      type: 'DECISION_ENGINE_SUGGESTED',
+      ts: tsNow,
+      payload: {
+        'action': decision.actionType.name,
+        'reason': decision.reason,
+        'confidence': decision.confidence.name,
+        'proposedItemIdx': decision.proposedItemIdx,
+        'proposedLayer': decision.proposedLayer?.value,
+        'proposedMarker': decision.proposedMarker,
+        'currentItemIdx': progress?.itemIdx ?? current?.itemIdx ?? 0,
+        'currentLayer': progress?.layer.value ?? current?.layer.value ?? 1,
+      },
+    ),
+  );
+  final currentAction = _inferCurrentAction(state);
+  service.appendEvent(
+    lessonLocalId,
+    StudentLearningEvent(
+      type: 'DECISION_ENGINE_COMPARED',
+      ts: tsNow,
+      payload: {
+        'suggestedAction': decision.actionType.name,
+        'currentAction': currentAction,
+        'match': decision.actionType.name == currentAction,
+        'confidence': decision.confidence.name,
+      },
+    ),
+  );
+}
+
+String _inferCurrentAction(StudentLearningState state) {
+  final progress = state.progress;
+  if (progress == null) return 'unknown';
+  final total = state.curriculum?.items.length ?? 0;
+  if (total > 0 && progress.itemIdx >= total) {
+    return DecisionActionType.showCompletion.name;
+  }
+  return DecisionActionType.showCurrentLesson.name;
+}

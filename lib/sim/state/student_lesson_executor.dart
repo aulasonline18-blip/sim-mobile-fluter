@@ -122,8 +122,13 @@ ApplyDecisionResult applyStudentDecision(
         );
       }
       return ApplyDecisionResult(nextProgress: inputProgress, applied: false);
-    case DecisionActionType.showCurrentLesson:
     case DecisionActionType.needsReinforcement:
+      // F2.3: zera erros ao refazer (nao duplica concluido)
+      return ApplyDecisionResult(
+        nextProgress: inputProgress.copyWith(erros: 0),
+        applied: true,
+      );
+    case DecisionActionType.showCurrentLesson:
     case DecisionActionType.waitForLessonText:
       return ApplyDecisionResult(nextProgress: inputProgress, applied: true);
     case DecisionActionType.noSafeDecision:
@@ -155,7 +160,6 @@ StudentLearningState processAnswerWithEngine(
   );
 
   final newErros = correct ? progress.erros : progress.erros + 1;
-  // INV-09: historia only grows when correct AND sinal=1 (Web: S04_SignalTracker.recordAttempt)
   final newHistoria = (correct && context.sinal == DecisionSignal.one)
       ? [...progress.historia, item.marker]
       : progress.historia;
@@ -178,13 +182,16 @@ StudentLearningState processAnswerWithEngine(
     marker: item.marker,
   );
 
+  // F2.3: STUDENT_DECISION_APPLIED/REJECTED conforme nomenclatura Web
   final event = StudentLearningEvent(
     type: applied.applied
-        ? 'STUDENT_EXECUTOR_APPLIED'
-        : 'STUDENT_EXECUTOR_REJECTED',
+        ? 'STUDENT_DECISION_APPLIED'
+        : 'STUDENT_DECISION_REJECTED',
     ts: ts,
     payload: {
-      'action': decision.actionType.name,
+      'decision': decision.actionType.name,
+      'appliedProgress': applied.nextProgress.toJson(),
+      'ts': ts,
       'reason': decision.reason,
       'fromItemIdx': idx,
       'fromLayer': progress.layer.value,
@@ -195,16 +202,15 @@ StudentLearningState processAnswerWithEngine(
     },
   );
 
-  // MAX_ATTEMPTS=300, MAX_EVENTS=500 — mirror Web writeStudentLearningStateInternal caps
-  const _maxAttempts = 300;
-  const _maxEvents = 500;
+  const maxAttemptsCap = 300;
+  const maxEventsCap = 500;
   final rawAttempts = [...state.attempts, attempt];
-  final cappedAttempts = rawAttempts.length > _maxAttempts
-      ? rawAttempts.sublist(rawAttempts.length - _maxAttempts)
+  final cappedAttempts = rawAttempts.length > maxAttemptsCap
+      ? rawAttempts.sublist(rawAttempts.length - maxAttemptsCap)
       : rawAttempts;
   final rawEvents = [...state.events, event];
-  final cappedEvents = rawEvents.length > _maxEvents
-      ? rawEvents.sublist(rawEvents.length - _maxEvents)
+  final cappedEvents = rawEvents.length > maxEventsCap
+      ? rawEvents.sublist(rawEvents.length - maxEventsCap)
       : rawEvents;
 
   return state.copyWith(

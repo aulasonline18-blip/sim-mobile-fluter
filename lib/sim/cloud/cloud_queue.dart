@@ -1,6 +1,7 @@
 // MIRROR OF: src/sim/state/cloudQueue.ts (Web, source of truth)
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../state/student_learning_state.dart';
@@ -160,7 +161,10 @@ class CloudQueue with WidgetsBindingObserver {
         session,
       );
       if (result.rejected && result.remoteState != null) {
-        stateService.write(mergeStudentLearningStateFromCloud(snap, result.remoteState!));
+        // F1.2: merge profundo em vez de substituicao simples
+        stateService.write(
+          mergeStudentLearningStateFromCloud(snap, result.remoteState!),
+        );
         enqueueStudentStateSync(lessonLocalId: lessonLocalId);
         return;
       }
@@ -198,6 +202,12 @@ class CloudQueue with WidgetsBindingObserver {
     final attempts = entry.attempts + 1;
     final delay = retryDelaysMs[
         (attempts - 1).clamp(0, retryDelaysMs.length - 1)];
+    // F3.7: avisa quando atinge limite de tentativas
+    if (attempts >= maxAttempts) {
+      debugPrint(
+        'cloudQueue: max attempts ($maxAttempts) reached for ${entry.lessonLocalId}',
+      );
+    }
     final bag = storage.readQueue();
     bag[entry.lessonLocalId] = entry.copyWith(
       attempts: attempts,
@@ -223,17 +233,4 @@ String stableHash(StudentLearningState state) {
     hash = ((hash << 5) + hash) ^ unit;
   }
   return (hash & 0xffffffff).toRadixString(36);
-}
-
-StudentLearningState mergeStudentLearningStateFromCloud(
-  StudentLearningState local,
-  StudentLearningState remote,
-) {
-  final remoteScore = scoreOfStudentLearningState(remote);
-  final localScore = scoreOfStudentLearningState(local);
-  if (remoteScore > localScore) return remote;
-  if (remoteScore == localScore && remote.updatedAt > local.updatedAt) {
-    return remote;
-  }
-  return local;
 }

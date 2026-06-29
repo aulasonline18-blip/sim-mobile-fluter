@@ -990,3 +990,78 @@ class StudentLearningState {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// F1.2 — merge profundo local vs cloud
+// ---------------------------------------------------------------------------
+
+String _attemptMergeKey(LessonAttempt a) =>
+    '${a.marker}|${a.layer.value}|${a.letra.name}|${a.sinal.value}|${a.correct}|${a.ts}';
+
+List<LessonAttempt> mergeAttempts(
+  List<LessonAttempt> existing,
+  List<LessonAttempt> incoming,
+) {
+  final byKey = <String, LessonAttempt>{};
+  for (final attempt in [...existing, ...incoming]) {
+    byKey.putIfAbsent(_attemptMergeKey(attempt), () => attempt);
+  }
+  return byKey.values.toList()..sort((a, b) => a.ts.compareTo(b.ts));
+}
+
+List<StudentLearningEvent> mergeEvents(
+  List<StudentLearningEvent> a,
+  List<StudentLearningEvent> b,
+) {
+  final byKey = <String, StudentLearningEvent>{};
+  for (final event in [...a, ...b]) {
+    final key = '${event.type}:${event.ts}';
+    byKey.putIfAbsent(key, () => event);
+  }
+  return byKey.values.toList()..sort((x, y) => x.ts.compareTo(y.ts));
+}
+
+List<String> mergeConcluidos(List<String> a, List<String> b) {
+  final seen = <String>{};
+  return [...a, ...b].where(seen.add).toList();
+}
+
+int _progressRank(LessonProgress? p) {
+  if (p == null) return 0;
+  return p.mainAdvances * 100000 + p.itemIdx * 1000 + p.layer.value * 100;
+}
+
+StudentLearningState mergeStudentLearningStateFromCloud(
+  StudentLearningState local,
+  StudentLearningState remote,
+) {
+  final mergedAttempts = mergeAttempts(local.attempts, remote.attempts);
+  final mergedEvents = mergeEvents(local.events, remote.events);
+  final lp = local.progress;
+  final rp = remote.progress;
+  LessonProgress? mergedProgress;
+  if (lp != null && rp != null) {
+    final mergedConcluidos = mergeConcluidos(lp.concluidos, rp.concluidos);
+    final greaterMainAdvances =
+        lp.mainAdvances > rp.mainAdvances ? lp.mainAdvances : rp.mainAdvances;
+    final baseProgress =
+        _progressRank(lp) >= _progressRank(rp) ? lp : rp;
+    mergedProgress = baseProgress.copyWith(
+      concluidos: mergedConcluidos,
+      mainAdvances: greaterMainAdvances,
+    );
+  } else {
+    mergedProgress = lp ?? rp;
+  }
+  final curriculum = local.curriculum ?? remote.curriculum;
+  final base = _progressRank(lp) >= _progressRank(rp) ? local : remote;
+  return base.copyWith(
+    curriculum: curriculum,
+    progress: mergedProgress,
+    attempts: mergedAttempts,
+    events: mergedEvents,
+    updatedAt: local.updatedAt > remote.updatedAt
+        ? local.updatedAt
+        : remote.updatedAt,
+  );
+}
