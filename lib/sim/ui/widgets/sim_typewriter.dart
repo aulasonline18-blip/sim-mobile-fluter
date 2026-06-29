@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 // §11 SimTypewriter
-// TW-1: Timer.periodic 18ms, 8 chars/tick, 6px cursor blink
+// TW-1: Timer.periodic 18ms, 1 char/tick, 6px cursor blink
 // TW-2: prefers-reduced-motion → instant display + onDone after 0ms
 
 class SimTypewriter extends StatefulWidget {
@@ -25,7 +25,7 @@ class SimTypewriter extends StatefulWidget {
 
 class _SimTypewriterState extends State<SimTypewriter>
     with SingleTickerProviderStateMixin {
-  static const _charsPerTick = 8;
+  static const _charsPerTick = 1;
   static const _tickMs = 18;
 
   String _displayed = '';
