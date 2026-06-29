@@ -149,7 +149,7 @@ StudentLearningEvent _executorError(
       'lessonLocalId': state.lessonLocalId,
       'itemIdx': state.progress?.itemIdx,
       'layer': state.progress?.layer.value,
-      if (extra != null) ...extra,
+      ...?extra,
     },
   );
 }
@@ -166,10 +166,7 @@ StudentLearningState processAnswerWithEngine(
   // D3 stage: no-active-lesson
   if (curriculum == null || progress == null) {
     return state.copyWith(
-      events: [
-        ...state.events,
-        _executorError(state, 'no-active-lesson', ts),
-      ],
+      events: [...state.events, _executorError(state, 'no-active-lesson', ts)],
     );
   }
 
@@ -218,7 +215,9 @@ StudentLearningState processAnswerWithEngine(
     return state.copyWith(
       events: [
         ...state.events,
-        _executorError(state, 'decideNextActionFromState', ts, {'error': e.toString()}),
+        _executorError(state, 'decideNextActionFromState', ts, {
+          'error': e.toString(),
+        }),
       ],
     );
   }

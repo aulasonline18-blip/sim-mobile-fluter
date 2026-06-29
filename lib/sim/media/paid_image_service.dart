@@ -9,13 +9,7 @@ import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import 's12_visual_pipeline.dart';
 
-enum PaidImageOfferStatus {
-  pending,
-  accepted,
-  declined,
-  consumed,
-  failed,
-}
+enum PaidImageOfferStatus { pending, accepted, declined, consumed, failed }
 
 class PaidImageOffer {
   PaidImageOffer({
@@ -34,19 +28,20 @@ class PaidImageOffer {
   String? error;
 }
 
-typedef PaidImageFetcher = Future<String> Function({
-  required String prompt,
-  required String lessonKey,
-});
+typedef PaidImageFetcher =
+    Future<String> Function({
+      required String prompt,
+      required String lessonKey,
+    });
 
 class PaidImageService {
   PaidImageService({
     required StudentLearningStateService stateService,
     required PaidImageFetcher fetcher,
     int creditCostPerImage = 1,
-  })  : _stateService = stateService,
-        _fetcher = fetcher,
-        _creditCost = creditCostPerImage;
+  }) : this._(stateService, fetcher, creditCostPerImage);
+
+  PaidImageService._(this._stateService, this._fetcher, this._creditCost);
 
   final StudentLearningStateService _stateService;
   final PaidImageFetcher _fetcher;
@@ -67,10 +62,7 @@ class PaidImageService {
   }) {
     final decision = decideVisualGeneration(
       visualTrigger,
-      const VisualDecisionContext(
-        allowPaidImages: true,
-        priority: 'active',
-      ),
+      const VisualDecisionContext(allowPaidImages: true, priority: 'active'),
     );
 
     if (!decision.generate || decision.prompt == null) {

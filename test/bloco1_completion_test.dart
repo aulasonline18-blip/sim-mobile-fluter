@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/sim/classroom/amparo_controller.dart';
+import 'package:sim_mobile/sim/core/signal_tracker.dart';
 import 'package:sim_mobile/sim/lesson/lesson_material_cache.dart';
 import 'package:sim_mobile/sim/lesson/lesson_models.dart';
 import 'package:sim_mobile/sim/state/learning_decision_engine.dart';
@@ -99,51 +100,53 @@ void main() {
     expect(merged.attempts.map((a) => a.ts), [10, 20, 30]);
   });
 
-  test('shadow decision grava auditoria uma vez sem se autoalimentar', () async {
-    var runs = 0;
-    late final StudentLearningStateService service;
-    service = StudentLearningStateService(
-      seed: {'bloco1': _state()},
-    )..setShadowDecisionRunner((id) {
-        runs++;
-        runShadowDecision(id, service);
-      });
+  test(
+    'shadow decision grava auditoria uma vez sem se autoalimentar',
+    () async {
+      var runs = 0;
+      late final StudentLearningStateService service;
+      service = StudentLearningStateService(seed: {'bloco1': _state()})
+        ..setShadowDecisionRunner((id) {
+          runs++;
+          runShadowDecision(id, service);
+        });
 
-    service.write(_state());
-    await Future<void>.delayed(const Duration(milliseconds: 350));
-    await Future<void>.delayed(const Duration(milliseconds: 350));
+      service.write(_state());
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      await Future<void>.delayed(const Duration(milliseconds: 350));
 
-    final events = service.read('bloco1')!.events;
-    expect(runs, 1);
-    expect(
-      events.map((event) => event.type),
-      ['DECISION_ENGINE_SUGGESTED', 'DECISION_ENGINE_COMPARED'],
-    );
-  });
+      final events = service.read('bloco1')!.events;
+      expect(runs, 1);
+      expect(events.map((event) => event.type), [
+        'DECISION_ENGINE_SUGGESTED',
+        'DECISION_ENGINE_COMPARED',
+      ]);
+    },
+  );
 
   test('SignalTracker com tres sinais 3 dispara amparo real', () {
-    final attempts = List.generate(
+    final attempts = List<LessonAttempt>.generate(
       3,
-      (_) => LessonAttempt(
+      (index) => LessonAttempt(
         marker: 'M1',
         layer: LessonLayer.l1,
         letra: AnswerLetter.A,
         sinal: DecisionSignal.three,
-        correct: false,
-        ts: 0,
+        correct: true,
+        ts: 100 + index,
       ),
     );
-    final signalThreeCount = attempts
-        .where(
-          (a) => a.marker == 'M1' && a.sinal == DecisionSignal.three,
-        )
-        .length;
+    final service = StudentLearningStateService(
+      seed: {'bloco1': _state(attempts: attempts)},
+    );
+    final tracker = SignalTracker(service);
+    final record = tracker.getByItem('M1');
 
     final next = const AmparoController().applyIfNeeded(
       state: _state(),
       correct: true,
       ts: 100,
-      signalThreeCount: signalThreeCount,
+      signalThreeCount: record?.s3 ?? 0,
     );
 
     expect(next.progress!.amparoLvl, 1);
@@ -151,20 +154,22 @@ void main() {
     expect(next.events.single.payload['trigger'], 'signal_tracker');
   });
 
-  test('LessonMaterialCache hidrata de SharedPreferences antes do primeiro uso',
-      () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final first = LessonMaterialCache();
-    first.put('lesson-key', _lesson('Texto persistido'));
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+  test(
+    'LessonMaterialCache hidrata de SharedPreferences antes do primeiro uso',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final first = LessonMaterialCache();
+      first.put('lesson-key', _lesson('Texto persistido'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-    final hydrated = LessonMaterialCache();
-    hydrated.hydrateFromPreferences(prefs);
-    final cached = hydrated.peekCachedLesson('lesson-key');
+      final hydrated = LessonMaterialCache();
+      hydrated.hydrateFromPreferences(prefs);
+      final cached = hydrated.peekCachedLesson('lesson-key');
 
-    expect(cached, isNotNull);
-    expect(cached!.conteudo.explanation, 'Texto persistido');
-    expect(cached.imagem, isNull);
-  });
+      expect(cached, isNotNull);
+      expect(cached!.conteudo.explanation, 'Texto persistido');
+      expect(cached.imagem, isNull);
+    },
+  );
 }

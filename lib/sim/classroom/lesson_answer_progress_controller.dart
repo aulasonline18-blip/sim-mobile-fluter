@@ -64,15 +64,6 @@ class LessonAnswerProgressController {
 
     audioCore?.stop();
     final letter = phase.letter!;
-    final signalThreeCount = stateService
-            .read(lessonLocalId)
-            ?.attempts
-            .where(
-              (a) =>
-                  a.marker == item.marker && a.sinal == DecisionSignal.three,
-            )
-            .length ??
-        0;
     final correct = letter == content.correctAnswer;
     final questionId = [
       item.marker,
@@ -137,6 +128,14 @@ class LessonAnswerProgressController {
         ),
       );
       final savedState = stateService.write(nextState);
+      final signalThreeCount = savedState.attempts
+          .where(
+            (attempt) =>
+                attempt.marker == item.marker &&
+                attempt.layer == position.layer &&
+                attempt.sinal == DecisionSignal.three,
+          )
+          .length;
       final amparoState = _amparo.applyIfNeeded(
         state: savedState,
         correct: correct,
