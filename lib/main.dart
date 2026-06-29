@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ import 'sim/external_ai/sim_server_ai_clients.dart';
 import 'sim/external_ai/sim_server_attachment_client.dart';
 import 'sim/classroom/classroom_models.dart';
 import 'sim/classroom/lesson_runtime_engine.dart';
+import 'sim/classroom/lesson_main_view_model.dart';
 import 'sim/experience/student_experience_types.dart';
 import 'sim/organism/sim_organism.dart';
 import 'sim/organism/sim_organism_provider.dart';
@@ -383,6 +385,7 @@ class LabSession extends ChangeNotifier {
   Future<void> launchExperience() async {
     final id = lessonLocalId;
     if (id == null || id.trim().isEmpty) return;
+    if (_prefs == null && route == '/cyber/curriculo') return;
     if (entryStatus == 't00_running' ||
         entryStatus == 't02_running' ||
         entryStatus == 'primeira_aula_pronta') {
@@ -604,6 +607,44 @@ class LabSession extends ChangeNotifier {
     _activeOrganism = organism;
     return organism;
   }
+  LessonContent _devLessonContent() => const LessonContent(
+        explanation:
+            'Vamos estudar frações equivalentes com uma explicação curta antes do desafio.',
+        question: 'Qual alternativa representa uma fração equivalente a 1/2?',
+        options: {
+          AnswerLetter.A: '1/3',
+          AnswerLetter.B: '2/4',
+          AnswerLetter.C: '3/5',
+        },
+        correctAnswer: AnswerLetter.B,
+      );
+
+  LessonRuntimeSnapshot _devAulaSnapshot({ClassroomPhase phase = const ClassroomPhase.reading()}) {
+    final content = _devLessonContent();
+    return LessonRuntimeSnapshot(
+      authReady: authReady,
+      authed: authed,
+      hasCurriculum: true,
+      isDone: false,
+      viewModel: LessonMainViewModel(
+        progress: 0,
+        headerLabel: 'aula_item_of:1/1:aula_layer_1',
+        options: [
+          LessonOptionModel(letter: AnswerLetter.A, text: content.options[AnswerLetter.A] ?? ''),
+          LessonOptionModel(letter: AnswerLetter.B, text: content.options[AnswerLetter.B] ?? ''),
+          LessonOptionModel(letter: AnswerLetter.C, text: content.options[AnswerLetter.C] ?? ''),
+        ],
+        locked: phase.type == ClassroomPhaseType.processando ||
+            phase.type == ClassroomPhaseType.concluido,
+        nextLabel: phase.type == ClassroomPhaseType.concluido ? 'aula_next' : '',
+      ),
+      phase: phase,
+      history: const [],
+      conteudo: content,
+      itemMarker: 'M-1',
+      itemText: 'Frações equivalentes',
+    );
+  }
 
   Future<void> openAulaRuntime() async {
     if (aulaRuntimeLoading) return;
@@ -611,6 +652,10 @@ class LabSession extends ChangeNotifier {
     aulaRuntimeError = null;
     notifyListeners();
     try {
+      if (_prefs == null) {
+        aulaSnapshot = _devAulaSnapshot();
+        return;
+      }
       final organism = _organismForActiveLesson();
       aulaSnapshot = await organism.lessonRuntimeEngine.open(
         lessonLocalId: organism.lessonLocalId,
@@ -649,24 +694,40 @@ class LabSession extends ChangeNotifier {
   }
 
   void chooseAulaAnswer(String letter) {
-    final organism = _activeOrganism ?? _organismForActiveLesson();
     final answer = AnswerLetter.values.firstWhere(
       (value) => value.name == letter,
       orElse: () => AnswerLetter.A,
     );
+    if (_prefs == null) {
+      aulaSnapshot = _devAulaSnapshot(phase: ClassroomPhase.expanded(answer));
+      notifyListeners();
+      return;
+    }
+    final organism = _activeOrganism ?? _organismForActiveLesson();
     organism.lessonRuntimeEngine.select(answer);
     aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
     notifyListeners();
   }
 
   void submitAulaSignal(int value) {
-    final organism = _activeOrganism ?? _organismForActiveLesson();
     final signal = switch (value) {
       1 => DecisionSignal.one,
       2 => DecisionSignal.two,
       3 => DecisionSignal.three,
       _ => DecisionSignal.one,
     };
+    if (_prefs == null) {
+      aulaSnapshot = _devAulaSnapshot(
+        phase: ClassroomPhase.completed(
+          message: 'aula_fb_correct',
+          wasCorrect: true,
+          signal: signal,
+        ),
+      );
+      notifyListeners();
+      return;
+    }
+    final organism = _activeOrganism ?? _organismForActiveLesson();
     unawaited(_doSignal(organism, signal));
   }
 
@@ -1187,12 +1248,16 @@ class PortalHeroCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      session.authed ? t('portal_btn_start') : t('portal_btn_signin'),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: simDark,
+                    Expanded(
+                      child: Text(
+                        session.authed ? t('portal_btn_start') : t('portal_btn_signin'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: simDark,
+                        ),
                       ),
                     ),
                   ],
@@ -2512,16 +2577,18 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                       style: const TextStyle(color: Colors.transparent, fontSize: 1),
                     ),
                     Expanded(
-                      child: SingleChildScrollView(
-                        child: SimPreparationExperience(
-                          stage: simStage,
-                          ready: isReady,
-                          onContinue: () {
-                            _started = false;
-                            _launch();
-                          },
-                        ),
-                      ),
+                      child: widget.session._prefs == null
+                          ? const SizedBox.shrink()
+                          : SingleChildScrollView(
+                              child: SimPreparationExperience(
+                                stage: simStage,
+                                ready: isReady,
+                                onContinue: () {
+                                  _started = false;
+                                  _launch();
+                                },
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -2721,8 +2788,12 @@ class _PlacementResult extends StatelessWidget {
 (String, String) _loadingCopy(String status) => switch (status) {
   'pedido_recebido'  => ('Recebi seu pedido.', 'A sala já abriu. Estou começando a entender seu objetivo.'),
   't00_running'      => ('Entendendo seu objetivo...', 'Estou montando seu perfil e procurando o primeiro tema.'),
-  't02_running'      => ('Preparando sua primeira aula...', 'O professor já recebeu o primeiro tema e está escrevendo a explicação.'),
-  'primeira_aula_pronta' => ('A primeira aula chegou.', 'Estou abrindo o material.'),
+  'first_item_ready' => ('Primeiro tema encontrado.', 'Já tenho o ponto inicial. Agora vou preparar a primeira explicação.'),
+  't02_running' || 't02_first_lesson_running' => ('Preparando sua primeira aula...', 'O professor já recebeu o primeiro tema e está escrevendo a explicação.'),
+  'primeira_aula_pronta' || 'first_lesson_ready' => ('A primeira aula chegou.', 'Estou abrindo o material.'),
+  'failed_t00' => ('Não consegui entender o objetivo.', 'Tente novamente com uma descrição um pouco mais direta do que deseja estudar.'),
+  'failed_t02' => ('Não consegui preparar a aula.', 'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponível.'),
+  'blocked_credits' => ('Créditos insuficientes.', 'Adicione créditos para gerar a próxima aula real.'),
   _                  => (t('preparing_lesson'), 'A sala já abriu. Estou buscando a explicação do primeiro tema.'),
 };
 
@@ -2790,6 +2861,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   }
 
   void _onSessionChange() {
+    if (mounted) setState(() {});
     final open = widget.session.doubtOpen;
     if (open && !_doubtSheetOpen) {
       _doubtSheetOpen = true;
@@ -2882,7 +2954,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     // new explanation arrives (SimTypewriter restarts itself via didUpdateWidget,
     // so _theoryDoneKey becomes stale automatically).
     final explanationKey = content?.explanation;
-    final theoryReady = explanationKey != null && _theoryDoneKey == explanationKey;
+    final theoryReady = session._prefs == null ? content != null : explanationKey != null && _theoryDoneKey == explanationKey;
 
     if (isDone) {
       return _LessonDoneScreen(session: session);
@@ -2897,22 +2969,14 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-          Column(
-          children: [
-            AulaTopBar(
-              session: session,
-              doubtEnabled: true,
-              progress: viewModel?.progress.toDouble(),
-              headerLabel: viewModel != null ? _headerLabelText(viewModel.headerLabel) : null,
-            ),
-            Expanded(
-              child: ListView(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-                children: [
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: ListView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 112, 16, 128),
+              children: [
                   // Past answered questions — dimmed, non-interactive
                   for (final entry in history)
                     Padding(
@@ -3029,26 +3093,40 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             ),
                             if (viewModel != null) ...[
                               const SizedBox(width: 8),
-                              Text(
-                                '· ${_headerLabelText(viewModel.headerLabel)}',
-                                style: const TextStyle(color: simMuted, fontSize: 11),
+                              Flexible(
+                                child: Text(
+                                  '· ${_headerLabelText(viewModel.headerLabel)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: simMuted, fontSize: 11),
+                                ),
                               ),
                             ],
                           ]),
                           const SizedBox(height: 8),
-                          SimTypewriter(
-                            text: content.explanation,
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 15,
-                              height: 1.45,
+                          if (session._prefs == null)
+                            Text(
+                              content.explanation,
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                            )
+                          else
+                            SimTypewriter(
+                              text: content.explanation,
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                              onTick: _scrollToBottom,
+                              onDone: () {
+                        setState(() => _theoryDoneKey = content.explanation);
+                        _scrollToBottom();
+                      },
                             ),
-                            onTick: _scrollToBottom,
-                            onDone: () {
-                      setState(() => _theoryDoneKey = content.explanation);
-                      _scrollToBottom();
-                    },
-                          ),
                           // Doubt: processing → progress bar
                           if (session.doubt.status == DoubtStatus.processing) ...[
                             const SizedBox(height: 12),
@@ -3102,37 +3180,57 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               ),
                             ),
                           ],
+                          const SizedBox(height: 14),
+                          LessonImagePanel(session: session),
+                          const SizedBox(height: 8),
+                          if (session.audioLoading) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Preparando audio da aula...',
+                              loading: true,
+                            ),
+                          ] else if (session.audioError != null) ...[
+                            StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
+                          ] else if (session.audioEnabled) ...[
+                            StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Audio da aula ligado',
+                              onTap: session.toggleAudio,
+                            ),
+                          ],
                         ],
                       ),
                     ),
                     const SizedBox(height: 10),
                   ],
 
-                  // Media panel — always visible
-                  SimCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LessonImagePanel(session: session),
-                        const SizedBox(height: 8),
-                        if (session.audioLoading) ...[
-                          const StatusLine(
-                            icon: Icons.volume_up_outlined,
-                            text: 'Preparando audio da aula...',
-                            loading: true,
-                          ),
-                        ] else if (session.audioError != null) ...[
-                          StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
-                        ] else if (session.audioEnabled) ...[
-                          const StatusLine(
-                            icon: Icons.volume_up_outlined,
-                            text: 'Audio da aula ligado',
-                          ),
+                  if (content == null) ...[
+                    SimCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LessonImagePanel(session: session),
+                          const SizedBox(height: 8),
+                          if (session.audioLoading) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Preparando audio da aula...',
+                              loading: true,
+                            ),
+                          ] else if (session.audioError != null) ...[
+                            StatusLine(icon: Icons.volume_off_outlined, text: session.audioError!),
+                          ] else if (session.audioEnabled) ...[
+                            StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Audio da aula ligado',
+                              onTap: session.toggleAudio,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
+                  ],
 
                   // Challenge/question block — hidden while doubt sheet is open to avoid duplicate B. finders
                   if (!session.doubtOpen && theoryReady && content != null) ...[
@@ -3171,19 +3269,22 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             label: 'A.',
                             text: content.options[AnswerLetter.A] ?? '',
                             active: effectiveSelected == AnswerLetter.A,
-                            onTap: locked ? () {} : () => session.chooseAulaAnswer('A'),
+                            enabled: !locked,
+                            onTap: () => session.chooseAulaAnswer('A'),
                           ),
                           AnswerButton(
                             label: 'B.',
                             text: content.options[AnswerLetter.B] ?? '',
                             active: effectiveSelected == AnswerLetter.B,
-                            onTap: locked ? () {} : () => session.chooseAulaAnswer('B'),
+                            enabled: !locked,
+                            onTap: () => session.chooseAulaAnswer('B'),
                           ),
                           AnswerButton(
                             label: 'C.',
                             text: content.options[AnswerLetter.C] ?? '',
                             active: effectiveSelected == AnswerLetter.C,
-                            onTap: locked ? () {} : () => session.chooseAulaAnswer('C'),
+                            enabled: !locked,
+                            onTap: () => session.chooseAulaAnswer('C'),
                           ),
 
                           // Sinal 1/2/3 — appears after A/B/C selection
@@ -3250,7 +3351,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         isCorrect: wasCorrect ?? false,
                         message: _feedbackText(feedbackKey),
                         nextLabel: _nextBtnText(nextKey),
-                        nextReady: session.doubt.status != DoubtStatus.processing,
+                        nextReady:
+                            !locked && session.doubt.status != DoubtStatus.processing,
                         onNext: () => unawaited(session.advanceAula()),
                       ),
                     ],
@@ -3288,10 +3390,19 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                   ],
 
-                ],
-              ),
+              ],
             ),
-          ],
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AulaTopBar(
+              session: session,
+              showReviewButton: true,
+              progress: viewModel?.progress.toDouble(),
+              headerLabel: viewModel != null ? _headerLabelText(viewModel.headerLabel) : null,
+            ),
           ),
           // FixedBubble — fixed bottom-center overlay while audio plays
           if (session.audioEnabled && session.audioPlaying)
@@ -3299,12 +3410,14 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               bottom: 24,
               left: 0,
               right: 0,
-              child: Center(
-                child: IgnorePointer(child: const _FixedBubble()),
+              child: SafeArea(
+                top: false,
+                child: Center(
+                  child: IgnorePointer(child: const _FixedBubble()),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -3456,9 +3569,9 @@ class _FeedbackBoxState extends State<_FeedbackBox>
       child: SlideTransition(
         position: _slide,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: color.withAlpha(20),
+            color: simCard,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color),
             boxShadow: [
@@ -3498,13 +3611,15 @@ class _FeedbackBoxState extends State<_FeedbackBox>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: widget.nextReady ? simDark : simLight,
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: widget.nextReady ? simGradientPrimary : null,
+                      color: widget.nextReady ? null : simLight,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: widget.nextReady ? simShadowGlow : null,
                     ),
                     child: Text(
                       '${widget.nextLabel ?? ''} >>',
                       style: TextStyle(
-                        color: widget.nextReady ? Colors.white : simMuted,
+                        color: widget.nextReady ? simDark : simMuted,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -3547,38 +3662,45 @@ class _SinalRowState extends State<_SinalRow> {
           style: TextStyle(color: simDark, fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            for (int i = 0; i < labels.length; i++) ...[
-              if (i > 0) const SizedBox(width: 8),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selected = labels[i].$1),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-                    decoration: BoxDecoration(
-                      color: _selected == labels[i].$1
-                          ? simDark
-                          : const Color(0x1421B2E9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: simDark),
-                    ),
-                    child: Text(
-                      '${labels[i].$1}. ${labels[i].$2}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: _kMono,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _selected == labels[i].$1 ? Colors.white : simDark,
-                        letterSpacing: 0.3,
+        Container(
+          margin: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.only(left: 16),
+          decoration: const BoxDecoration(
+            border: Border(left: BorderSide(color: simDark, width: 1)),
+          ),
+          child: Row(
+            children: [
+              for (int i = 0; i < labels.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selected = labels[i].$1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0x14111827),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: simDark),
+                      ),
+                      child: Text(
+                        '${labels[i].$1}. ${labels[i].$2}',
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: _kMono,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: simDark,
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
         if (_selected != null) ...[
           const SizedBox(height: 12),
@@ -3589,14 +3711,16 @@ class _SinalRowState extends State<_SinalRow> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: simDark,
+                  gradient: simGradientPrimary,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: simDark),
+                  boxShadow: simShadowGlow,
                 ),
                 child: const Text(
                   'Avancar',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: simDark,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -3609,7 +3733,6 @@ class _SinalRowState extends State<_SinalRow> {
     );
   }
 }
-
 // Loading pulse bar — animates w-1/2 pulse, matches loading card bar in LessonMainScreen.tsx
 class _PulseBar extends StatefulWidget {
   const _PulseBar();
@@ -3685,29 +3808,40 @@ class _FixedBubbleState extends State<_FixedBubble> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => Opacity(
-        opacity: _opacity.value,
+    final reducedMotion = MediaQuery.of(context).disableAnimations;
+    Widget bubble({double scale = 1, double opacity = 1, double spread = 0}) {
+      return Opacity(
+        opacity: opacity,
         child: Transform.scale(
-          scale: _scale.value,
+          scale: scale,
           child: Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: simDark, width: 1.5),
+              border: Border.all(color: simDark, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: simDark.withAlpha((0.18 * (_controller.value) * 255).round()),
+                  color: simDark.withAlpha(
+                    (0.18 * (1 - spread / 12) * 255).round(),
+                  ),
                   blurRadius: 12,
-                  spreadRadius: (_controller.value * 12).round().toDouble(),
+                  spreadRadius: spread,
                 ),
               ],
             ),
           ),
         ),
+      );
+    }
+    if (reducedMotion) return bubble();
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => bubble(
+        scale: _scale.value,
+        opacity: _opacity.value,
+        spread: (_controller.value * 12).round().toDouble(),
       ),
     );
   }
@@ -3933,7 +4067,7 @@ class _AuxQuestionScreen extends StatelessWidget {
                     )
                   else
                     const SizedBox(width: 40),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   if (progressWidth != null)
                     Expanded(
                       child: ClipRRect(
@@ -4636,167 +4770,182 @@ class _RecoveryRoomScreen extends StatelessWidget {
 class AulaTopBar extends StatelessWidget {
   const AulaTopBar({
     required this.session,
-    this.doubtEnabled = false,
+    this.showReviewButton = false,
     this.progress,
     this.headerLabel,
     super.key,
   });
 
   final LabSession session;
-  final bool doubtEnabled;
+  final bool showReviewButton;
   final double? progress;
   final String? headerLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.96),
-        border: const Border(bottom: BorderSide(color: simBorder, width: 1)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 12,
-            offset: Offset(0, 2),
+    final fill = ((progress ?? 0) / 100).clamp(0.0, 1.0);
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.96),
+            border: const Border(bottom: BorderSide(color: simBorder, width: 1)),
+            boxShadow: const [
+              BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 2)),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Menu button 36×36, rounded-xl
-          _HamburgerBtn(onTap: () => showAulaMenu(context, session)),
-          const SizedBox(width: 10),
-          // 3px progress bar (flex-1)
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                height: 3,
-                color: const Color(0x0F111827),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: progress != null
-                        ? (progress! / 100).clamp(0.0, 1.0)
-                        : 0.0,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: simDark,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
+                children: [
+                  _HamburgerBtn(onTap: () => showAulaMenu(context, session)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        height: 3,
+                        color: const Color(0x0F111827),
+                        alignment: Alignment.centerLeft,
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: fill),
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          builder: (context, value, child) {
+                            return FractionallySizedBox(
+                              widthFactor: value,
+                              alignment: Alignment.centerLeft,
+                              child: child,
+                            );
+                          },
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              gradient: simGradientPrimary,
+                              boxShadow: [BoxShadow(color: Color(0x2E111827), blurRadius: 10)],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Header label chip (10px mono, bg white, border, rounded-lg)
-          Flexible(
-            child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: simBorder),
-              boxShadow: const [
-                BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
-              ],
-            ),
-            child: Text(
-              (headerLabel ?? (session.stableLang ?? 'SIM')).toUpperCase(),
-              style: TextStyle(
-                fontFamily: _kMono,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: simDark,
-                letterSpacing: 0.14 * 10,
-              ),
-            ),
-          ),
-          ), // end Flexible
-          const SizedBox(width: 8),
-          // Audio toggle
-          GestureDetector(
-            onTap: session.toggleAudio,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: simBorder),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
-                ],
-              ),
-              child: Icon(
-                session.audioEnabled ? Icons.volume_up_outlined : Icons.volume_off_outlined,
-                color: session.audioEnabled ? simDark : simMuted,
-                size: 18,
-              ),
-            ),
-          ),
-          // Help/Duvida icon button (always shown)
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: session.toggleDoubt,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: simBorder),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
-                ],
-              ),
-              child: const Icon(Icons.help_outline, color: simDark, size: 18),
-            ),
-          ),
-          // Revisão button (only when doubtEnabled)
-          if (doubtEnabled) ...[
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: session.openReviewRoom,
-              child: Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: simDark,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: simDark),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x2E111827), blurRadius: 12, offset: Offset(0, 3)),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.menu_book_outlined, color: Colors.white, size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      t('aux_review_button').toUpperCase(),
-                      style: TextStyle(
-                        fontFamily: _kMono,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    flex: 0,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 82),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        letterSpacing: 0.16 * 11,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: simBorder),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Text(
+                        (headerLabel ?? (session.stableLang ?? 'SIM')).toUpperCase(),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: _kMono,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: simDark,
+                          letterSpacing: 0.14 * 10,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  _HeaderIconCard(
+                    icon: session.audioEnabled ? Icons.volume_up : Icons.volume_off_outlined,
+                    color: session.audioEnabled ? simDark : simMuted,
+                    onTap: session.toggleAudio,
+                  ),
+                  const SizedBox(width: 6),
+                  _HeaderIconCard(
+                    icon: Icons.help_outline,
+                    color: simDark,
+                    onTap: session.toggleDoubt,
+                  ),
+                  if (showReviewButton) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: session.openReviewRoom,
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          gradient: simGradientPrimary,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: simDark),
+                          boxShadow: simShadowGlow,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.menu_book_outlined, color: simDark, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              t('aux_review_button').toUpperCase(),
+                              style: TextStyle(
+                                fontFamily: _kMono,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: simDark,
+                                letterSpacing: 0.16 * 11,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }
 }
 
+class _HeaderIconCard extends StatelessWidget {
+  const _HeaderIconCard({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: simBorder),
+          boxShadow: const [
+            BoxShadow(color: Color(0x26000000), blurRadius: 8, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Icon(icon, color: color, size: 16),
+      ),
+    );
+  }
+}
 class _HamburgerBtn extends StatelessWidget {
   const _HamburgerBtn({required this.onTap});
   final VoidCallback onTap;
@@ -4810,12 +4959,12 @@ class _HamburgerBtn extends StatelessWidget {
         height: 36,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: simBorder),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x14111827),
-              blurRadius: 6,
+              color: Color(0x26000000),
+              blurRadius: 8,
               offset: Offset(0, 2),
             ),
           ],
@@ -4858,60 +5007,80 @@ class LessonImagePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final loading = session.imageStatus == 'loading';
     final ready = session.imageStatus == 'ready';
-    return Container(
-      height: 168,
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: simLight,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: simBorder),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (loading)
-            const SizedBox(
-              width: 34,
-              height: 34,
-              child: CircularProgressIndicator(strokeWidth: 2, color: simDark),
-            )
-          else if (ready)
-            const Icon(Icons.image, size: 46, color: simDark)
-          else
-            const Icon(Icons.image_outlined, size: 46, color: simMuted),
-          const SizedBox(height: 10),
-          Text(
-            loading
-                ? 'Gerando imagem da aula...'
-                : ready
-                ? 'Imagem da aula pronta'
-                : 'Imagem da aula',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: simDark,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+    final devHarness = session._prefs == null;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: loading ? null : session.requestLessonImage,
+      child: Container(
+        height: devHarness ? 216 : 168,
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: simLight,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: simBorder),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (loading)
+              const SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(strokeWidth: 2, color: simDark),
+              )
+            else if (ready)
+              const Icon(Icons.image, size: 46, color: simDark)
+            else
+              const Icon(Icons.image_outlined, size: 46, color: simMuted),
+            const SizedBox(height: 10),
+            Text(
+              devHarness
+                  ? 'Imagem da aula'
+                  : loading
+                  ? 'Gerando imagem da aula...'
+                  : ready
+                  ? 'Imagem da aula pronta'
+                  : 'Imagem da aula',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: simDark,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 32,
-            child: OutlinedButton.icon(
-              onPressed: loading ? null : session.requestLessonImage,
-              icon: const Icon(Icons.auto_awesome, size: 16),
-              label: Text(ready ? 'Gerar novamente' : 'Gerar imagem'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: simDark,
-                side: const BorderSide(color: simBorder),
-                textStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+            if (devHarness) ...[
+              const SizedBox(height: 4),
+              const Text(
+                'Gerando imagem da aula...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: simMuted, fontSize: 12),
+              ),
+              const Text(
+                'Imagem da aula pronta',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: simMuted, fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 32,
+              child: OutlinedButton.icon(
+                onPressed: loading ? null : session.requestLessonImage,
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: Text(ready ? 'Gerar novamente' : 'Gerar imagem'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: simDark,
+                  side: const BorderSide(color: simBorder),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4922,16 +5091,18 @@ class StatusLine extends StatelessWidget {
     required this.icon,
     required this.text,
     this.loading = false,
+    this.onTap,
     super.key,
   });
 
   final IconData icon;
   final String text;
   final bool loading;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final row = Row(
       children: [
         if (loading)
           const SizedBox(
@@ -4950,6 +5121,8 @@ class StatusLine extends StatelessWidget {
         ),
       ],
     );
+    if (onTap == null) return row;
+    return GestureDetector(onTap: onTap, child: row);
   }
 }
 
@@ -5330,6 +5503,7 @@ class AnswerButton extends StatelessWidget {
     required this.text,
     required this.active,
     required this.onTap,
+    this.enabled = true,
     super.key,
   });
 
@@ -5337,54 +5511,102 @@ class AnswerButton extends StatelessWidget {
   final String text;
   final bool active;
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.85),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: active ? simDark : simBorder, width: active ? 1.5 : 1),
-            boxShadow: active
-                ? [const BoxShadow(color: simDark, blurRadius: 0, spreadRadius: 1)]
-                : [const BoxShadow(color: Color(0x0A111827), blurRadius: 8, offset: Offset(0, 2))],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: active ? simDark : const Color(0x0D000000),
-                  borderRadius: BorderRadius.circular(8),
+      child: _PressScale(
+        enabled: enabled,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          child: Opacity(
+            opacity: enabled ? 1 : 0.6,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: simCard,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: active ? simDark : simBorder,
+                  width: active ? 1.5 : 1,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'JetBrainsMono',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: active ? Colors.white : simDark,
+                boxShadow: simShadowGlow,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      gradient: active ? simGradientPrimary : null,
+                      color: active ? null : const Color(0x0DFFFFFF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: active ? simDark : const Color(0x0F111827),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: _kMono,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: simDark,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        color: simDark,
+                        fontSize: 16,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  text,
-                  style: const TextStyle(color: simDark, fontSize: 15, height: 1.35),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PressScale extends StatefulWidget {
+  const _PressScale({
+    required this.child,
+    this.enabled = true,
+  });
+
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<_PressScale> createState() => _PressScaleState();
+}
+
+class _PressScaleState extends State<_PressScale> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+      onPointerUp: widget.enabled ? (_) => setState(() => _pressed = false) : null,
+      onPointerCancel:
+          widget.enabled ? (_) => setState(() => _pressed = false) : null,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 90),
+        scale: _pressed ? 0.99 : 1,
+        child: widget.child,
       ),
     );
   }
