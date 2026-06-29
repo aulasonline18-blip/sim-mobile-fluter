@@ -2910,12 +2910,12 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   }
 
   void _onSessionChange() {
-    final _snap = widget.session.aulaSnapshot;
-    final _hist = _snap?.history ?? const <QuestionHistoryEntry>[];
-    final _hc = _snap?.conteudo != null;
-    if (_hist.length != _lastHistoryLen || _hc != _lastHasContent) {
-      _lastHistoryLen = _hist.length;
-      _lastHasContent = _hc;
+    final snap = widget.session.aulaSnapshot;
+    final history = snap?.history ?? const <QuestionHistoryEntry>[];
+    final hasContent = snap?.conteudo != null;
+    if (history.length != _lastHistoryLen || hasContent != _lastHasContent) {
+      _lastHistoryLen = history.length;
+      _lastHasContent = hasContent;
       _scrollToNewQuestion(_activeKey);
     }
     if (mounted) setState(() {});
@@ -3042,27 +3042,31 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               children: [
                 // Past answered questions — dimmed, non-interactive
                 // Sliding window: last 4 entries keep image, older entries show text only
-                Builder(builder: (context) {
-                  final imageCutoff = (history.length - 4).clamp(0, history.length);
-                  return Column(
-                    children: [
-                      for (var i = 0; i < history.length; i++)
-                        Padding(
-                          key: i == history.length - 1 ? _activeKey : null,
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Opacity(
-                            opacity: 0.6,
-                            child: IgnorePointer(
-                              child: _QuestionHistoryBlock(
-                                entry: history[i],
-                                showImage: i >= imageCutoff,
+                Builder(
+                  builder: (context) {
+                    final imageCutoff = (history.length - 4).clamp(
+                      0,
+                      history.length,
+                    );
+                    return Column(
+                      children: [
+                        for (var i = 0; i < history.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Opacity(
+                              opacity: 0.6,
+                              child: IgnorePointer(
+                                child: _QuestionHistoryBlock(
+                                  entry: history[i],
+                                  showImage: i >= imageCutoff,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  );
-                }),
+                      ],
+                    );
+                  },
+                ),
 
                 // Active content card
                 if (session.aulaRuntimeLoading && content == null) ...[
@@ -3180,6 +3184,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                 // Theory card — only when content is loaded
                 if (content != null) ...[
                   SimCard(
+                    key: _activeKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -3600,7 +3605,11 @@ class _QuestionHistoryBlock extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 120, maxHeight: 80),
               color: Colors.white,
               padding: const EdgeInsets.all(4),
-              child: Image.network(entry.imageUrl!, fit: BoxFit.contain, cacheWidth: 240),
+              child: Image.network(
+                entry.imageUrl!,
+                fit: BoxFit.contain,
+                cacheWidth: 240,
+              ),
             ),
           ),
           const SizedBox(height: 12),
