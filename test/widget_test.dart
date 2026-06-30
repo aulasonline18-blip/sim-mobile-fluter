@@ -101,14 +101,14 @@ void main() {
     await tester.pumpWidget(SimMobileApp(initialSession: session));
     session.openSupport('/creditos');
     await tester.pumpAndSettle();
-    expect(find.text('My credits'), findsOneWidget);
-    expect(find.text('CURRENT BALANCE'), findsOneWidget);
-    await tester.tap(find.text('about 33 lessons'));
+    expect(find.text('Meus créditos'), findsOneWidget);
+    expect(find.text('SALDO ATUAL'), findsOneWidget);
+    await tester.tap(find.text('cerca de 33 aulas'));
     await tester.pumpAndSettle();
     expect(find.text('Retorno do pagamento'), findsOneWidget);
     await tester.tap(find.text('Tentar de novo'));
     await tester.pumpAndSettle();
-    expect(find.text('about 166 lessons'), findsOneWidget);
+    expect(find.text('cerca de 166 aulas'), findsOneWidget);
 
     session.openSupport('/privacidade');
     await tester.pumpAndSettle();

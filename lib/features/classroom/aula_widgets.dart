@@ -370,7 +370,7 @@ class LessonImagePanel extends StatelessWidget {
                 : ready
                 ? 'Imagem da aula pronta'
                 : offer
-                ? 'Imagem opcional da aula'
+                ? t('aula_img_desc')
                 : error ?? 'Imagem da aula',
             textAlign: TextAlign.center,
             style: const TextStyle(

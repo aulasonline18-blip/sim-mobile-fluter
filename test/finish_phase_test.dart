@@ -178,8 +178,16 @@ void main() {
       ),
     );
 
-    expect(find.text('Imagem opcional da aula'), findsOneWidget);
-    expect(find.text('10 crédito(s) · Saldo: 0'), findsOneWidget);
+    expect(
+      find.text(
+        'Esta parte da aula tem uma imagem criada por inteligência artificial.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Custa 10 créditos. Seu saldo: 0 créditos.'),
+      findsOneWidget,
+    );
     expect(find.text('Comprar créditos'), findsOneWidget);
     expect(find.text('Continuar sem imagem'), findsOneWidget);
 
@@ -191,6 +199,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Pular'), findsOneWidget);
-    expect(find.text('Ver imagem (10)'), findsOneWidget);
+    expect(find.text('Ver imagem (10 créditos)'), findsOneWidget);
   });
 }

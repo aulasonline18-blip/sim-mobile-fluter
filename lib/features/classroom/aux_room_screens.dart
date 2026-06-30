@@ -511,7 +511,7 @@ class _AuxFeedbackBox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
-                'â–¶',
+                '▶',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14,
