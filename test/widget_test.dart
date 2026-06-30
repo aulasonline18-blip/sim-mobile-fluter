@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/main.dart';
+import 'package:sim_mobile/shared/widgets/shared_widgets.dart';
+import 'package:sim_mobile/sim/state/student_learning_state.dart';
 
 void main() {
   testWidgets('Portal shows SIM entry point', (WidgetTester tester) async {
@@ -149,4 +151,101 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tell us about who is going to study'), findsOneWidget);
   });
+
+  testWidgets('Drawer lista, busca, renomeia e apaga aulas locais', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(480, 1200));
+    final session = LabSession()
+      ..authed = true
+      ..authReady = true
+      ..credits = 3;
+    final store = session.canonicalStore!;
+    store.writeState(_drawerState('lesson-a', 'Álgebra linear', 1));
+    store.writeState(_drawerState('lesson-b', 'Biologia celular', 2));
+    session.lessonLocalId = 'lesson-a';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showAulaMenu(context, session),
+            child: const Text('open drawer'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open drawer'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Álgebra linear'), findsOneWidget);
+    expect(find.text('Biologia celular'), findsOneWidget);
+    expect(find.text('2/2'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'bio');
+    await tester.pumpAndSettle();
+    expect(find.text('Álgebra linear'), findsNothing);
+    expect(find.text('Biologia celular'), findsOneWidget);
+
+    await tester.tap(find.text('✎').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Citologia');
+    await tester.tap(find.text('✓'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '');
+    await tester.pumpAndSettle();
+    expect(find.text('Citologia'), findsOneWidget);
+
+    await tester.tap(find.text('🗑').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Apagar esta aula?'), findsOneWidget);
+    await tester.tap(find.text('🗑').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Citologia'), findsNothing);
+    expect(store.listLocalStates(), hasLength(1));
+    expect(store.listLocalStates(includeDeleted: true), hasLength(2));
+    await tester.pump(const Duration(milliseconds: 2300));
+
+    await tester.binding.setSurfaceSize(null);
+  });
+}
+
+StudentLearningState _drawerState(String id, String title, int itemIdx) {
+  final now = DateTime(2026, 6, 30).millisecondsSinceEpoch + itemIdx;
+  return StudentLearningState.empty(lessonLocalId: id, now: now).copyWith(
+    profile: StudentProfile(
+      objetivo: title,
+      stableLang: 'Portuguese',
+      academicLevel: 'ensino_medio',
+    ),
+    curriculum: StudentCurriculum(
+      topic: title,
+      totalItems: 3,
+      generatedAt: now,
+      provisional: false,
+      items: const [
+        CurriculumItem(marker: 'M1', text: 'Item 1'),
+        CurriculumItem(marker: 'M2', text: 'Item 2'),
+        CurriculumItem(marker: 'M3', text: 'Item 3'),
+      ],
+    ),
+    progress: LessonProgress(
+      itemIdx: itemIdx,
+      layer: LessonLayer.l1,
+      erros: 0,
+      amparoLvl: 0,
+      historia: const [],
+      mainAdvances: itemIdx,
+      concluidos: const [],
+      pendentesMarkers: const [],
+      totalItems: 3,
+      pctAvanco: ((itemIdx / 3) * 100).round(),
+    ),
+    current: LessonCurrent(
+      itemIdx: itemIdx,
+      marker: 'M$itemIdx',
+      layer: LessonLayer.l1,
+      amparoLvl: 0,
+    ),
+  );
 }

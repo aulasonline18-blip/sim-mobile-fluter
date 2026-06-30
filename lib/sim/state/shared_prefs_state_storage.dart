@@ -48,6 +48,9 @@ class SharedPrefsStudentStateLocalStorage implements StudentStateLocalStorage {
     _prefs.setString('$_eventsKeyPrefix$lessonLocalId', encoded);
   }
 
+  @override
+  List<String> listStateIds() => readIndex();
+
   List<String> readIndex() {
     final raw = _prefs.getStringList(indexKey);
     return raw ?? const [];

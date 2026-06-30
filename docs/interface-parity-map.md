@@ -59,7 +59,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 | Revisao | `AuxRoomScreens.tsx` | `ReviewRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Recuperacao | `AuxRoomScreens.tsx` | `RecoveryRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Amparo | `lesson-pipeline-runtime.ts`, `T02Service.ts`, `routes/pai.tsx` | `AmparoController`, `LessonAnswerProgressController`, `FatherPanel` | Mapeado: no Web nao ha sala visual separada de amparo no fluxo principal; amparo e modo T02/estado e aparece no Painel do Pai. Flutter tem controlador e status equivalente. | Baixa | Capturar Painel do Pai quando SimWeb rodar. | IGUAL FUNCIONALMENTE |
-| Drawer/historico | `AulaDrawer.tsx` | `showAulaMenu` | Parcialmente corrigido: busca/historico/footer existem e export/import/status agora tem acao real via store/clipboard/dialog. Ainda falta paridade completa com cloud/local, renomear/apagar e screenshots. | Alta | Completar lista cloud/local e acoes de renomear/apagar iguais ao Web. | PARCIAL |
+| Drawer/historico | `AulaDrawer.tsx` | `showAulaMenu` | Parcialmente corrigido: lista local multi-aula, busca, contador, paginacao 30+30, abrir aula, renomear inline, apagar com tombstone, export/import/status e teste widget existem. Ainda falta lista cloud autenticada, dedupe cloud/local, delete cloud, sync import->cloud e screenshots. | Alta | Completar lista cloud/local e acoes de sync/delete cloud iguais ao Web. | PARCIAL |
 | Creditos | `routes/creditos.tsx` | `CreditsLabScreen` | Corrigido para estrutura Web: header, balance card, recharge card, packs 100/200/500 com loading e checkout. Ainda falta erro hosted/modal embedded visual. | Alta | Capturar screenshot e cobrir erro hosted/modal se aplicavel ao Flutter. | IGUAL FUNCIONALMENTE |
 | Conclusao | `LessonDoneScreen` Web | `LessonDoneScreen` Flutter | Usa robo; precisa validar CTA/destino. | Baixa | Screenshot/teste. | PARCIAL |
 | Loading | `LessonStateScreens.tsx` | Flutter loading states | Estados existem; nao aprovados visualmente. | Media | Testes + screenshot. | PARCIAL |
@@ -69,7 +69,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 
 ## Diferencas Criticas Ja Encontradas
 
-1. Drawer Flutter ainda nao prova paridade total com cloud/local, renomear, apagar e lista paginada do Web.
+1. Drawer Flutter ainda nao prova paridade total com cloud autenticado, dedupe cloud/local, delete cloud e import sync para nuvem.
 2. Ainda faltam screenshots reais Web/Flutter para aprovar visualmente portal, login, idioma, objetivo, preparacao, aula, drawer e creditos.
 3. Duvida Flutter ja tem camera/galeria e chamada real de T02, mas ainda precisa screenshot comparativo autenticado para marcar `APROVADO`.
 4. Amparo foi mapeado como comportamento/estado, nao como tela propria; falta apenas screenshot do Painel do Pai.
@@ -86,14 +86,14 @@ Fonte: `/root/sim-work/sim-web/src/cyber/AulaDrawer.tsx` no commit `d113cf4`.
 | Recarregar creditos | Aparece somente autenticado; navega para `/creditos` preservando `returnTo`. | Botao condicionado por `authState === "in"`. | AUSENTE/PARCIAL no drawer Flutter; tela de creditos existe fora. |
 | Auth | Ao abrir, chama `supabase.auth.getSession()`, assina `onAuthStateChange`, define `checking/in/out`. | `useEffect` com `supabase.auth.getSession()` e subscription. | AUSENTE/PARCIAL: Flutter drawer nao prova separacao por auth. |
 | Lista nuvem | Usa `useSimLessonsList(open && authState === "in")`, filtra estados deletados, busca por tema/idioma/nivel/id. | `cloudList`, `filteredCloudList`, `matchesLessonSearch`. | AUSENTE: Flutter nao tem lista de aulas da conta no drawer. |
-| Lista local | Usa `cyberLessons.listSummaries()`, remove duplicados ja presentes na nuvem por id/tema. | `localOnly = lessons.filter(...)`. | PARCIAL: Flutter lista local/canonica, mas nao prova dedupe com nuvem. |
-| Busca | Campo de busca filtra nuvem e local, mostra contador `shownRows/totalRows`. | `lessonSearch`, `drawer_search_placeholder`, contador. | PARCIAL: busca existe, precisa paridade visual/contagem. |
-| Paginacao | Mostra 30 linhas inicialmente e carrega mais 30 por clique. | `DRAWER_INITIAL_VISIBLE = 30`, `DRAWER_PAGE_SIZE = 30`, `drawer_load_more`. | AUSENTE/PARCIAL: Flutter precisa limite e carregar mais. |
-| Abrir local | Tenta `cyberLessons.restoreToSession`; se falhar busca estado remoto por `lessonLocalId`, hidrata, ativa, navega, dispara evento. | `handleAbrir`, `getStudentStateByLesson`, `hydrateStudentLearningStateFromCloud`, `notifyActiveLessonChanged`. | PARCIAL: retomar existe em partes, precisa prova por UI e estado. |
+| Lista local | Usa `cyberLessons.listSummaries()`, remove duplicados ja presentes na nuvem por id/tema. | `localOnly = lessons.filter(...)`. | IGUAL FUNCIONALMENTE para lista local: Flutter lista todos os `StudentStateStore.listLocalStates()`, filtrando tombstones. Dedupe com nuvem ainda ausente. |
+| Busca | Campo de busca filtra nuvem e local, mostra contador `shownRows/totalRows`. | `lessonSearch`, `drawer_search_placeholder`, contador. | IGUAL FUNCIONALMENTE para lista local; nuvem ainda ausente. |
+| Paginacao | Mostra 30 linhas inicialmente e carrega mais 30 por clique. | `DRAWER_INITIAL_VISIBLE = 30`, `DRAWER_PAGE_SIZE = 30`, `drawer_load_more`. | IGUAL FUNCIONALMENTE para lista local usando `aulaDrawerInitialVisible`/`aulaDrawerPageSize`. |
+| Abrir local | Tenta `cyberLessons.restoreToSession`; se falhar busca estado remoto por `lessonLocalId`, hidrata, ativa, navega, dispara evento. | `handleAbrir`, `getStudentStateByLesson`, `hydrateStudentLearningStateFromCloud`, `notifyActiveLessonChanged`. | PARCIAL: Flutter ativa `lessonLocalId` e abre `/cyber/aula`; fallback remoto/evento ativo ainda ausente. |
 | Abrir nuvem | Usa snapshot ou busca remoto, hidrata, cacheia `lessonId`, ativa, navega e dispara evento. | `handleAbrirCloud`, `cacheLessonCloudId`. | AUSENTE no drawer Flutter. |
-| Renomear local | Botao `✎`, input inline, confirma com `✓` ou Enter, cancela com Escape. | `handleRenomearStart`, `handleRenomearConfirm`, `cyberLessons.rename`. | AUSENTE/PARCIAL: nao ha prova de rename inline. |
+| Renomear local | Botao `✎`, input inline, confirma com `✓` ou Enter, cancela com Escape. | `handleRenomearStart`, `handleRenomearConfirm`, `cyberLessons.rename`. | IGUAL FUNCIONALMENTE: Flutter tem `StudentStateStore.renameLesson`, input inline, `✓`, `✕` e teste widget. |
 | Renomear nuvem | Botao `✎`, input inline, atualiza `StudentLearningStateService.rename` e agenda sync. | `handleRenomearCloudConfirm`, `StudentLearningSync.enqueuePatch`. | AUSENTE. |
-| Apagar local | Confirma, deleta local-first, opcionalmente nuvem por localId, refetch, mostra erro cloud. | `handleApagar`, `deleteLesson`, `drawer_delete_cloud_error`. | AUSENTE/PARCIAL: nao ha prova de apagar por item com tombstone/sync. |
+| Apagar local | Confirma, deleta local-first, opcionalmente nuvem por localId, refetch, mostra erro cloud. | `handleApagar`, `deleteLesson`, `drawer_delete_cloud_error`. | IGUAL FUNCIONALMENTE para local-first/tombstone; cloud delete ainda ausente. |
 | Apagar nuvem | Confirma, `deleteLesson`, remove espelho local, refetch, erro claro. | `handleApagarCloud`, `removeLocalMirrorFor`. | AUSENTE. |
 | Exportar backup | Gera `sim-backup-YYYY-MM-DD.txt` com `exportCyberBackup()`. | `handleExport`. | PARCIAL: Flutter exporta para clipboard/dialog, nao arquivo identico. |
 | Importar backup | File input `.json/.txt`, parse, importa local, se logado enfileira sync, drain, pull e refetch. | `handleImportFile`, `parseCyberBackup`, `StudentLearningSync.drain`. | PARCIAL: Flutter importa texto/clipboard; falta nuvem/sync como Web. |
@@ -129,10 +129,10 @@ Tentativas executadas em 2026-06-30:
 Nao estamos em B. Progresso desta rodada:
 
 - `flutter analyze`: passou.
-- `flutter test`: passou, 157 testes.
+- `flutter test`: passou, 158 testes.
 - `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`: passou, APK gerado em `build/app/outputs/flutter-apk/app-release.apk`.
-- APK: 55.108.644 bytes; SHA256 `b54174402b39abebb9966c606f982c92e8ce74f8e534ce0772a5527a6c249c9e`.
-- Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida com texto/camera/galeria e T02 real, creditos com estrutura Web, drawer export/import/status com acao real e mojibake visivel em pontos alterados.
+- APK: 55.125.028 bytes; SHA256 `81029f277067e8fb6cb85d7c36d2d697d194d54f0567b79400584cc3b7445f40`.
+- Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida com texto/camera/galeria e T02 real, creditos com estrutura Web, drawer local com lista/busca/paginacao/renomear/apagar/export/import/status e mojibake visivel em pontos alterados.
 - Capturado SimWeb real para portal e login; rota idioma sem sessao ficou em branco.
 
-Ainda falta para B: captura visual real do SimWeb/Flutter em rotas autenticadas, drawer completo cloud/local/renomear/apagar/paginacao e aprovacao visual tela por tela.
+Ainda falta para B: captura visual real do SimWeb/Flutter em rotas autenticadas, drawer cloud completo com dedupe/sync/delete e aprovacao visual tela por tela.

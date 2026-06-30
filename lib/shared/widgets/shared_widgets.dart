@@ -35,6 +35,7 @@ import '../../sim/media/student_lesson_media_service.dart';
 import '../../sim/state/shared_prefs_state_storage.dart';
 import '../../sim/state/student_learning_state.dart';
 import '../../sim/state/student_state_store.dart';
+import '../../sim/school/aula_drawer_contract.dart';
 import '../../sim/ui/sim_i18n.dart';
 import '../../sim/ui/widgets/cyber_step_shell.dart';
 import '../../sim/ui/widgets/sim_preparation_experience.dart';
@@ -286,11 +287,15 @@ class _AulaDrawerContent extends StatefulWidget {
 
 class _AulaDrawerContentState extends State<_AulaDrawerContent> {
   final TextEditingController _searchCtrl = TextEditingController();
+  final TextEditingController _renameCtrl = TextEditingController();
   String? _feedback;
+  int _visibleLessonCount = aulaDrawerInitialVisible;
+  String? _renamingLessonId;
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _renameCtrl.dispose();
     super.dispose();
   }
 
@@ -304,6 +309,68 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
   void _handleNovaAula() {
     widget.onClose();
     widget.session.goPortal();
+  }
+
+  void _handleOpenLesson(String lessonLocalId) {
+    widget.session.lessonLocalId = lessonLocalId;
+    widget.session.route = '/cyber/aula';
+    widget.onClose();
+    unawaited(widget.session.openAulaRuntime());
+  }
+
+  void _startRename(StudentLearningState state) {
+    setState(() {
+      _renamingLessonId = state.lessonLocalId;
+      _renameCtrl.text = _lessonTitle(state);
+    });
+  }
+
+  void _confirmRename() {
+    final id = _renamingLessonId;
+    if (id == null) return;
+    final store = widget.session.canonicalStore;
+    if (store == null) return;
+    final clean = _renameCtrl.text.trim();
+    if (clean.isEmpty) {
+      setState(() => _renamingLessonId = null);
+      return;
+    }
+    store.renameLesson(id, clean);
+    setState(() {
+      _renamingLessonId = null;
+      _renameCtrl.clear();
+    });
+    _flash(t('renomear'));
+  }
+
+  Future<void> _handleDelete(StudentLearningState state) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('confirmar_apagar')),
+        content: Text(_lessonTitle(state)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t('fechar')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t('apagar')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final store = widget.session.canonicalStore;
+    if (store == null) return;
+    store.tombstoneLesson(state.lessonLocalId);
+    if (widget.session.lessonLocalId == state.lessonLocalId) {
+      widget.session.lessonLocalId = null;
+      widget.session.goPortal();
+    }
+    setState(() {});
+    _flash(t('drawer_delete_error'));
   }
 
   Future<void> _handleExportBackup() async {
@@ -407,10 +474,15 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     final state = lessonId != null
         ? session.canonicalStore?.readState(lessonId)
         : null;
+    final localStates =
+        session.canonicalStore?.listLocalStates() ?? <StudentLearningState>[];
+    final filteredStates = localStates.where(_matchesStateSearch).toList();
+    final visibleStates = filteredStates
+        .take(_visibleLessonCount)
+        .toList(growable: false);
+    final hasMoreLessons = visibleStates.length < filteredStates.length;
     final total = state?.curriculum?.totalItems ?? 0;
     final advances = state?.progress?.itemIdx ?? 0;
-    final pct = total > 0 ? ((advances / total) * 100).round() : 0;
-    final lessonName = state?.curriculum?.topic ?? lessonId ?? '';
 
     return Column(
       children: [
@@ -569,7 +641,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (lessonName.isEmpty)
+                if (localStates.isEmpty)
                   Text(
                     t('historico_vazio'),
                     style: const TextStyle(color: muted, fontSize: 12),
@@ -584,7 +656,9 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                     ),
                     child: TextField(
                       controller: _searchCtrl,
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (_) => setState(
+                        () => _visibleLessonCount = aulaDrawerInitialVisible,
+                      ),
                       style: const TextStyle(color: text, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: t('drawer_search_placeholder'),
@@ -598,46 +672,65 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Current lesson item
-                  if (_matchSearch(lessonName))
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: border),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  lessonName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: text,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  '$pct% · $advances/$total',
-                                  style: TextStyle(
-                                    fontFamily: kMono,
-                                    fontSize: 10,
-                                    color: muted,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '${visibleStates.length}/${filteredStates.length}',
+                      style: TextStyle(
+                        fontFamily: kMono,
+                        fontSize: 10,
+                        color: muted,
+                        letterSpacing: 0.5,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (filteredStates.isEmpty)
+                    Text(
+                      t('drawer_search_empty'),
+                      style: const TextStyle(color: muted, fontSize: 12),
+                    )
+                  else ...[
+                    for (final lesson in visibleStates) ...[
+                      _DrawerLessonRow(
+                        state: lesson,
+                        active: session.lessonLocalId == lesson.lessonLocalId,
+                        renaming: _renamingLessonId == lesson.lessonLocalId,
+                        renameController: _renameCtrl,
+                        onOpen: () => _handleOpenLesson(lesson.lessonLocalId),
+                        onStartRename: () => _startRename(lesson),
+                        onConfirmRename: _confirmRename,
+                        onCancelRename: () =>
+                            setState(() => _renamingLessonId = null),
+                        onDelete: () => unawaited(_handleDelete(lesson)),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    if (hasMoreLessons)
+                      GestureDetector(
+                        onTap: () => setState(
+                          () => _visibleLessonCount += aulaDrawerPageSize,
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: border),
+                          ),
+                          child: Text(
+                            t('drawer_load_more'),
+                            style: const TextStyle(
+                              color: text,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ],
             ),
@@ -759,10 +852,158 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     );
   }
 
-  bool _matchSearch(String name) {
-    final q = _searchCtrl.text.trim().toLowerCase();
-    if (q.isEmpty) return true;
-    return name.toLowerCase().contains(q);
+  bool _matchesStateSearch(StudentLearningState state) {
+    return matchesLessonSearch(_searchCtrl.text, [
+      _lessonTitle(state),
+      state.profile.language,
+      state.profile.stableLang,
+      state.profile.academicLevel,
+      state.profile.nivel,
+      state.lessonLocalId,
+      state.current?.marker,
+    ]);
+  }
+}
+
+String _lessonTitle(StudentLearningState state) {
+  final title = state.profile.objetivo ?? state.curriculum?.topic;
+  final clean = title?.trim();
+  if (clean != null && clean.isNotEmpty) return clean;
+  return state.lessonLocalId;
+}
+
+class _DrawerLessonRow extends StatelessWidget {
+  const _DrawerLessonRow({
+    required this.state,
+    required this.active,
+    required this.renaming,
+    required this.renameController,
+    required this.onOpen,
+    required this.onStartRename,
+    required this.onConfirmRename,
+    required this.onCancelRename,
+    required this.onDelete,
+  });
+
+  final StudentLearningState state;
+  final bool active;
+  final bool renaming;
+  final TextEditingController renameController;
+  final VoidCallback onOpen;
+  final VoidCallback onStartRename;
+  final VoidCallback onConfirmRename;
+  final VoidCallback onCancelRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    const border = Color(0xFFD4D4D4);
+    const text = Color(0xFF1A1A1A);
+    const muted = Color(0xFF5A5A5A);
+    final total = state.curriculum?.totalItems ?? 0;
+    final advances = state.progress?.itemIdx ?? 0;
+    final pct = total > 0 ? ((advances / total) * 100).round() : 0;
+    final pending = state.progress?.pendentesMarkers.length ?? 0;
+    if (renaming) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: renameController,
+                autofocus: true,
+                style: const TextStyle(color: text, fontSize: 13),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+                onSubmitted: (_) => onConfirmRename(),
+              ),
+            ),
+            _DrawerIconButton(label: '✓', onTap: onConfirmRename),
+            _DrawerIconButton(label: '✕', onTap: onCancelRename),
+          ],
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFFF8FAFC) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? simDark : border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: onOpen,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _lessonTitle(state),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '$pct% · $advances/$total'
+                    '${pending > 0 ? ' · $pending pend.' : ''}',
+                    style: const TextStyle(
+                      fontFamily: kMono,
+                      fontSize: 10,
+                      color: muted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _DrawerIconButton(label: t('renomear'), onTap: onStartRename),
+          _DrawerIconButton(label: t('apagar'), onTap: onDelete),
+        ],
+      ),
+    );
+  }
+}
+
+class _DrawerIconButton extends StatelessWidget {
+  const _DrawerIconButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF1A1A1A),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
   }
 }
 

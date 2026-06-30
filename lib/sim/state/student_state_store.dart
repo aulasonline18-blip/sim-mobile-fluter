@@ -84,6 +84,7 @@ abstract interface class StudentStateLocalStorage {
   void writeState(String lessonLocalId, String encoded);
   String? readEvents(String lessonLocalId);
   void writeEvents(String lessonLocalId, String encoded);
+  List<String> listStateIds();
 }
 
 class MemoryStudentStateLocalStorage implements StudentStateLocalStorage {
@@ -95,6 +96,9 @@ class MemoryStudentStateLocalStorage implements StudentStateLocalStorage {
 
   @override
   String? readState(String lessonLocalId) => states[lessonLocalId];
+
+  @override
+  List<String> listStateIds() => states.keys.toList(growable: false);
 
   @override
   void writeEvents(String lessonLocalId, String encoded) {
@@ -243,6 +247,52 @@ class StudentStateStore {
   List<CanonicalLearningEvent> getEventLog(String lessonLocalId) {
     return List.unmodifiable(
       _eventLog[lessonLocalId] ?? _readEvents(lessonLocalId),
+    );
+  }
+
+  List<StudentLearningState> listLocalStates({bool includeDeleted = false}) {
+    final ids = {...local.listStateIds(), ..._memory.keys};
+    final states = ids.map(readState).where((state) {
+      if (includeDeleted) return true;
+      return state.extra['deletedAt'] == null &&
+          (state.extra['syncInfo'] is! Map ||
+              (state.extra['syncInfo'] as Map)['deletedAt'] == null);
+    }).toList();
+    states.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return states;
+  }
+
+  StudentLearningState renameLesson(String lessonLocalId, String name) {
+    final clean = name.trim();
+    if (clean.isEmpty) return readState(lessonLocalId);
+    return writeState(
+      readState(lessonLocalId).copyWith(
+        profile: readState(lessonLocalId).profile.copyWith(
+          objetivo: clean,
+          targetTopic: clean,
+          sessionGoal: clean,
+        ),
+        extra: {...readState(lessonLocalId).extra, 'renamedAt': now()},
+      ),
+    );
+  }
+
+  StudentLearningState tombstoneLesson(String lessonLocalId) {
+    final ts = now();
+    final state = readState(lessonLocalId);
+    return writeState(
+      state.copyWith(
+        extra: {
+          ...state.extra,
+          'deletedAt': ts,
+          'syncInfo': {
+            if (state.extra['syncInfo'] is Map)
+              ...JsonMap.from(state.extra['syncInfo'] as Map),
+            'deletedAt': ts,
+            'operation': 'tombstone',
+          },
+        },
+      ),
     );
   }
 
