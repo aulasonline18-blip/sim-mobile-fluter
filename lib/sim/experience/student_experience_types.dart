@@ -33,6 +33,8 @@ enum StudentExperienceEventType {
   t00ProfilePartialReceived,
   t00FirstItemReceived,
   t00FirstItemReceivedAt,
+  t00PartialReady,
+  t00QualityCheckReceived,
   t00FinalCurriculumReceived,
   t00ProviderFailedAfterPartial,
   t00FallbackGatewayStarted,
@@ -53,10 +55,7 @@ enum StudentExperienceEventType {
 enum StudentExperienceErrorKind { credits, timeout, generic }
 
 class StudentExperienceErrorInfo {
-  const StudentExperienceErrorInfo({
-    required this.kind,
-    required this.message,
-  });
+  const StudentExperienceErrorInfo({required this.kind, required this.message});
 
   final StudentExperienceErrorKind kind;
   final String message;

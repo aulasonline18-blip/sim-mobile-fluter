@@ -66,6 +66,7 @@ class LabSession extends ChangeNotifier {
     this._attachmentClient,
     StudentStateCloudFunctions? drawerCloudFunctions,
     SupabaseSessionProvider? drawerSessionProvider,
+    this.experiencePreparerOverride,
     this.prefs,
   }) : canonicalStore =
            canonicalStore ??
@@ -79,6 +80,8 @@ class LabSession extends ChangeNotifier {
   }
 
   final SharedPreferences? prefs;
+  final Future<StudentExperienceResult> Function(StudentExperienceArgs args)?
+  experiencePreparerOverride;
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
   StudentStateCloudFunctions? _drawerCloudFunctions;
@@ -344,7 +347,6 @@ class LabSession extends ChangeNotifier {
   Future<void> launchExperience() async {
     final id = lessonLocalId;
     if (id == null || id.trim().isEmpty) return;
-    if (prefs == null && route == '/cyber/curriculo') return;
     if (entryStatus == 't00_running' ||
         entryStatus == 't02_running' ||
         entryStatus == 'primeira_aula_pronta') {
@@ -357,7 +359,6 @@ class LabSession extends ChangeNotifier {
 
     try {
       debugPrint('[SIM] T00_STARTED lessonLocalId=$id');
-      final organism = simOrganismProvider.forLesson(id);
       final onboarding = <String, dynamic>{
         'objetivo': freeText.trim(),
         'free_text': freeText.trim(),
@@ -394,8 +395,13 @@ class LabSession extends ChangeNotifier {
         },
       );
 
-      final result = await organism.experienceEngine
-          .prepareStudentExperienceEntry(args);
+      final prepareOverride = experiencePreparerOverride;
+      final result = prepareOverride == null
+          ? await simOrganismProvider
+                .forLesson(id)
+                .experienceEngine
+                .prepareStudentExperienceEntry(args)
+          : await prepareOverride(args);
 
       entryStatus = 'primeira_aula_pronta';
       notifyListeners();

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/sim/experience/student_experience_engine.dart';
 import 'package:sim_mobile/sim/experience/student_experience_t00_adapter.dart';
 import 'package:sim_mobile/sim/experience/student_experience_t02_adapter.dart';
@@ -409,6 +411,95 @@ void main() {
     expect(result, [true, true, true]);
     expect(t02.calls, 3);
     expect(service.read('cyber-ready')?.readyLessonMaterials.length, 3);
+  });
+
+  test(
+    'invalid ready state material is discarded and T02 is called again',
+    () async {
+      final service = StudentLearningStateService(
+        seed: {
+          'cyber-ready': _stateWithCurriculum().copyWith(
+            readyLessonMaterials: {
+              preparedLessonMaterialKey(0, 'M1', LessonLayer.l1): {
+                'text_status': 'ready',
+                'explanation': '',
+                'question': 'Pergunta?',
+                'options': {'A': 'A', 'B': 'B', 'C': 'C'},
+                'correct_answer': 'A',
+                'for_itemIdx': 0,
+                'for_marker': 'M1',
+                'for_layer': LessonLayer.l1.name,
+              },
+            },
+          ),
+        },
+      );
+      final t02 = FakeT02Client();
+      final orchestrator = LessonOrchestrator(
+        t02Client: t02,
+        cache: LessonMaterialCache(),
+        bus: LessonEventBus(),
+      );
+      final materialService = StudentLessonMaterialService(
+        stateService: service,
+        orchestrator: orchestrator,
+        readyWindowEngine: DopamineReadyWindowEngine(
+          service: service,
+          orchestrator: orchestrator,
+        ),
+      );
+
+      final result = await materialService
+          .resolveLessonMaterialFromStateOrEngine(
+            ResolveLessonMaterialInput(
+              lessonLocalId: 'cyber-ready',
+              topic: 'Objetivo',
+              itemIdx: 0,
+              marker: 'M1',
+              layer: LessonLayer.l1,
+              params: const CompleteLessonParams(
+                lessonLocalId: 'cyber-ready',
+                item: 'Item 1',
+                lang: 'pt',
+                academic: 'fundamental',
+                layer: LessonLayer.l1,
+                mode: LessonMode.session,
+                marker: 'M1',
+              ),
+            ),
+          );
+
+      expect(result?.conteudo.explanation, 'Explicacao de Item 1');
+      expect(t02.calls, 1);
+      expect(
+        service.read('cyber-ready')?.events.map((event) => event.type),
+        contains('LESSON_MATERIAL_INVALID_DISCARDED'),
+      );
+    },
+  );
+
+  test('invalid persistent cache entries are ignored', () async {
+    SharedPreferences.setMockInitialValues({
+      'sim-lesson-text-cache-v1': jsonEncode({
+        'bad': {
+          'savedAt': DateTime.now().millisecondsSinceEpoch,
+          'lesson': {
+            'conteudo': {
+              'explanation': 'Exp',
+              'question': 'Pergunta?',
+              'options': {'A': 'A', 'B': '', 'C': 'C'},
+              'correct_answer': 'A',
+            },
+            'audioText': 'Exp. Pergunta?',
+          },
+        },
+      }),
+    });
+
+    final cache = LessonMaterialCache();
+    await cache.hydrate();
+
+    expect(cache.peek('bad'), isNull);
   });
 
   test('StudentExperienceT02Adapter prepares first minimum lesson', () async {

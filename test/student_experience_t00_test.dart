@@ -16,6 +16,10 @@ class FakeT00Client implements T00BootstrapClient {
       payload: {'profile': 'Aluno precisa de base visual.'},
     );
     yield const T00BootstrapChunk(
+      type: 't00_fallback_gateway_started',
+      payload: {'error': 'gateway slow', 'ts': 1},
+    );
+    yield const T00BootstrapChunk(
       type: 't00_item_partial',
       payload: {
         'item': {
@@ -26,6 +30,17 @@ class FakeT00Client implements T00BootstrapClient {
         },
       },
     );
+    yield const T00BootstrapChunk(
+      type: 't00_partial_ready',
+      payload: {'count': 1, 'ms': 12},
+    );
+    yield const T00BootstrapChunk(
+      type: 't00_quality_check',
+      payload: {
+        'quality_check': {'ok': true},
+      },
+    );
+    yield const T00BootstrapChunk(type: 'done', payload: {'ok': true});
   }
 }
 
@@ -109,11 +124,22 @@ void main() {
       expect(result.destination, '/cyber/placement');
       expect(result.curriculum.items.first.marker, 'M1');
       final state = service.read('cyber-fractions');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      final settledState = service.read('cyber-fractions');
       expect(state?.entry?.firstItemMarker, 'M1');
       expect(
         state?.events.map((event) => event.type),
         contains('CURRICULUM_GENERATED'),
       );
+      final progressEvents = settledState?.events
+          .where((event) => event.type == 'PROGRESS_UPDATED')
+          .map((event) => event.payload['event'])
+          .toList();
+      expect(progressEvents, contains('t00FallbackGatewayStarted'));
+      expect(progressEvents, contains('t00PartialReady'));
+      expect(progressEvents, contains('t00QualityCheckReceived'));
+      expect(settledState?.curriculum?.items, hasLength(1));
     },
   );
 }

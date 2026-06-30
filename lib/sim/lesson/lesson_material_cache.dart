@@ -4,7 +4,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../state/student_learning_state.dart';
+import 'lesson_content_validator.dart';
 import 'lesson_models.dart';
 
 const String _kCacheKey = 'sim-lesson-text-cache-v1';
@@ -19,11 +19,9 @@ class _CacheEntry {
 }
 
 class LessonMaterialCache {
-  LessonMaterialCache({
-    int? maxLessons,
-    int? ttlMs,
-  })  : maxLessons = maxLessons ?? _kMaxMemoryLessons,
-        ttlMs = ttlMs ?? _kLessonTtlMs;
+  LessonMaterialCache({int? maxLessons, int? ttlMs})
+    : maxLessons = maxLessons ?? _kMaxMemoryLessons,
+      ttlMs = ttlMs ?? _kLessonTtlMs;
 
   final int maxLessons;
   final int ttlMs;
@@ -105,19 +103,21 @@ class LessonMaterialCache {
 
   // Persiste _memory em SharedPreferences, strip de imagem para manter leve.
   void _persist() {
-    unawaited(Future(() async {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final payload = <String, dynamic>{};
-        for (final entry in _memory.entries) {
-          payload[entry.key] = {
-            'savedAt': entry.value.savedAt,
-            'lesson': _lessonToJsonNoImage(entry.value.lesson),
-          };
-        }
-        await prefs.setString(_kCacheKey, jsonEncode(payload));
-      } catch (_) {}
-    }));
+    unawaited(
+      Future(() async {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final payload = <String, dynamic>{};
+          for (final entry in _memory.entries) {
+            payload[entry.key] = {
+              'savedAt': entry.value.savedAt,
+              'lesson': _lessonToJsonNoImage(entry.value.lesson),
+            };
+          }
+          await prefs.setString(_kCacheKey, jsonEncode(payload));
+        } catch (_) {}
+      }),
+    );
   }
 
   bool _isExpired(_CacheEntry entry) {
@@ -152,29 +152,7 @@ class LessonMaterialCache {
 
   static LessonContent? _lessonContentFromJson(Map<String, dynamic> json) {
     try {
-      final optRaw = json['options'];
-      if (optRaw is! Map) return null;
-      final options = <AnswerLetter, String>{};
-      for (final letter in AnswerLetter.values) {
-        final text = optRaw[letter.name];
-        if (text is String) options[letter] = text;
-      }
-      final correctRaw = json['correct_answer'] as String?;
-      final correct = AnswerLetter.values.firstWhere(
-        (l) => l.name == correctRaw,
-        orElse: () => AnswerLetter.A,
-      );
-      return LessonContent(
-        explanation: (json['explanation'] as String?) ?? '',
-        question: (json['question'] as String?) ?? '',
-        options: options,
-        correctAnswer: correct,
-        whyCorrect: json['why_correct'] as String?,
-        whyWrong: json['why_wrong'],
-        visualTrigger: json['visual_trigger'] is Map
-            ? Map<String, dynamic>.from(json['visual_trigger'] as Map)
-            : null,
-      );
+      return validatedLessonContentFromJson(json);
     } catch (_) {
       return null;
     }

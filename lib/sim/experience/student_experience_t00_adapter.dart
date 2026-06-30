@@ -12,10 +12,7 @@ import 'student_experience_types.dart';
 import 't00_profile_writer.dart';
 
 class StudentExperienceT00Adapter {
-  StudentExperienceT00Adapter({
-    required this.service,
-    required this.client,
-  });
+  StudentExperienceT00Adapter({required this.service, required this.client});
 
   final StudentLearningStateService service;
   final T00BootstrapClient client;
@@ -133,11 +130,11 @@ class StudentExperienceT00Adapter {
                 bootStartedAt: bootStartedAt,
               );
               if (result != null && result.count == 1) {
-                final curriculum =
-                    service.read(args.lessonLocalId)?.curriculum;
+                final curriculum = service.read(args.lessonLocalId)?.curriculum;
                 first = curriculum == null ? null : _firstItemFrom(curriculum);
                 debugPrint(
-                    '[SIM] T00_FIRST_ITEM_RECEIVED marker=${result.marker}');
+                  '[SIM] T00_FIRST_ITEM_RECEIVED marker=${result.marker}',
+                );
                 args.onStage?.call(StudentExperienceRouteStage.curriculum);
                 writeStudentExperienceSnapshot(
                   service,
@@ -158,6 +155,54 @@ class StudentExperienceT00Adapter {
                 }
               }
             }
+            break;
+
+          case 't00_partial_ready':
+            publishStudentExperienceEvent(
+              service,
+              args.lessonLocalId,
+              StudentExperienceEventType.t00PartialReady,
+              {'count': chunk.payload['count'], 'ms': chunk.payload['ms']},
+            );
+            break;
+
+          case 't00_quality_check':
+            publishStudentExperienceEvent(
+              service,
+              args.lessonLocalId,
+              StudentExperienceEventType.t00QualityCheckReceived,
+              {'quality_check': chunk.payload['quality_check']},
+            );
+            break;
+
+          case 't00_fallback_gateway_started':
+          case 'fallback_gateway_started':
+            publishStudentExperienceEvent(
+              service,
+              args.lessonLocalId,
+              StudentExperienceEventType.t00FallbackGatewayStarted,
+              {'error': chunk.payload['error'], 'ts': chunk.payload['ts']},
+            );
+            break;
+
+          case 't00_fallback_gateway_succeeded':
+          case 'fallback_gateway_succeeded':
+            publishStudentExperienceEvent(
+              service,
+              args.lessonLocalId,
+              StudentExperienceEventType.t00FallbackGatewaySucceeded,
+              {'ts': chunk.payload['ts']},
+            );
+            break;
+
+          case 't00_fallback_gateway_failed':
+          case 'fallback_gateway_failed':
+            publishStudentExperienceEvent(
+              service,
+              args.lessonLocalId,
+              StudentExperienceEventType.t00FallbackGatewayFailed,
+              {'error': chunk.payload['error'], 'ts': chunk.payload['ts']},
+            );
             break;
 
           case 't00_final':
@@ -181,8 +226,9 @@ class StudentExperienceT00Adapter {
                     expansionStatus: CurriculumStatusValue.expanded,
                     updatedAt: DateTime.now().toIso8601String(),
                     objectiveKey: normalizeStudyKey(topic),
-                    initialCount:
-                        partialItems.isEmpty ? 1 : partialItems.length,
+                    initialCount: partialItems.isEmpty
+                        ? 1
+                        : partialItems.length,
                     totalCount: finalItems.length,
                   ),
                   profile: state.profile.copyWith(
@@ -221,8 +267,9 @@ class StudentExperienceT00Adapter {
       // Stream encerrou — se ainda não completamos, tenta fallback.
       if (!completer.isCompleted) {
         final fallback = service.read(args.lessonLocalId)?.curriculum;
-        final fallbackFirst =
-            fallback == null ? null : _firstItemFrom(fallback);
+        final fallbackFirst = fallback == null
+            ? null
+            : _firstItemFrom(fallback);
         if (fallbackFirst != null) {
           completer.complete(fallbackFirst);
         } else {
@@ -233,18 +280,14 @@ class StudentExperienceT00Adapter {
       service.mutate(args.lessonLocalId, (state) {
         return state.copyWith(
           profile: state.profile.copyWith(
-            extra: {
-              ...state.profile.extra,
-              'bootstrap_status': 'failed',
-            },
+            extra: {...state.profile.extra, 'bootstrap_status': 'failed'},
           ),
         );
       });
       if (!completer.isCompleted) {
         if (partialItems.isNotEmpty) {
           final partial = service.read(args.lessonLocalId)?.curriculum;
-          final partialFirst =
-              partial == null ? null : _firstItemFrom(partial);
+          final partialFirst = partial == null ? null : _firstItemFrom(partial);
           if (partialFirst != null) {
             writeStudentExperienceSnapshot(
               service,

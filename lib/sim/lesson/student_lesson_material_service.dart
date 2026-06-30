@@ -6,6 +6,7 @@ import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
 import '../media/student_lesson_media_service.dart';
 import 'dopamine_ready_window_engine.dart';
+import 'lesson_content_validator.dart';
 import 'lesson_models.dart';
 import 'lesson_orchestrator.dart';
 
@@ -250,27 +251,31 @@ class StudentLessonMaterialService {
     if (material['for_itemIdx'] != input.itemIdx) return null;
     if (material['for_layer'] != input.layer.name) return null;
     if ((material['for_marker'] as String?) != input.marker) return null;
-    final options = material['options'];
-    if (options is! Map) return null;
-    final correct = AnswerLetter.values.firstWhere(
-      (letter) => letter.name == material['correct_answer'],
-      orElse: () => AnswerLetter.A,
-    );
-    return LessonContent(
-      explanation: (material['explanation'] ?? '').toString(),
-      question: (material['question'] ?? '').toString(),
-      options: {
-        AnswerLetter.A: (options['A'] ?? '').toString(),
-        AnswerLetter.B: (options['B'] ?? '').toString(),
-        AnswerLetter.C: (options['C'] ?? '').toString(),
-      },
-      correctAnswer: correct,
-      whyCorrect: material['why_correct'] as String?,
-      whyWrong: material['why_wrong'],
-      visualTrigger: material['visual_trigger'] is Map
-          ? JsonMap.from(material['visual_trigger'] as Map)
-          : null,
-    );
+    try {
+      return validatedLessonContentFromJson(JsonMap.from(material));
+    } on LessonContentValidationException catch (error) {
+      stateService.mutate(input.lessonLocalId, (state) {
+        final next = {...state.readyLessonMaterials}..remove(key);
+        return state.copyWith(
+          readyLessonMaterials: next,
+          events: [
+            ...state.events,
+            StudentLearningEvent(
+              type: 'LESSON_MATERIAL_INVALID_DISCARDED',
+              ts: DateTime.now().millisecondsSinceEpoch,
+              payload: {
+                'key': key,
+                'itemIdx': input.itemIdx,
+                'marker': input.marker,
+                'layer': input.layer.value,
+                'error': error.message,
+              },
+            ),
+          ],
+        );
+      });
+      return null;
+    }
   }
 
   void _mirrorCurrentLessonMaterial(

@@ -4,6 +4,7 @@ import '../media/audio_core.dart';
 import '../media/lesson_audio_api_contract.dart';
 import '../media/lesson_image_api_contract.dart';
 import '../media/lesson_visual_pipeline.dart';
+import '../lesson/lesson_content_validator.dart';
 import '../modules/pedagogical_module_contracts.dart';
 import '../state/student_learning_state.dart';
 import 'sim_ai_server_config.dart';
@@ -228,38 +229,31 @@ class SimServerT02Client implements T02LessonClient {
     if (decoded is! Map) {
       throw const SimExternalAiException('T02 retornou resposta invalida.');
     }
-    return _parseT02Material(JsonMap.from(decoded));
+    try {
+      return _parseT02Material(JsonMap.from(decoded));
+    } on LessonContentValidationException catch (error) {
+      throw SimExternalAiException(
+        'T02 retornou contrato invalido: ${error.message}',
+        statusCode: 502,
+      );
+    }
   }
 
   T02LessonMaterial _parseT02Material(JsonMap json) {
     final source = json['conteudo'] is Map
         ? JsonMap.from(json['conteudo'])
         : json;
-    final options = source['options'];
-    final correct = (source['correct_answer'] ?? source['correctAnswer'] ?? 'A')
-        .toString();
-    final visualTriggerRaw =
-        source['visual_trigger'] ?? source['visualTrigger'];
+    final content = validatedLessonContentFromJson(source);
     return T02LessonMaterial(
-      explanation: (source['explanation'] ?? '').toString(),
-      question: (source['question'] ?? '').toString(),
-      options: {
-        AnswerLetter.A: options is Map ? (options['A'] ?? '').toString() : '',
-        AnswerLetter.B: options is Map ? (options['B'] ?? '').toString() : '',
-        AnswerLetter.C: options is Map ? (options['C'] ?? '').toString() : '',
-      },
-      correctAnswer: AnswerLetter.values.firstWhere(
-        (letter) => letter.name == correct,
-        orElse: () => AnswerLetter.A,
-      ),
-      whyCorrect: (source['why_correct'] ?? source['whyCorrect'] ?? '')
-          .toString(),
-      whyWrong: source['why_wrong'] ?? source['whyWrong'],
+      explanation: content.explanation,
+      question: content.question,
+      options: content.options,
+      correctAnswer: content.correctAnswer,
+      whyCorrect: content.whyCorrect ?? '',
+      whyWrong: content.whyWrong,
       generatedAt: DateTime.now(),
       source: (source['source'] ?? 'sim-server-t02').toString(),
-      visualTrigger: visualTriggerRaw is Map
-          ? JsonMap.from(visualTriggerRaw)
-          : null,
+      visualTrigger: content.visualTrigger,
     );
   }
 }

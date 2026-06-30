@@ -188,18 +188,16 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                       ),
                     ),
                     Expanded(
-                      child: widget.session.prefs == null
-                          ? const SizedBox.shrink()
-                          : SingleChildScrollView(
-                              child: SimPreparationExperience(
-                                stage: simStage,
-                                ready: isReady,
-                                onContinue: () {
-                                  _started = false;
-                                  _launch();
-                                },
-                              ),
-                            ),
+                      child: SingleChildScrollView(
+                        child: SimPreparationExperience(
+                          stage: simStage,
+                          ready: isReady,
+                          onContinue: () {
+                            _started = false;
+                            _launch();
+                          },
+                        ),
+                      ),
                     ),
                   ],
                 ),

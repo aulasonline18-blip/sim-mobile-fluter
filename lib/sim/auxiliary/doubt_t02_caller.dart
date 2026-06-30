@@ -48,6 +48,7 @@ class DoubtT02Caller {
               'name': doubtImage.name,
               'type': doubtImage.type,
               'size': doubtImage.size,
+              'dataUrl': doubtImage.dataUrl,
               'hasDataUrl': doubtImage.dataUrl.isNotEmpty,
             },
         },

@@ -228,4 +228,40 @@ void main() {
     expect((transport.lastBody as Map)['mode'], 'lesson');
     expect(material.question, 'Pergunta?');
   });
+
+  test('T02 invalido nao vira aula falsa nem default A', () async {
+    final transport = RecordingTransport()
+      ..jsonBody =
+          '{"explanation":"Exp","question":"Pergunta?","options":{"A":"um","B":"dois","C":"tres"},"correct_answer":"D"}';
+    final client = SimServerT02Client(
+      config: SimAiServerConfig(
+        baseUrl: 'https://gemini-aid-pal.lovable.app',
+        t02Path: '/api/sim/t02',
+        accessTokenProvider: () async => 'user-token',
+      ),
+      transport: transport,
+    );
+
+    await expectLater(
+      client.completeLesson(
+        const T02LessonRequest(
+          lessonLocalId: 'lesson-1',
+          item: 'Frações',
+          lang: 'pt-BR',
+          academic: 'ano 6',
+          layer: LessonLayer.l1,
+          mode: 'session',
+          errCount: 0,
+          history: [],
+        ),
+      ),
+      throwsA(
+        isA<SimExternalAiException>().having(
+          (error) => error.message,
+          'message',
+          contains('contrato invalido'),
+        ),
+      ),
+    );
+  });
 }

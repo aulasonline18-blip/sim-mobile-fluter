@@ -178,6 +178,7 @@ void main() {
       'name': 'foto.png',
       'type': 'image/png',
       'size': 64,
+      'dataUrl': 'data:image/png;base64,AAAA',
       'hasDataUrl': true,
     });
     expect(controller.state.response?.visualTrigger, trigger);
@@ -205,6 +206,17 @@ void main() {
   test('review room builds queue, answers, and completes', () async {
     final client = FakeT02Client();
     final states = {'l1': seedState()};
+    states['l1'] = registerPendingFromAttempt(
+      states['l1']!,
+      LessonAttempt(
+        marker: 'M1',
+        layer: LessonLayer.l1,
+        letra: AnswerLetter.A,
+        sinal: DecisionSignal.two,
+        correct: true,
+        ts: 1,
+      ),
+    );
     final service = StudentAuxRoomService(
       readState: (id) => states[id]!,
       writeState: (state) => states[state.lessonLocalId] = state,
@@ -225,11 +237,18 @@ void main() {
 
     var view = await review.startReviewRoom(context, 5);
     expect(view.status, ReviewRoomStatus.ready);
+    expect(view.queue.first, 'M1');
     expect(client.auxCalls, 1);
     view = review.selectLetter(view, AnswerLetter.B);
     view = review.answerReviewRoom(context, view, DecisionSignal.one);
     expect(view.status, ReviewRoomStatus.result);
     expect(view.resultCorrect, true);
+    expect(
+      pendingMapOf(ensureAuxRooms(states['l1']!)).single['status'],
+      'cleared',
+    );
+    expect(states['l1']?.current?.marker, 'M1');
+    expect(states['l1']?.current?.layer, LessonLayer.l1);
   });
 
   test(
@@ -273,6 +292,11 @@ void main() {
       view = recovery.answerRecoveryRoom(context, view, DecisionSignal.one);
       expect(view.status, RecoveryRoomStatus.result);
       expect(view.resultCorrect, true);
+      expect(isFinalBlockedByRecovery(recovery, 'l1'), false);
+      final done = await recovery.nextRecoveryRoom(context, view);
+      expect(done.status, RecoveryRoomStatus.done);
+      expect(states['l1']?.current?.marker, 'M1');
+      expect(states['l1']?.current?.layer, LessonLayer.l1);
     },
   );
 

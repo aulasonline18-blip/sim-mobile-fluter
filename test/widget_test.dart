@@ -5,6 +5,7 @@ import 'package:sim_mobile/main.dart';
 import 'package:sim_mobile/shared/widgets/shared_widgets.dart';
 import 'package:sim_mobile/sim/cloud/cloud_functions.dart';
 import 'package:sim_mobile/sim/cloud/supabase_client_contract.dart';
+import 'package:sim_mobile/sim/experience/student_experience_types.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
 
 void main() {
@@ -15,14 +16,42 @@ void main() {
     expect(find.text('Smart Intelligence Mentor'), findsOneWidget);
   });
 
-  testWidgets('Phase 2 saves live entry and reaches curriculum route', (
+  testWidgets('Objetivo continua, prepara primeira aula e permite responder', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(480, 1200));
-    final session = LabSession()
-      ..authed = true
-      ..authReady = true
-      ..credits = 3;
+    var t00Called = false;
+    var t02Called = false;
+    final session =
+        LabSession(
+            experiencePreparerOverride: (args) async {
+              t00Called = true;
+              expect(args.onboarding['objetivo'], contains('matemática'));
+              args.onStage?.call(StudentExperienceRouteStage.curriculum);
+              await Future<void>.delayed(const Duration(milliseconds: 1));
+              args.onStage?.call(StudentExperienceRouteStage.lesson);
+              t02Called = true;
+              await Future<void>.delayed(const Duration(milliseconds: 1));
+              args.onStage?.call(StudentExperienceRouteStage.ready);
+              return const StudentExperienceResult(
+                destination: '/cyber/aula',
+                curriculum: StudentCurriculum(
+                  topic: 'Matemática',
+                  totalItems: 1,
+                  generatedAt: null,
+                  provisional: false,
+                  items: [CurriculumItem(marker: 'M1', text: 'Frações')],
+                ),
+                startMarker: 'M1',
+                startItemIndex: 0,
+              );
+            },
+          )
+          ..authed = true
+          ..authReady = true
+          ..credits = 999999
+          ..selectedLanguageCode = 'pt'
+          ..stableLang = 'pt-BR';
     await tester.pumpWidget(SimMobileApp(initialSession: session));
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
@@ -40,12 +69,23 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save and continue'));
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(t00Called, isTrue, reason: 'clicar continuar deve iniciar T00');
+    await tester.pump(const Duration(seconds: 1));
+    expect(t02Called, isTrue, reason: 'primeiro item deve iniciar T02');
     await tester.pumpAndSettle();
-    expect(find.text('/cyber/curriculo'), findsOneWidget);
+    expect(find.text('/cyber/curriculo'), findsNothing);
+    expect(find.textContaining('entry.status: pedido_recebido'), findsNothing);
+    expect(find.text('B'), findsOneWidget);
     expect(
-      find.textContaining('entry.status: pedido_recebido'),
+      find.text('Qual alternativa representa uma fração equivalente a 1/2?'),
       findsOneWidget,
     );
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Exato! Você domina este ponto.'), findsOneWidget);
     await tester.binding.setSurfaceSize(null);
   });
 
