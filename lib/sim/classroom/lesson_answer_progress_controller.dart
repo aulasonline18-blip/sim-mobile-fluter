@@ -231,10 +231,11 @@ class LessonAnswerProgressController {
     final marker = curriculum.items[itemIdx].marker;
     final stateForDecision =
         evidence.status == MasteryStatus.mastered &&
-            !(progress.concluidos.contains(marker))
+            evidence.marker == marker &&
+            !(progress.concluidos.contains(evidence.marker))
         ? state.copyWith(
             progress: progress.copyWith(
-              concluidos: [...progress.concluidos, marker],
+              concluidos: [...progress.concluidos, evidence.marker],
             ),
           )
         : state;
