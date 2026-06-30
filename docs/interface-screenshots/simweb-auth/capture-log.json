@@ -1,0 +1,335 @@
+[
+  {
+    "type": "console",
+    "level": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "type": "console",
+    "level": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/routes/creditos.tsx"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/StudentProfileService.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningCloudMeta.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningSession.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningState.store.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningState.types.ts"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/lib/credits.functions.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningSync.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/deleteLesson.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningStateService.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/bridge/useSimLessonsList.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/cloud/lessons.functions.ts"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: eff73389-42d5-4b1e-9b0a-4f01d5349f84"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "[cloudPull] StudentLearningState pull complete {studentStates: 0, legacy: tombstones_only}"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "[cloudPull] StudentLearningState pull complete {studentStates: 0, legacy: tombstones_only}"
+  },
+  {
+    "type": "shot",
+    "name": "portal-auth",
+    "url": "http://127.0.0.1:4177/",
+    "body": "9\nMENU\n✕\n＋\nNew lesson\nLESSON HISTORY\n\nNo saved lessons yet.\n\n⤓ Export\n⤒ Import\nⓘ Status\nSIM\n\nSmart Intelligence Mentor\n\nGuided artificial intelligence for real learning - adapted to the learner, supervised by the system, and built to turn effort into real progress.\n\nStart\n\nSIM v1 • Cyber-Premium\n\nHelp improve SIM.\n\nSend suggestions, report difficulties, and talk directly to the developer.\n\n1/5\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "drawer-auth",
+    "url": "http://127.0.0.1:4177/",
+    "body": "9\nMENU\n✕\n＋\nNew lesson\n⚡\nRecharge credits\nTOP UP\nLESSON HISTORY\n\nNo lessons saved to your account yet.\n\nProgress\n0/0 · 0 ok\n⤓ Export\n⤒ Import\nⓘ Status\nSign out\nSolicitar exclusão da conta\nSIM\n\nSmart Intelligence Mentor\n\nGuided artificial intelligence for real learning - adapted to the learner, supervised by the system, and built to turn effort into real progress.\n\nStart\n\nSIM v1 • Cyber-Premium\n\nHelp improve SIM.\n\nSend suggestions, report difficulties, and talk directly to the developer.\n\n1/5\n1/5"
+  },
+  {
+    "type": "console",
+    "level": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "type": "console",
+    "level": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/routes/creditos.tsx"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/StudentProfileService.ts"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningCloudMeta.ts"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningState.store.ts"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningSession.ts"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningState.types.ts"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningSync.ts"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "[cloudPull] StudentLearningState pull complete {studentStates: 0, legacy: tombstones_only}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: eff73389-42d5-4b1e-9b0a-4f01d5349f84"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "[cloudPull] StudentLearningState pull complete {studentStates: 0, legacy: tombstones_only}"
+  },
+  {
+    "type": "shot",
+    "name": "idioma-auth",
+    "url": "http://127.0.0.1:4177/cyber/idioma?novo=true",
+    "body": "Step 1 of 5\nChoose your language\n\nSIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.\n\n🇺🇸\nEnglish · English\n🇧🇷\nPortuguese · Português\n🇪🇸\nSpanish · Español\n🇫🇷\nFrench · Français\n🇯🇵\nJapanese · 日本語\n🌐\nOther language\n1/5"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningStateService.ts"
+  },
+  {
+    "type": "response",
+    "status": 304,
+    "url": "http://127.0.0.1:4177/src/sim/state/deleteLesson.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLiveEntryState.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/lesson-id.ts"
+  },
+  {
+    "type": "shot",
+    "name": "objetivo-empty",
+    "url": "http://127.0.0.1:4177/cyber/objeto",
+    "body": "Ficha pedagógica\nConte sobre quem vai estudar\nResumo do aluno e do pedido\nCAMPO OBRIGATÓRIO\nEscreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.\n0/1500\n\nQuanto mais você contar, melhor o professor adapta a aula: idade, série, matéria, objetivo, prazo, dificuldades, jeito de aprender, atenção, leitura, contas, confiança e qualquer cuidado importante.\n\nComo prefere ser chamado?\nEscreva o objetivo primeiro\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "anexos-menu",
+    "url": "http://127.0.0.1:4177/cyber/objeto",
+    "body": "Ficha pedagógica\nConte sobre quem vai estudar\nResumo do aluno e do pedido\nCAMPO OBRIGATÓRIO\nEscreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.\nAnexar arquivoTirar fotoEscolher imagem\n0/1500\n\nQuanto mais você contar, melhor o professor adapta a aula: idade, série, matéria, objetivo, prazo, dificuldades, jeito de aprender, atenção, leitura, contas, confiança e qualquer cuidado importante.\n\nComo prefere ser chamado?\nEscreva o objetivo primeiro\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "objetivo-filled",
+    "url": "http://127.0.0.1:4177/cyber/objeto",
+    "body": "Ficha pedagógica\nConte sobre quem vai estudar\nResumo do aluno e do pedido\nCAMPO OBRIGATÓRIO\nEscreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.\nAnexar arquivoTirar fotoEscolher imagem\n104/1500\n\nQuanto mais você contar, melhor o professor adapta a aula: idade, série, matéria, objetivo, prazo, dificuldades, jeito de aprender, atenção, leitura, contas, confiança e qualquer cuidado importante.\n\nComo prefere ser chamado?\nSalvar e continuar\n1/5"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_PAYLOAD] {freeTextChars: 104, attachmentsCount: 0, totalExtractedChars: 0}"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/experience/StudentExperienceEngine.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/experience/StudentExperienceGuards.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/experience/StudentExperienceStore.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/lesson-orchestrator.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/lesson/studentLessonMaterialService.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/experience/StudentExperienceT00Adapter.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/experience/StudentExperienceT02Adapter.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/experience/StudentExperiencePlacementAdapter.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/lesson-orchestrator.impl.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningState.services.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentLearningState.mirror.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/lesson-pipeline-runtime.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/StudentPlacementService.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/sim/state/studentAuxRooms.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/lesson-event-bus.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/LessonVisualPipeline.ts"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "http://127.0.0.1:4177/src/cyber/lesson-material-cache.ts"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[READY_WINDOW_WORKER_STARTED] {source: StudentLearningState}"
+  },
+  {
+    "type": "console",
+    "level": "error",
+    "text": "Error: <svg> attribute height: Expected length, \"auto\"."
+  },
+  {
+    "type": "response",
+    "status": 503,
+    "url": "http://127.0.0.1:4177/api/bootstrap-t00"
+  },
+  {
+    "type": "console",
+    "level": "error",
+    "text": "Failed to load resource: the server responded with a status of 503 ()"
+  },
+  {
+    "type": "shot",
+    "name": "preparacao-start",
+    "url": "http://127.0.0.1:4177/cyber/curriculo",
+    "body": "Não consegui preparar agora.\n\nSeus creditos acabaram. Compre creditos para continuar estudando.\n\nComprar créditos\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "aula-or-error",
+    "url": "http://127.0.0.1:4177/cyber/curriculo",
+    "body": "Não consegui preparar agora.\n\nSeus creditos acabaram. Compre creditos para continuar estudando.\n\nComprar créditos\n1/5"
+  }
+]

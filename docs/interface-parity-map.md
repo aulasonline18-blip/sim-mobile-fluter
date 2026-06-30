@@ -3,12 +3,23 @@
 Base da auditoria: 2026-06-30.
 
 - SimWeb: `/root/sim-work/sim-web`, branch `main`, commit `d113cf4` (`Lovable update`).
-- SimApp Flutter: `/root/sim-mobile-fluter`, branch `main`, commit `7f06676` (`docs: map amparo interface parity`).
+- SimApp Flutter: `/root/sim-mobile-fluter`, branch `main`, commit `197d9a9` (`feat: align cloud aula drawer actions`).
 - Fonte primária desta missão: SimWeb rodando + código real do SimWeb.
 - Capturas reais ja obtidas do SimWeb em 390x844:
   - `docs/interface-screenshots/simweb/portal-390x844.png`
   - `docs/interface-screenshots/simweb/login-390x844.png`
   - `docs/interface-screenshots/simweb/idioma-390x844.png` (rota protegida/sem sessao renderizou branco; referencia visual continua pelo codigo ate haver sessao autenticada capturavel).
+- Capturas autenticadas reais do SimWeb obtidas em 390x844:
+  - `docs/interface-screenshots/simweb-auth/portal-auth-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/drawer-auth-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/idioma-auth-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/objetivo-empty-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/anexos-menu-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/objetivo-filled-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/preparacao-start-390x844.png`
+  - `docs/interface-screenshots/simweb-auth/aula-or-error-390x844.png`
+  - Log: `docs/interface-screenshots/simweb-auth/capture-log.json`.
+- Resultado real da captura autenticada: o fluxo Web chegou a `/cyber/curriculo`, chamou `/api/bootstrap-t00` e recebeu `503` por credito insuficiente (`Seus creditos acabaram`). Por isso aula, duvida, revisao e recuperacao autenticadas nao foram capturadas nesta conta.
 
 ## Inventario De Telas E Estados SimWeb
 
@@ -59,7 +70,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 | Revisao | `AuxRoomScreens.tsx` | `ReviewRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Recuperacao | `AuxRoomScreens.tsx` | `RecoveryRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Amparo | `lesson-pipeline-runtime.ts`, `T02Service.ts`, `routes/pai.tsx` | `AmparoController`, `LessonAnswerProgressController`, `FatherPanel` | Mapeado: no Web nao ha sala visual separada de amparo no fluxo principal; amparo e modo T02/estado e aparece no Painel do Pai. Flutter tem controlador e status equivalente. | Baixa | Capturar Painel do Pai quando SimWeb rodar. | IGUAL FUNCIONALMENTE |
-| Drawer/historico | `AulaDrawer.tsx` | `showAulaMenu` | Parcialmente corrigido: lista local multi-aula, lista cloud autenticada, dedupe cloud/local por `lessonLocalId`, busca, contador, paginacao 30+30, abrir aula local/cloud, renomear inline local/cloud, apagar local com tombstone, apagar cloud via endpoint, export/import/status e teste widget existem. Ainda falta import sync->cloud e screenshot autenticado. | Alta | Completar import sync->cloud e prova visual autenticada. | PARCIAL |
+| Drawer/historico | `AulaDrawer.tsx` | `showAulaMenu` | Corrigido funcionalmente nos pontos cloud principais: lista cloud autenticada, dedupe cloud/local por `lessonLocalId`, busca, contador, paginacao 30+30, abrir aula local/cloud, renomear inline local/cloud, apagar local com tombstone e apagar cloud via endpoint, com teste widget. Ainda falta comparacao visual Flutter vs Web e confirmar backup/import/status/logout/exclusao contra Web. | Alta | Captura Flutter equivalente e prova visual autenticada; completar itens residuais do drawer que nao entraram no escopo cloud principal. | IGUAL FUNCIONALMENTE |
 | Creditos | `routes/creditos.tsx` | `CreditsLabScreen` | Corrigido para estrutura Web: header, balance card, recharge card, packs 100/200/500 com loading e checkout. Ainda falta erro hosted/modal embedded visual. | Alta | Capturar screenshot e cobrir erro hosted/modal se aplicavel ao Flutter. | IGUAL FUNCIONALMENTE |
 | Conclusao | `LessonDoneScreen` Web | `LessonDoneScreen` Flutter | Usa robo; precisa validar CTA/destino. | Baixa | Screenshot/teste. | PARCIAL |
 | Loading | `LessonStateScreens.tsx` | Flutter loading states | Estados existem; nao aprovados visualmente. | Media | Testes + screenshot. | PARCIAL |
@@ -69,11 +80,11 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 
 ## Diferencas Criticas Ja Encontradas
 
-1. Drawer Flutter ainda nao prova import sync para nuvem e screenshot autenticado; cloud list/dedupe/open/rename/delete agora tem teste widget.
-2. Ainda faltam screenshots reais Web/Flutter para aprovar visualmente portal, login, idioma, objetivo, preparacao, aula, drawer e creditos.
-3. Duvida Flutter ja tem camera/galeria e chamada real de T02, mas ainda precisa screenshot comparativo autenticado para marcar `APROVADO`.
-4. Amparo foi mapeado como comportamento/estado, nao como tela propria; falta apenas screenshot do Painel do Pai.
-5. Comentarios com mojibake ainda podem existir, mas textos visiveis auditados nesta rodada foram corrigidos nos pontos alterados.
+1. Capturas autenticadas reais do SimWeb existem para portal, drawer, idioma, objetivo/anexos e erro de preparacao por credito.
+2. Aula, duvida, revisao e recuperacao do SimWeb nao foram capturadas porque a conta autenticada criada para auditoria recebeu `503` em `/api/bootstrap-t00` por credito insuficiente.
+3. Capturas Flutter equivalentes ainda nao existem: `flutter test` com screenshot travou no ambiente headless e `flutter run -d web-server` renderizou tela branca por erro do Passkeys Web SDK ausente. Configurar `web/`/Passkeys seria mudanca de produto e nao foi feita.
+4. Drawer cloud Flutter esta funcionalmente coberto por teste widget para listar, deduplicar, abrir, renomear e apagar; falta prova visual equivalente.
+5. Sem capturas Flutter comparativas e sem aula Web autenticada, nenhuma tela pode ser marcada `APROVADO`.
 
 ## Contrato De Paridade Do Drawer SimWeb
 
@@ -123,6 +134,12 @@ Tentativas executadas em 2026-06-30:
   - Portal: `npx -y playwright screenshot --viewport-size=390,844 http://127.0.0.1:4177/ docs/interface-screenshots/simweb/portal-390x844.png`.
   - Login: `npx -y playwright screenshot --viewport-size=390,844 http://127.0.0.1:4177/login docs/interface-screenshots/simweb/login-390x844.png`.
   - Idioma: `npx -y playwright screenshot --viewport-size=390,844 http://127.0.0.1:4177/cyber/idioma docs/interface-screenshots/simweb/idioma-390x844.png`; sem sessao autenticada, a captura ficou em branco, entao idioma/objetivo/aula protegidos ainda dependem de sessao real ou especificacao por codigo.
+- Ajuste autorizado de captura autenticada, sem alterar produto SimWeb: instalei Playwright temporario fora dos repositorios em `/tmp/sim-capture-tools` (`npm install playwright@latest --no-save`).
+- Cadastro autenticado real criado pelo fluxo Web em `/login` e storage salvo em `/tmp/simweb-auth-state.json`. A captura autenticada confirmou token Supabase real e rota protegida `/cyber/idioma`.
+- Capturas autenticadas Playwright geradas em `docs/interface-screenshots/simweb-auth/`.
+- Bloqueio real da aula Web: ao salvar objetivo, o Web chamou `/api/bootstrap-t00` e recebeu `503`; a tela exibiu `Nao consegui preparar agora. Seus creditos acabaram. Compre creditos para continuar estudando.`. Portanto aula/duvida/revisao/recuperacao nao foram capturadas com esta conta.
+- Tentativa de captura Flutter por `flutter test` com arquivo temporario de screenshot: bloqueada, a chamada de captura travou o harness headless. O arquivo temporario foi removido e nao houve alteracao de produto.
+- Tentativa de captura Flutter por `flutter run -d web-server --web-port 5080`: o servidor subiu, mas a tela ficou branca. Console Playwright registrou `Passkeys Web SDK not loaded` e `TypeError: Cannot read properties of undefined (reading 'init')`. Nao configurei `web/` nem bundle de Passkeys porque isso seria alteracao de produto fora do escopo.
 
 ## Status Atual
 
@@ -133,6 +150,7 @@ Nao estamos em B. Progresso desta rodada:
 - `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`: passou, APK gerado em `build/app/outputs/flutter-apk/app-release.apk`.
 - APK: 55.141.412 bytes; SHA256 `91527e59939a067985a804914d566fc22eef6605895de082f6f46b726abc0a62`.
 - Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida com texto/camera/galeria e T02 real, creditos com estrutura Web, drawer local/cloud com lista/dedupe/busca/paginacao/abrir/renomear/apagar/export/import/status e mojibake visivel em pontos alterados.
-- Capturado SimWeb real para portal e login; rota idioma sem sessao ficou em branco.
+- Capturado SimWeb autenticado real para portal, drawer, idioma, objetivo/anexos e erro de preparacao por credito.
+- Nao ha captura Flutter equivalente aprovada nesta rodada por bloqueio tecnico do ambiente de screenshot/headless/web-server.
 
-Ainda falta para B: captura visual real do SimWeb/Flutter em rotas autenticadas, import sync->cloud no drawer e aprovacao visual tela por tela.
+Ainda falta para B: liberar credito/credencial Web para capturar aula/duvida/revisao/recuperacao reais, obter capturas Flutter equivalentes por dispositivo/emulador ou outro metodo autorizado, comparar tela por tela e corrigir diferencas visuais restantes.

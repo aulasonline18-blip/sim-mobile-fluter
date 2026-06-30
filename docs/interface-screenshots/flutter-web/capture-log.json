@@ -1,0 +1,37 @@
+[
+  {
+    "type": "console",
+    "level": "info",
+    "text": "DDC is about to load 1/2 scripts with pool size = 1000"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "DDC is about to load 963/963 scripts with pool size = 1000"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "Starting application from main method in: org-dartlang-app:/web_entrypoint.dart."
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "Error: Passkeys Web SDK not loaded. Please include the Passkeys Web SDK (bundle.js) in your HTML file. You can find it on https://github.com/corbado/flutter-passkeys/releases/download/2.4.0/bundle.js"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "Scripts may close only the windows that were opened by them."
+  },
+  {
+    "type": "pageerror",
+    "text": "TypeError: Cannot read properties of undefined (reading 'init')"
+  },
+  {
+    "type": "shot",
+    "name": "portal-unauth",
+    "url": "http://127.0.0.1:5080/",
+    "body": ""
+  }
+]
