@@ -5,6 +5,7 @@ class CreditsSnapshot {
     required this.lifetimeSpent,
     this.email,
     this.displayName,
+    this.testCreditMode = false,
   });
 
   final int balance;
@@ -12,6 +13,7 @@ class CreditsSnapshot {
   final int lifetimeSpent;
   final String? email;
   final String? displayName;
+  final bool testCreditMode;
 }
 
 class ChargeLessonGenerationInput {

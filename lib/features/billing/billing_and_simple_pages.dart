@@ -137,7 +137,7 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              '${session.credits}',
+                              session.isUnlimited ? '∞' : '${session.credits}',
                               style: const TextStyle(
                                 color: simDark,
                                 fontSize: 60,
@@ -145,20 +145,22 @@ class _CreditsLabScreenState extends State<CreditsLabScreen> {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 7),
-                              child: Text(
-                                session.credits == 1
-                                    ? t('pay_credit_one')
-                                    : t('pay_credits'),
-                                style: const TextStyle(
-                                  color: simMuted,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                            if (!session.isUnlimited) ...[
+                              const SizedBox(width: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 7),
+                                child: Text(
+                                  session.credits == 1
+                                      ? t('pay_credit_one')
+                                      : t('pay_credits'),
+                                  style: const TextStyle(
+                                    color: simMuted,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ],

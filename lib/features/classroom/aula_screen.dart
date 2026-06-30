@@ -663,7 +663,6 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     message: feedbackText(feedbackKey),
                     nextLabel: nextBtnText(nextKey),
                     nextReady:
-                        !locked &&
                         session.doubt.status != DoubtStatus.processing,
                     onNext: () => unawaited(session.advanceAula()),
                   ),

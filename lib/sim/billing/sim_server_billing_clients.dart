@@ -127,6 +127,7 @@ class SimServerCreditsClient implements CreditsFunctions {
       lifetimeSpent: (data['lifetimeSpent'] as num?)?.toInt() ?? 0,
       email: data['email']?.toString(),
       displayName: data['displayName']?.toString(),
+      testCreditMode: data['testCreditMode'] == true,
     );
   }
 

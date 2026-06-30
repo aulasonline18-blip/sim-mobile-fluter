@@ -101,6 +101,7 @@ class PortalScreen extends StatelessWidget {
                             : const SizedBox(width: 48, height: 48),
                         CreditsPill(
                           value: displayBalance,
+                          isUnlimited: session.isUnlimited,
                           onTap: session.openCredits,
                         ),
                       ],

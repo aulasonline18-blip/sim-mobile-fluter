@@ -1671,10 +1671,16 @@ class RoundIconButton extends StatelessWidget {
 }
 
 class CreditsPill extends StatelessWidget {
-  const CreditsPill({required this.value, required this.onTap, super.key});
+  const CreditsPill({
+    required this.value,
+    required this.onTap,
+    this.isUnlimited = false,
+    super.key,
+  });
 
   final int value;
   final VoidCallback onTap;
+  final bool isUnlimited;
 
   @override
   Widget build(BuildContext context) {
@@ -1690,7 +1696,7 @@ class CreditsPill extends StatelessWidget {
             const Icon(Icons.link, color: simDark, size: 17),
             const SizedBox(width: 8),
             Text(
-              '$value',
+              isUnlimited ? '∞' : '$value',
               style: const TextStyle(
                 color: simDark,
                 fontSize: 14,

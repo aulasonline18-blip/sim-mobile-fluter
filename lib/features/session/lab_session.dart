@@ -137,6 +137,7 @@ class LabSession extends ChangeNotifier {
   set authReady(bool value) => authSession.authReady = value;
   int get credits => authSession.credits;
   set credits(int value) => authSession.credits = value;
+  bool get isUnlimited => authSession.isUnlimited;
   String? get userId => authSession.userId;
   String? get userEmail => authSession.userEmail;
   String? get userName => authSession.userName;
@@ -479,17 +480,20 @@ class LabSession extends ChangeNotifier {
 
   void _loadCreditsFromServer() {
     authSession.credits = 1;
+    authSession.isUnlimited = false;
     _creditsLoaded = false;
     unawaited(
       SimServerCreditsClient(config: _serverConfig())
           .getMyCredits()
           .then((snapshot) {
             authSession.credits = snapshot.balance;
+            authSession.isUnlimited = snapshot.testCreditMode;
             _creditsLoaded = true;
             notifyListeners();
           })
           .catchError((_) {
             _creditsLoaded = false;
+            notifyListeners();
           }),
     );
   }

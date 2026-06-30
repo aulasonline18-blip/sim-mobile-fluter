@@ -14,6 +14,7 @@ class AuthSession extends ChangeNotifier {
   bool authed = false;
   bool authReady = false;
   int credits = 0;
+  bool isUnlimited = false;
   String? userId;
   String? userEmail;
   String? userName;
@@ -59,6 +60,7 @@ class AuthSession extends ChangeNotifier {
       onAuthenticated?.call();
     } else {
       credits = 0;
+      isUnlimited = false;
     }
     notifyListeners();
     navigation.notifyListeners();
