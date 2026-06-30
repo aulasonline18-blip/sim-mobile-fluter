@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../sim/billing/sim_server_billing_clients.dart';
 import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/cloud_functions.dart';
 import '../../sim/cloud/supabase_flutter_session_provider.dart';
 import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
 import '../../sim/config/sim_environment.dart';
@@ -289,14 +290,23 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
   final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _renameCtrl = TextEditingController();
   String? _feedback;
+  bool _cloudLoading = false;
+  List<StudentStateSummaryRow> _cloudLessons = const [];
   int _visibleLessonCount = aulaDrawerInitialVisible;
   String? _renamingLessonId;
+  String? _renamingCloudId;
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     _renameCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshCloudLessons());
   }
 
   void _flash(String msg) {
@@ -318,10 +328,43 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     unawaited(widget.session.openAulaRuntime());
   }
 
+  Future<void> _refreshCloudLessons() async {
+    if (!widget.session.authed) return;
+    setState(() => _cloudLoading = true);
+    try {
+      final rows = await widget.session.listDrawerCloudLessons();
+      if (!mounted) return;
+      setState(() {
+        _cloudLessons = rows;
+        _cloudLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cloudLoading = false);
+      _flash(t('drawer_import_cloud_failed'));
+    }
+  }
+
+  Future<void> _handleOpenCloudLesson(StudentStateSummaryRow row) async {
+    final ok = await widget.session.openDrawerCloudLesson(row.lessonLocalId);
+    if (ok) {
+      widget.onClose();
+      return;
+    }
+    _flash(t('curriculo_nao_encontrado'));
+  }
+
   void _startRename(StudentLearningState state) {
     setState(() {
       _renamingLessonId = state.lessonLocalId;
       _renameCtrl.text = _lessonTitle(state);
+    });
+  }
+
+  void _startRenameCloud(StudentStateSummaryRow row) {
+    setState(() {
+      _renamingCloudId = row.lessonLocalId;
+      _renameCtrl.text = row.tema;
     });
   }
 
@@ -340,6 +383,27 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
       _renamingLessonId = null;
       _renameCtrl.clear();
     });
+    _flash(t('renomear'));
+  }
+
+  Future<void> _confirmRenameCloud() async {
+    final id = _renamingCloudId;
+    if (id == null) return;
+    final clean = _renameCtrl.text.trim();
+    if (clean.isEmpty) {
+      setState(() => _renamingCloudId = null);
+      return;
+    }
+    final ok = await widget.session.renameDrawerCloudLesson(id, clean);
+    if (!ok) {
+      _flash(t('drawer_rename_error'));
+      return;
+    }
+    setState(() {
+      _renamingCloudId = null;
+      _renameCtrl.clear();
+    });
+    await _refreshCloudLessons();
     _flash(t('renomear'));
   }
 
@@ -371,6 +435,37 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     }
     setState(() {});
     _flash(t('drawer_delete_error'));
+  }
+
+  Future<void> _handleDeleteCloud(StudentStateSummaryRow row) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('drawer_delete_account_confirm')),
+        content: Text(row.tema),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t('fechar')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t('apagar')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final deleted = await widget.session.deleteDrawerCloudLesson(
+      row.lessonLocalId,
+    );
+    if (!deleted) {
+      _flash(t('drawer_delete_error'));
+      return;
+    }
+    await _refreshCloudLessons();
+    setState(() {});
+    _flash('Aula apagada.');
   }
 
   Future<void> _handleExportBackup() async {
@@ -476,11 +571,25 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
         : null;
     final localStates =
         session.canonicalStore?.listLocalStates() ?? <StudentLearningState>[];
+    final localIds = localStates.map((state) => state.lessonLocalId).toSet();
+    final cloudOnly = _cloudLessons
+        .where((row) => !localIds.contains(row.lessonLocalId))
+        .toList(growable: false);
+    final filteredCloud = cloudOnly.where(_matchesCloudSearch).toList();
     final filteredStates = localStates.where(_matchesStateSearch).toList();
-    final visibleStates = filteredStates
+    final totalRows = filteredCloud.length + filteredStates.length;
+    final visibleCloud = filteredCloud
         .take(_visibleLessonCount)
         .toList(growable: false);
-    final hasMoreLessons = visibleStates.length < filteredStates.length;
+    final localVisibleSlots = (_visibleLessonCount - visibleCloud.length).clamp(
+      0,
+      _visibleLessonCount,
+    );
+    final visibleStates = filteredStates
+        .take(localVisibleSlots)
+        .toList(growable: false);
+    final shownRows = visibleCloud.length + visibleStates.length;
+    final hasMoreLessons = shownRows < totalRows;
     final total = state?.curriculum?.totalItems ?? 0;
     final advances = state?.progress?.itemIdx ?? 0;
 
@@ -641,9 +750,18 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (localStates.isEmpty)
+                if (_cloudLoading &&
+                    localStates.isEmpty &&
+                    _cloudLessons.isEmpty)
                   Text(
-                    t('historico_vazio'),
+                    t('searching_account'),
+                    style: const TextStyle(color: muted, fontSize: 12),
+                  )
+                else if (localStates.isEmpty && _cloudLessons.isEmpty)
+                  Text(
+                    session.authed
+                        ? t('no_account_lessons')
+                        : t('historico_vazio'),
                     style: const TextStyle(color: muted, fontSize: 12),
                   )
                 else ...[
@@ -675,7 +793,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      '${visibleStates.length}/${filteredStates.length}',
+                      '$shownRows/$totalRows',
                       style: TextStyle(
                         fontFamily: kMono,
                         fontSize: 10,
@@ -685,12 +803,26 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (filteredStates.isEmpty)
+                  if (totalRows == 0)
                     Text(
                       t('drawer_search_empty'),
                       style: const TextStyle(color: muted, fontSize: 12),
                     )
                   else ...[
+                    for (final lesson in visibleCloud) ...[
+                      _DrawerCloudLessonRow(
+                        row: lesson,
+                        renaming: _renamingCloudId == lesson.lessonLocalId,
+                        renameController: _renameCtrl,
+                        onOpen: () => unawaited(_handleOpenCloudLesson(lesson)),
+                        onStartRename: () => _startRenameCloud(lesson),
+                        onConfirmRename: () => unawaited(_confirmRenameCloud()),
+                        onCancelRename: () =>
+                            setState(() => _renamingCloudId = null),
+                        onDelete: () => unawaited(_handleDeleteCloud(lesson)),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     for (final lesson in visibleStates) ...[
                       _DrawerLessonRow(
                         state: lesson,
@@ -863,6 +995,17 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
       state.current?.marker,
     ]);
   }
+
+  bool _matchesCloudSearch(StudentStateSummaryRow row) {
+    return matchesLessonSearch(_searchCtrl.text, [
+      row.tema,
+      row.idioma,
+      row.nivel,
+      row.lessonLocalId,
+      row.lessonCloudId,
+      row.markerAtual,
+    ]);
+  }
 }
 
 String _lessonTitle(StudentLearningState state) {
@@ -960,6 +1103,109 @@ class _DrawerLessonRow extends StatelessWidget {
                   Text(
                     '$pct% · $advances/$total'
                     '${pending > 0 ? ' · $pending pend.' : ''}',
+                    style: const TextStyle(
+                      fontFamily: kMono,
+                      fontSize: 10,
+                      color: muted,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _DrawerIconButton(label: t('renomear'), onTap: onStartRename),
+          _DrawerIconButton(label: t('apagar'), onTap: onDelete),
+        ],
+      ),
+    );
+  }
+}
+
+class _DrawerCloudLessonRow extends StatelessWidget {
+  const _DrawerCloudLessonRow({
+    required this.row,
+    required this.renaming,
+    required this.renameController,
+    required this.onOpen,
+    required this.onStartRename,
+    required this.onConfirmRename,
+    required this.onCancelRename,
+    required this.onDelete,
+  });
+
+  final StudentStateSummaryRow row;
+  final bool renaming;
+  final TextEditingController renameController;
+  final VoidCallback onOpen;
+  final VoidCallback onStartRename;
+  final VoidCallback onConfirmRename;
+  final VoidCallback onCancelRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    const border = Color(0xFFD4D4D4);
+    const text = Color(0xFF1A1A1A);
+    const muted = Color(0xFF5A5A5A);
+    final total = row.totalItens;
+    final adv = row.concluidos > row.itemIdx ? row.concluidos : row.itemIdx;
+    final pct = total > 0 ? ((adv / total) * 100).round() : 0;
+    if (renaming) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: renameController,
+                autofocus: true,
+                style: const TextStyle(color: text, fontSize: 13),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+                onSubmitted: (_) => onConfirmRename(),
+              ),
+            ),
+            _DrawerIconButton(label: '✓', onTap: onConfirmRename),
+            _DrawerIconButton(label: '✕', onTap: onCancelRename),
+          ],
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: onOpen,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    row.tema.trim().isEmpty ? row.lessonLocalId : row.tema,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '$pct% · $adv/$total · conta',
                     style: const TextStyle(
                       fontFamily: kMono,
                       fontSize: 10,

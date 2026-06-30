@@ -8,7 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/cloud_functions.dart';
 import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_client_contract.dart';
 import '../../sim/cloud/supabase_flutter_session_provider.dart';
 import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
 import '../../sim/config/sim_environment.dart';
@@ -59,10 +61,14 @@ class LabSession extends ChangeNotifier {
   LabSession({
     StudentStateStore? canonicalStore,
     this._attachmentClient,
+    StudentStateCloudFunctions? drawerCloudFunctions,
+    SupabaseSessionProvider? drawerSessionProvider,
     this.prefs,
   }) : canonicalStore =
            canonicalStore ??
            StudentStateStore(local: MemoryStudentStateLocalStorage()) {
+    _drawerCloudFunctions = drawerCloudFunctions;
+    _drawerSessionProvider = drawerSessionProvider;
     entryForm.addListener(_notifyFromChild);
     authSession.addListener(_notifyFromChild);
     navigationState.addListener(_notifyFromChild);
@@ -72,6 +78,8 @@ class LabSession extends ChangeNotifier {
   final SharedPreferences? prefs;
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
+  StudentStateCloudFunctions? _drawerCloudFunctions;
+  SupabaseSessionProvider? _drawerSessionProvider;
 
   late final EntryFormState entryForm = EntryFormState(
     attachmentClient: _attachmentClient,
@@ -483,6 +491,120 @@ class LabSession extends ChangeNotifier {
       accessTokenProvider: () async =>
           _supabaseClientOrNull()?.auth.currentSession?.accessToken,
     );
+  }
+
+  StudentStateCloudFunctions _cloudFunctionsForDrawer() {
+    return _drawerCloudFunctions ??= SimServerCloudFunctions(
+      config: _serverConfig(),
+    );
+  }
+
+  SupabaseSessionProvider _sessionProviderForDrawer() {
+    return _drawerSessionProvider ??= const SupabaseFlutterSessionProvider();
+  }
+
+  Future<SupabaseSession?> _drawerSession() async {
+    if (!authed) return null;
+    return _sessionProviderForDrawer().currentSession();
+  }
+
+  Future<List<StudentStateSummaryRow>> listDrawerCloudLessons() async {
+    final session = await _drawerSession();
+    if (session == null) return const [];
+    final rows = await _cloudFunctionsForDrawer().listStudentStateSummaries(
+      session,
+    );
+    return rows.where((row) => !row.deleted).toList(growable: false);
+  }
+
+  Future<bool> openDrawerCloudLesson(String lessonLocalId) async {
+    final session = await _drawerSession();
+    if (session == null) return false;
+    final row = await _cloudFunctionsForDrawer().getStudentStateByLesson(
+      lessonLocalId,
+      session,
+    );
+    final state = row?.state;
+    if (state == null || _stateDeleted(state)) return false;
+    canonicalStore?.writeState(state);
+    this.lessonLocalId = state.lessonLocalId;
+    navigationState.openRoute('/cyber/aula');
+    unawaited(openAulaRuntime());
+    return true;
+  }
+
+  Future<bool> renameDrawerCloudLesson(
+    String lessonLocalId,
+    String name,
+  ) async {
+    final clean = name.trim();
+    if (clean.isEmpty) return false;
+    final session = await _drawerSession();
+    if (session == null) return false;
+    final local = _readExistingLocalState(lessonLocalId);
+    final remote = local == null
+        ? (await _cloudFunctionsForDrawer().getStudentStateByLesson(
+            lessonLocalId,
+            session,
+          ))?.state
+        : null;
+    final base = local ?? remote;
+    if (base == null || _stateDeleted(base)) return false;
+    final renamed = base.copyWith(
+      profile: base.profile.copyWith(
+        objetivo: clean,
+        targetTopic: clean,
+        sessionGoal: clean,
+      ),
+      extra: {
+        ...base.extra,
+        'renamedAt': DateTime.now().millisecondsSinceEpoch,
+      },
+    );
+    canonicalStore?.writeState(renamed);
+    await _cloudFunctionsForDrawer().persistStudentState(
+      PersistStudentStateInput(
+        lessonLocalId: lessonLocalId,
+        state: renamed,
+        clientUpdatedAt: renamed.updatedAt,
+        clientScore: scoreOfStudentLearningState(renamed),
+        schemaVersion: studentLearningStateSchemaVersion,
+      ),
+      session,
+    );
+    return true;
+  }
+
+  Future<bool> deleteDrawerCloudLesson(String lessonLocalId) async {
+    final session = await _drawerSession();
+    if (session == null) return false;
+    await _cloudFunctionsForDrawer().deleteStudentStateByLesson(
+      lessonLocalId,
+      session,
+    );
+    if (_readExistingLocalState(lessonLocalId) != null) {
+      canonicalStore?.tombstoneLesson(lessonLocalId);
+    }
+    if (this.lessonLocalId == lessonLocalId) {
+      this.lessonLocalId = null;
+      navigationState.goPortal();
+    }
+    return true;
+  }
+
+  StudentLearningState? _readExistingLocalState(String lessonLocalId) {
+    final store = canonicalStore;
+    if (store == null) return null;
+    for (final state in store.listLocalStates(includeDeleted: true)) {
+      if (state.lessonLocalId == lessonLocalId) return state;
+    }
+    return null;
+  }
+
+  bool _stateDeleted(StudentLearningState state) {
+    return state.extra['deletedAt'] != null ||
+        (state.extra['syncInfo'] is Map &&
+            (state.extra['syncInfo'] as Map)['deletedAt'] != null);
   }
 
   LessonAudioController _audioControllerFor(String id) {

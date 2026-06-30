@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/main.dart';
 import 'package:sim_mobile/shared/widgets/shared_widgets.dart';
+import 'package:sim_mobile/sim/cloud/cloud_functions.dart';
+import 'package:sim_mobile/sim/cloud/supabase_client_contract.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
 
 void main() {
@@ -208,6 +210,153 @@ void main() {
 
     await tester.binding.setSurfaceSize(null);
   });
+
+  testWidgets('Drawer cloud lista, deduplica, abre, renomeia e apaga', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(480, 1200));
+    final cloud = _FakeDrawerCloud()
+      ..put(_drawerState('lesson-a', 'Duplicada na conta', 1))
+      ..put(_drawerState('cloud-c', 'Geometria na conta', 1))
+      ..put(_drawerState('cloud-d', 'Física na conta', 2))
+      ..put(_drawerState('cloud-e', 'Química na conta', 1));
+    final session =
+        LabSession(
+            drawerCloudFunctions: cloud,
+            drawerSessionProvider: _FakeDrawerSessionProvider(),
+          )
+          ..authed = true
+          ..authReady = true
+          ..credits = 3;
+    session.canonicalStore!.writeState(_drawerState('lesson-a', 'Local A', 1));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showAulaMenu(context, session),
+            child: const Text('open cloud drawer'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open cloud drawer'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Duplicada na conta'), findsNothing);
+    expect(find.text('Geometria na conta'), findsOneWidget);
+    expect(find.text('Física na conta'), findsOneWidget);
+    expect(find.text('Química na conta'), findsOneWidget);
+
+    await tester.tap(find.text('Física na conta'));
+    await tester.pumpAndSettle();
+    expect(session.lessonLocalId, 'cloud-d');
+    expect(session.route, '/cyber/aula');
+    expect(session.canonicalStore!.listLocalStates(), hasLength(2));
+
+    await tester.tap(find.text('open cloud drawer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('✎').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Geometria editada');
+    await tester.tap(find.text('✓'));
+    await tester.pumpAndSettle();
+    expect(cloud.persistCalls, 1);
+    expect(find.text('Geometria editada'), findsOneWidget);
+    expect(find.text('Química na conta'), findsOneWidget);
+
+    await tester.tap(find.text('🗑').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('🗑').last);
+    await tester.pumpAndSettle();
+    expect(cloud.deleteCalls, 1);
+    expect(find.text('Química na conta'), findsNothing);
+    expect(find.text('Geometria editada'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2300));
+
+    await tester.binding.setSurfaceSize(null);
+  });
+}
+
+class _FakeDrawerSessionProvider implements SupabaseSessionProvider {
+  @override
+  Future<SupabaseSession?> currentSession() async =>
+      const SupabaseSession(accessToken: 'token', userId: 'u1');
+}
+
+class _FakeDrawerCloud implements StudentStateCloudFunctions {
+  final Map<String, StudentLearningState> states = {};
+  int persistCalls = 0;
+  int deleteCalls = 0;
+
+  void put(StudentLearningState state) {
+    states[state.lessonLocalId] = state;
+  }
+
+  @override
+  Future<void> deleteStudentStateByLesson(
+    String lessonLocalId,
+    SupabaseSession session,
+  ) async {
+    deleteCalls += 1;
+    states.remove(lessonLocalId);
+  }
+
+  @override
+  Future<StudentStateRow?> getStudentStateByLesson(
+    String lessonLocalId,
+    SupabaseSession session,
+  ) async {
+    final state = states[lessonLocalId];
+    if (state == null) return null;
+    return StudentStateRow(
+      lessonLocalId: lessonLocalId,
+      state: state,
+      highWaterMark: scoreOfStudentLearningState(state),
+      schemaVersion: studentLearningStateSchemaVersion,
+    );
+  }
+
+  @override
+  Future<List<StudentStateRow>> listStudentStates(
+    SupabaseSession session,
+  ) async {
+    return [
+      for (final state in states.values)
+        StudentStateRow(
+          lessonLocalId: state.lessonLocalId,
+          state: state,
+          highWaterMark: scoreOfStudentLearningState(state),
+          schemaVersion: studentLearningStateSchemaVersion,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<StudentStateSummaryRow>> listStudentStateSummaries(
+    SupabaseSession session,
+  ) async {
+    return [
+      for (final row in await listStudentStates(session))
+        if (summarizeStudentStateRow(row) != null)
+          summarizeStudentStateRow(row)!,
+    ];
+  }
+
+  @override
+  Future<PersistStudentStateResult> persistStudentState(
+    PersistStudentStateInput input,
+    SupabaseSession session,
+  ) async {
+    persistCalls += 1;
+    states[input.lessonLocalId] = input.state;
+    return PersistStudentStateResult.accepted(
+      lessonLocalId: input.lessonLocalId,
+      highWaterMark: input.clientScore,
+      schemaVersion: input.schemaVersion,
+    );
+  }
 }
 
 StudentLearningState _drawerState(String id, String title, int itemIdx) {
