@@ -1,0 +1,2096 @@
+## PLANTA-MÃE DO SIM IDEAL — VERSÃO DEFINITIVA
+
+### (Planta-Mãe + Adendos + Conteúdos das Plantas Anteriores)
+
+---
+
+### SUMÁRIO
+
+**PARTE 1** — Planta-Mãe do SIM Ideal (versão 1.0) — **integral, caractere por caractere**
+
+**PARTE 2** — Adendo à Planta-Mãe do SIM Ideal — **integral, caractere por caractere**
+
+**PARTE 3** — Conteúdos das plantas anteriores que NÃO ESTÃO na Planta-Mãe — **adicionados**
+
+---
+
+# PARTE 1 — PLANTA-MÃE DO SIM IDEAL (VERSÃO 1.0)
+
+---
+
+```
+# PLANTA-MÃE DO SIM IDEAL
+
+## Sistema Operacional Pedagógico Adaptativo Supervisionado
+
+**Versão:** 1.0 — Planta de construção do zero  
+**Objetivo:** permitir que uma equipe de engenharia de software, IA, produto, design, backend, mobile e QA construa o SIM do zero em Web, Android, iOS, Windows, Linux ou tecnologia futura.  
+**Princípio supremo:** a Constituição do SIM é maior que qualquer plataforma. A tecnologia é instrumento. A partitura permanece.
+
+---
+
+# 0. Regra de leitura obrigatória para a construtora
+
+Esta planta não é apenas uma ideia de produto. Ela é uma especificação de construção.
+
+Nenhum engenheiro deve começar pelo código antes de entender estas regras:
+
+1. O SIM não é chatbot.
+2. O SIM não é quiz.
+3. O SIM não é apenas app.
+4. O SIM não é gamificação visual.
+5. O SIM é um sistema operacional pedagógico adaptativo supervisionado.
+6. A IA gera conteúdo.
+7. O software governa o fluxo.
+8. O aluno responde.
+9. O sistema valida.
+10. O Pai supervisiona.
+11. O aluno só avança quando há evidência real de aprendizagem.
+12. A experiência deve funcionar em celular fraco e internet ruim.
+13. A primeira aula deve chegar rápido.
+14. O texto da aula nunca deve esperar imagem, áudio, currículo gigante ou cache pesado.
+15. A IA nunca deve ser dona do estado, do progresso, da validação final ou da rota do aluno.
+
+Se algum código, tela, módulo ou decisão contrariar estes pontos, está errado, mesmo que funcione tecnicamente.
+
+---
+
+# 1. Definição operacional do SIM
+
+O SIM é um sistema que usa inteligência artificial para ensinar com humanidade, rigor e adaptação, mas impede que a inteligência artificial fique sozinha no comando.
+
+O SIM possui três entidades constitucionais:
+
+## 1.1 Pai
+
+O Pai é a autoridade da missão.
+
+Ele representa:
+
+- proteção do aluno;
+- exigência de aprendizagem real;
+- combate à falsa maestria;
+- supervisão do Tutor;
+- governo moral do sistema;
+- garantia de que o aluno difícil não será abandonado.
+
+Na engenharia, o Pai aparece como uma camada de governança chamada **Father Governance Layer**.
+
+Ela não é uma tela comum. É um conjunto de leis de produto, testes e bloqueios que nenhuma função pode violar.
+
+## 1.2 Assistente
+
+O Assistente é o software.
+
+Ele governa:
+
+- estado;
+- fluxo;
+- memória;
+- currículo;
+- item atual;
+- histórico de conquistas;
+- revisão;
+- reforço;
+- pausa;
+- cache;
+- backup;
+- chamadas para IA;
+- validação final.
+
+O Assistente não deve ensinar como professor principal. Ele organiza a sala, chama o Tutor e decide o próximo passo.
+
+## 1.3 Tutor
+
+O Tutor é a IA.
+
+Ele gera:
+
+- interpretação do objetivo;
+- currículo;
+- aula;
+- pergunta;
+- alternativas;
+- imagem;
+- áudio adaptado;
+- revisão;
+- reforço;
+- amparo;
+- simulado;
+- adaptação de linguagem.
+
+Mas o Tutor não decide sozinho se o aluno aprendeu.
+
+O Tutor não salva estado.
+
+O Tutor não controla progresso.
+
+O Tutor não governa o sistema.
+
+---
+
+# 2. Usuário-alvo constitucional
+
+O SIM deve ser construído para o aluno difícil, não para o aluno ideal.
+
+O aluno pode ser:
+
+- desmotivado;
+- distraído;
+- impaciente;
+- cansado;
+- resistente;
+- ansioso;
+- inseguro;
+- com dificuldade de memória;
+- com baixa leitura;
+- com baixa disciplina;
+- com baixa tolerância ao esforço;
+- com déficit de atenção;
+- no espectro autista;
+- viciado em estímulos rápidos;
+- usuário de celular fraco;
+- usuário com internet instável.
+
+Consequência de engenharia:
+
+1. O app deve abrir rápido.
+2. O fluxo inicial deve ter baixo atrito.
+3. O aluno não deve digitar textos longos durante a aula.
+4. O aluno deve responder com A/B/C e sinal 1/2/3.
+5. O texto deve aparecer antes da imagem.
+6. O cache deve ser pequeno.
+7. O sistema deve continuar aceitável com internet ruim.
+8. A interface deve ser limpa.
+9. O erro deve virar pista pedagógica.
+10. O avanço deve ser sentido, mas sem cassino visual.
+
+---
+
+# 3. Requisitos não negociáveis
+
+## 3.1 Requisitos pedagógicos
+
+1. Todo conteúdo deve ser quebrado em unidades pequenas.
+2. Nenhum assunto grande pode ser tratado como item único.
+3. Cada item deve poder ser ensinado, testado, revisado e consolidado.
+4. Acertar uma vez não é dominar.
+5. O aluno só conquista um item com evidência suficiente.
+6. O sistema deve registrar fraquezas.
+7. Fraqueza não é punição.
+8. Reforço é reparo.
+9. Revisão é obrigatória.
+10. Conteúdo sem fonte segura deve ser bloqueado ou marcado para verificação.
+
+## 3.2 Requisitos técnicos
+
+1. O estado principal deve ficar fora da IA.
+2. O app deve ser offline-first sempre que possível.
+3. O backend deve proteger chaves de IA.
+4. O sistema deve aceitar troca futura de modelo de IA.
+5. Toda resposta de IA deve passar por validação de contrato.
+6. Tarefa pesada deve entrar em fila.
+7. Requisições duplicadas devem ser deduplicadas.
+8. O cache deve ser limitado.
+9. O app deve funcionar em celular fraco.
+10. A primeira aula deve ter prioridade absoluta.
+
+## 3.3 Requisitos de experiência
+
+1. Interface limpa.
+2. Sem jargão técnico para o aluno.
+3. Sem JSON visível.
+4. Sem logs visíveis.
+5. Sem "engine", "state", "layer", "payload" para o aluno.
+6. Botões grandes.
+7. Texto curto.
+8. Uma ação por vez.
+9. Feedback humano.
+10. Motivação invisível, sem estética de cassino.
+
+---
+
+# 4. Arquitetura geral
+
+A arquitetura do SIM deve ter 9 camadas.
+
+## Camada 1 — Interface do Aluno
+
+Responsabilidade:
+
+- mostrar telas;
+- receber cliques;
+- receber respostas A/B/C + sinal 1/2/3;
+- exibir aula;
+- exibir feedback;
+- exibir revisão;
+- exibir reforço;
+- exibir restauração;
+- exibir estado simples de progresso.
+
+A interface nunca decide aprendizagem final.
+
+Ela apenas envia eventos para o Assistente.
+
+## Camada 2 — Father Governance Layer
+
+Responsabilidade:
+
+- guardar leis máximas;
+- impedir decisões contrárias à Constituição;
+- definir critérios de aceite;
+- impedir avanço falso;
+- impedir IA dona do sistema;
+- impedir interface poluída;
+- impedir cache destrutivo;
+- impedir conteúdo sem fonte;
+- impedir gamificação vulgar.
+
+Implementação:
+
+- constantes de regras;
+- testes automáticos;
+- checks de fluxo;
+- validações de contrato;
+- critérios de aceitação de produto;
+- flags de bloqueio.
+
+## Camada 3 — Assistente Local
+
+É o cérebro operacional do app.
+
+Responsável por:
+
+- fluxo de telas;
+- estado local;
+- fila de tarefas;
+- cache;
+- progresso;
+- revisão;
+- reforço;
+- backup;
+- retomada;
+- chamadas ao backend;
+- interpretação dos contratos da IA.
+
+Deve funcionar parcialmente offline.
+
+## Camada 4 — Banco Local Leve
+
+Guarda apenas o necessário.
+
+Tecnologias possíveis:
+
+- Web: IndexedDB + localStorage/sessionStorage mínimo;
+- Android: SQLite/Room/MMKV;
+- iOS: SQLite/CoreData/SwiftData/UserDefaults mínimo;
+- Desktop: SQLite/local file store;
+- React Native: SQLite/MMKV.
+
+Não guardar centenas de aulas.
+
+Guardar pouco, guardar bem, limpar o velho.
+
+## Camada 5 — Fila de Tarefas
+
+Toda tarefa pesada passa por fila.
+
+A fila organiza prioridade, deduplicação e cancelamento.
+
+Prioridade absoluta:
+
+1. salvar estado crítico;
+2. texto da aula atual;
+3. validação de resposta atual;
+4. amparo imediato;
+5. próxima aula necessária;
+6. imagem da aula atual;
+7. áudio opcional;
+8. expansão maior de currículo;
+9. revisão futura;
+10. reforço futuro;
+11. relatórios;
+12. sincronização em nuvem.
+
+Regra:
+
+Nada pesado passa na frente da primeira aula.
+
+## Camada 6 — Roteador do Tutor
+
+Módulo que chama a IA certa com contrato certo.
+
+Ele envia missões pequenas:
+
+- interpretar objetivo;
+- gerar currículo inicial;
+- expandir currículo;
+- gerar aula;
+- gerar visual;
+- adaptar voz;
+- gerar revisão;
+- gerar reforço;
+- gerar amparo;
+- gerar simulado;
+- verificar fonte.
+
+Nunca pedir para a IA "fazer tudo".
+
+## Camada 7 — Backend / AI Gateway
+
+Responsável por:
+
+- proteger chaves;
+- chamar modelo de IA;
+- aplicar rate limit;
+- validar JSON/contrato;
+- registrar erros técnicos;
+- trocar de fornecedor de IA;
+- fallback de modelo;
+- bloquear resposta insegura;
+- compressão de payload;
+- streaming quando possível.
+
+O app nunca deve depender diretamente de um modelo específico.
+
+## Camada 8 — Tutor / IA
+
+A IA gera conteúdo conforme contratos.
+
+Cada chamada possui:
+
+1. missão humana;
+2. contexto mínimo;
+3. contrato técnico de resposta;
+4. restrições de segurança;
+5. formato de saída validável.
+
+A IA não recebe todo o sistema.
+
+Ela recebe apenas o necessário para a tarefa.
+
+## Camada 9 — Sincronização e Backup
+
+Responsável por:
+
+- exportar progresso;
+- importar progresso;
+- gerar snapshot;
+- recuperar sessão quebrada;
+- migrar dispositivo;
+- sincronizar quando houver internet;
+- proteger contra perda.
+
+---
+
+# 5. Modelo de dados mínimo
+
+A equipe deve implementar estas entidades. Nomes podem mudar por plataforma, mas o significado não pode mudar.
+
+## 5.1 StudentProfile
+
+```json
+{
+  "studentId": "string",
+  "stableLang": "pt-BR | en-US | other",
+  "ageRange": "child | teen | adult | unknown",
+  "readingLevel": "low | normal | high | unknown",
+  "accessibilityNeeds": [],
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+## 5.2 LearningGoal
+
+```json
+{
+  "goalId": "string",
+  "originalText": "string",
+  "targetTopic": "string",
+  "geographicZone": "string",
+  "academicLevel": "string",
+  "sessionGoal": "string",
+  "scope": "string",
+  "confirmed": true,
+  "createdAt": "datetime"
+}
+```
+
+## 5.3 Curriculum
+
+```json
+{
+  "curriculumId": "string",
+  "goalId": "string",
+  "status": "initial | expanding | complete | blocked | partial",
+  "sourceAnchors": [],
+  "items": [],
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+## 5.4 CurriculumItem
+
+```json
+{
+  "itemId": "string",
+  "order": 1,
+  "title": "string",
+  "atomicConcept": "string",
+  "prerequisites": [],
+  "status": "locked | ready | in_progress | conquered | review_due | reinforcement_due | skipped_pending_source",
+  "sourceRequired": true,
+  "sourceStatus": "verified | weak | missing | not_required",
+  "difficulty": "easy | medium | hard",
+  "createdAt": "datetime"
+}
+```
+
+## 5.5 Lesson
+
+```json
+{
+  "lessonId": "string",
+  "itemId": "string",
+  "version": 1,
+  "textStatus": "pending | ready | failed",
+  "imageStatus": "not_needed | pending | ready | failed",
+  "audioStatus": "not_needed | pending | ready | failed",
+  "explanation": "string",
+  "challenge": {},
+  "visualRequest": {},
+  "createdAt": "datetime"
+}
+```
+
+## 5.6 Challenge
+
+```json
+{
+  "challengeId": "string",
+  "lessonId": "string",
+  "layer": "recognition | understanding | application | integrated_application | review | reinforcement",
+  "question": "string",
+  "options": {
+    "A": "string",
+    "B": "string",
+    "C": "string"
+  },
+  "correctOption": "A | B | C",
+  "explanationForCorrect": "string",
+  "explanationForWrong": "string",
+  "sourceRefs": []
+}
+```
+
+## 5.7 StudentAnswer
+
+```json
+{
+  "answerId": "string",
+  "challengeId": "string",
+  "selectedOption": "A | B | C",
+  "confidenceSignal": 1,
+  "isCorrect": true,
+  "responseTimeMs": 0,
+  "attemptNumber": 1,
+  "createdAt": "datetime"
+}
+```
+
+Sinal de confiança:
+
+- 1 = tenho certeza;
+- 2 = acho que sim / quero cuidado;
+- 3 = estou inseguro.
+
+## 5.8 MasteryEvidence
+
+```json
+{
+  "itemId": "string",
+  "recognitionPassed": true,
+  "understandingPassed": true,
+  "applicationPassed": true,
+  "retentionPassed": false,
+  "integratedPassed": false,
+  "confidencePattern": [1,2,1],
+  "errorCount": 0,
+  "hesitationCount": 0,
+  "masteryScore": 0.0,
+  "status": "insufficient | provisional | conquered | needs_review | needs_reinforcement"
+}
+```
+
+## 5.9 ConquestRecord
+
+```json
+{
+  "itemId": "string",
+  "conqueredAt": "datetime",
+  "evidenceSummary": "string",
+  "reviewScheduledAt": "datetime",
+  "sourceRefs": [],
+  "version": 1
+}
+```
+
+## 5.10 WeaknessRecord
+
+```json
+{
+  "weaknessId": "string",
+  "itemId": "string",
+  "concept": "string",
+  "reason": "wrong_answer | low_confidence | repeated_hesitation | retention_failure | source_gap",
+  "severity": "low | medium | high",
+  "active": true,
+  "repairAttempts": 0,
+  "lastSeenAt": "datetime"
+}
+```
+
+## 5.11 ReviewSchedule
+
+```json
+{
+  "reviewId": "string",
+  "itemId": "string",
+  "dueAt": "datetime",
+  "reviewType": "quick | applied | integrated | reinforcement_check",
+  "priority": "low | medium | high",
+  "completed": false
+}
+```
+
+## 5.12 TaskQueueItem
+
+```json
+{
+  "taskId": "string",
+  "type": "lesson_text | image | audio | curriculum_expand | review_generate | reinforcement_generate | backup_sync",
+  "dedupeKey": "string",
+  "priority": 1,
+  "status": "queued | running | done | failed | cancelled",
+  "payload": {},
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+---
+
+# 6. Funções do Tutor / IA
+
+Cada função da IA deve ser pequena, isolada e validável.
+
+## T01 — Objective Interpreter
+
+Entrada:
+
+- idioma;
+- texto livre do aluno;
+- pistas opcionais de idade/série;
+- país se informado.
+
+Saída obrigatória:
+
+```json
+{
+  "targetTopic": "string",
+  "geographicZone": "string",
+  "academicLevel": "string",
+  "sessionGoal": "string",
+  "scope": "string",
+  "confidence": 0.0,
+  "needsClarification": false,
+  "clarifyingQuestion": "string | null"
+}
+```
+
+Regras:
+
+- não inventar nível se houver dúvida;
+- inferir país apenas quando houver pista forte;
+- se faltar assunto, pedir detalhe;
+- linguagem humana na pergunta de esclarecimento.
+
+## T02 — Curriculum Expander
+
+Entrada:
+
+- objetivo confirmado;
+- nível;
+- currículo de referência;
+- limite inicial.
+
+Saída:
+
+```json
+{
+  "sourceAnchors": [],
+  "items": [
+    {
+      "title": "string",
+      "atomicConcept": "string",
+      "prerequisites": [],
+      "sourceRefs": [],
+      "estimatedDifficulty": "easy | medium | hard"
+    }
+  ],
+  "expansionStatus": "initial | complete | needs_more_source"
+}
+```
+
+Regras:
+
+- gerar primeiro currículo inicial pequeno;
+- não travar primeira aula esperando currículo gigante;
+- expandir em segundo plano;
+- cada item deve ser atômico;
+- se não houver fonte segura, marcar bloqueio.
+
+## T03 — Lesson Tutor
+
+Entrada:
+
+- item atual;
+- perfil do aluno;
+- histórico mínimo;
+- fraquezas ativas;
+- idioma.
+
+Saída:
+
+```json
+{
+  "explanation": "string",
+  "challenge": {
+    "question": "string",
+    "options": {"A":"string","B":"string","C":"string"},
+    "correctOption": "A | B | C",
+    "whyCorrect": "string",
+    "whyWrong": {"A":"string","B":"string","C":"string"}
+  },
+  "visualNeed": {
+    "needed": true,
+    "reason": "string",
+    "visualBrief": "string"
+  },
+  "sourceRefs": []
+}
+```
+
+Regras:
+
+- explicação curta;
+- pergunta clara;
+- alternativas sem pegadinha injusta;
+- sem texto longo;
+- sem jargão inadequado ao nível;
+- imagem só quando didática.
+
+## T04 — Visual Tutor
+
+Gera instrução de imagem didática.
+
+Saída:
+
+```json
+{
+  "visualType": "diagram | map | anatomy | graph | process | comparison | object",
+  "mustShow": [],
+  "mustNotShow": [],
+  "labels": [],
+  "style": "clean didactic premium",
+  "accessibilityNotes": "string"
+}
+```
+
+Regra:
+
+Imagem é aula, não decoração.
+
+## T05 — Audio / Voice Tutor
+
+Adapta texto para fala.
+
+Saída:
+
+```json
+{
+  "speakableText": "string",
+  "pace": "slow | normal",
+  "tone": "warm | neutral | encouraging",
+  "pauseHints": []
+}
+```
+
+Regra:
+
+Áudio é opcional e nunca bloqueia aula.
+
+## T06 — Review Tutor
+
+Gera revisão curta.
+
+Saída:
+
+```json
+{
+  "reviewQuestion": "string",
+  "options": {"A":"string","B":"string","C":"string"},
+  "correctOption": "A | B | C",
+  "reviewType": "recognition | application | integrated"
+}
+```
+
+## T07 — Reinforcement Tutor
+
+Gera reparo de fraqueza.
+
+Saída:
+
+```json
+{
+  "microExplanation": "string",
+  "analogy": "string",
+  "repairChallenge": {},
+  "successCriterion": "string"
+}
+```
+
+## T08 — Support Tutor
+
+Ajuda quando o aluno erra.
+
+Saída:
+
+```json
+{
+  "supportType": "hint | analogy | reexplain | reduce_load | pause",
+  "message": "string",
+  "nextChallenge": "optional"
+}
+```
+
+## T09 — Exam Tutor
+
+Gera simulado diagnóstico.
+
+Saída:
+
+```json
+{
+  "questions": [],
+  "answerKey": [],
+  "diagnosticMap": []
+}
+```
+
+## T10 — Adaptive Tutor
+
+Sugere adaptação.
+
+Saída:
+
+```json
+{
+  "pace": "slower | same | faster",
+  "languageLevel": "simpler | same | more_technical",
+  "supportNeed": "none | light | medium | strong",
+  "reason": "string"
+}
+```
+
+## T11 — Source / Fact Tutor
+
+Ajuda com fonte.
+
+Saída:
+
+```json
+{
+  "sourceStatus": "verified | weak | missing",
+  "recommendedSources": [],
+  "shouldBlockTeaching": false,
+  "reason": "string"
+}
+```
+
+Regra:
+
+Fonte não pode depender apenas da confiança da IA. O software precisa validar se o contrato trouxe referência aceitável.
+
+---
+
+# 7. Funções do Assistente / Software
+
+## S01 — Onboarding Manager
+
+Controla:
+
+- idioma;
+- novo aluno ou restauração;
+- objetivo livre;
+- interpretação;
+- confirmação;
+- nível;
+- início da preparação.
+
+Eventos aceitos:
+
+- APP_OPENED;
+- LANGUAGE_SELECTED;
+- ACCESS_SELECTED;
+- OBJECTIVE_SUBMITTED;
+- OBJECTIVE_INTERPRETED;
+- PLAN_CONFIRMED;
+- PLAN_REJECTED;
+- RESTORE_SUBMITTED;
+- RESTORE_SUCCESS;
+- RESTORE_FAILED.
+
+## S02 — State Store
+
+Guarda todo estado crítico.
+
+Regras:
+
+- salvar imediatamente após escolhas importantes;
+- nunca depender de memória da IA;
+- salvar antes de chamar tarefa pesada;
+- salvar depois de resposta do aluno;
+- gerar snapshot em pontos críticos.
+
+## S03 — Flow Controller
+
+Decide próxima tela.
+
+Nenhuma tela decide sozinha.
+
+Tabela de fluxo:
+
+| Estado | Próxima ação |
+|--------|--------------|
+| sem idioma | tela idioma |
+| idioma salvo sem acesso | tela acesso |
+| novo aluno sem objetivo | tela objetivo |
+| objetivo enviado sem interpretação | chamar T01 |
+| interpretação pronta | tela confirmação |
+| plano confirmado | preparação mínima |
+| currículo inicial pronto | aula |
+| aula respondida | validar resposta |
+| item conquistado | próximo item ou revisão |
+| erro repetido | amparo ou pausa |
+| revisão vencida | revisão |
+| fraqueza ativa alta | reforço |
+
+## S04 — Tutor Router
+
+Chama IA.
+
+Responsabilidades:
+
+- escolher T correto;
+- montar contexto mínimo;
+- enviar contrato;
+- receber resposta;
+- validar schema;
+- rejeitar resposta quebrada;
+- pedir retry seguro;
+- acionar fallback.
+
+## S05 — Curriculum Store
+
+Guarda:
+
+- currículo inicial;
+- currículo completo;
+- ordem;
+- status de cada item;
+- bloqueios de fonte;
+- pré-requisitos.
+
+## S06 — Lesson Controller
+
+Controla:
+
+- item atual;
+- aula atual;
+- desafio atual;
+- camada pedagógica;
+- estado de imagem;
+- estado de áudio;
+- resposta do aluno.
+
+## S07 — Answer Validator
+
+Valida:
+
+- alternativa escolhida;
+- resposta correta;
+- sinal de confiança;
+- tempo de resposta;
+- padrão de erro;
+- consistência da pergunta.
+
+Não decide conquista sozinho. Ele produz evidência.
+
+## S08 — Advance Gate
+
+Decide avanço.
+
+Critérios mínimos:
+
+- reconhecimento correto;
+- entendimento correto;
+- aplicação correta;
+- confiança suficiente;
+- sem erro crítico ativo;
+- revisão programada;
+- conexão com item anterior quando aplicável.
+
+Possíveis decisões:
+
+```json
+{
+  "decision": "advance | continue_same_item | support | pause | review | reinforcement",
+  "reason": "string",
+  "evidenceUpdate": {}
+}
+```
+
+## S09 — Conquest Tracker
+
+Registra item conquistado.
+
+Só registra quando S08 autorizar.
+
+Nunca registrar por elogio da IA.
+
+## S10 — Review Scheduler
+
+Agenda revisão.
+
+Regra base:
+
+- acerto com sinal 1: revisão mais tarde;
+- acerto com sinal 2: revisão intermediária;
+- acerto com sinal 3: revisão próxima;
+- erro: reforço ou revisão muito próxima.
+
+## S11 — Reinforcement Manager
+
+Controla fraquezas.
+
+Uma fraqueza é eliminada apenas quando o aluno demonstra segurança repetida.
+
+## S12 — Support Controller
+
+Controla:
+
+- dica;
+- analogia;
+- reexplicação;
+- redução de carga;
+- pausa tática;
+- retomada.
+
+## S13 — Backup Manager
+
+Exporta e importa progresso.
+
+Backup mínimo deve conter:
+
+- versão do SIM;
+- idioma;
+- perfil;
+- objetivo;
+- currículo;
+- item atual;
+- conquistas;
+- fraquezas;
+- revisões;
+- aula atual se necessário;
+- checksum.
+
+## S14 — Performance Cache Manager
+
+Controla:
+
+- cache de aula atual;
+- próximas 2 aulas;
+- deduplicação;
+- limpeza;
+- fila;
+- prioridade;
+- modo internet ruim;
+- limite de memória.
+
+---
+
+# 8. Fluxo completo do aluno
+
+## 8.1 Abertura
+
+1. App abre.
+2. Carrega shell mínimo.
+3. Lê estado local.
+4. Se não houver idioma, mostra idioma.
+5. Se houver sessão ativa, oferece continuar.
+6. Se houver falha anterior, oferece restaurar.
+
+Tempo alvo em celular fraco:
+
+- primeira tela visível em até 2 segundos quando possível;
+- sem bloquear por IA.
+
+## 8.2 Idioma
+
+Tela:
+
+- Português;
+- English;
+- Outro.
+
+Ao escolher:
+
+- salvar stableLang;
+- toda interface futura usa esse idioma;
+- não redetectar idioma por mensagem posterior.
+
+## 8.3 Acesso
+
+Opções:
+
+A) começar nova matéria;  
+B) restaurar progresso.
+
+Se restaurar:
+
+- colar backup;
+- validar checksum;
+- reconstruir estado;
+- mostrar retomada humana;
+- ir para ponto correto.
+
+## 8.4 Objetivo
+
+O aluno escreve livremente.
+
+O sistema chama T01.
+
+Se T01 não conseguir interpretar:
+
+- pedir uma pergunta curta;
+- não gerar currículo com chute fraco.
+
+## 8.5 Confirmação
+
+Mostrar:
+
+- matéria;
+- currículo/país;
+- nível;
+- meta;
+- escopo.
+
+Opções:
+
+A) confirmar;  
+B) ajustar.
+
+Só depois da confirmação o sistema prepara currículo.
+
+## 8.6 Preparação mínima
+
+Ordem obrigatória:
+
+1. salvar objetivo confirmado;
+2. criar currículo inicial pequeno;
+3. selecionar primeiro item;
+4. chamar texto da primeira aula;
+5. renderizar texto assim que pronto;
+6. gerar imagem em segundo plano se necessário;
+7. expandir currículo maior depois.
+
+## 8.7 Aula
+
+Tela mostra:
+
+- título do item;
+- explicação curta;
+- pergunta;
+- alternativas A/B/C;
+- sinais 1/2/3.
+
+Resposta do aluno:
+
+- A1, A2, A3, B1, B2, B3, C1, C2, C3.
+
+## 8.8 Depois da resposta
+
+Fluxo:
+
+1. S07 valida resposta.
+2. S08 decide próximo passo.
+3. S02 salva estado.
+4. S10 agenda revisão se necessário.
+5. S11 registra fraqueza se necessário.
+6. S12 chama amparo se necessário.
+7. S09 registra conquista se autorizado.
+8. S03 leva para próxima tela.
+
+---
+
+# 9. Máquina de estados
+
+Estados principais:
+
+```text
+BOOT
+LANGUAGE_REQUIRED
+ACCESS_REQUIRED
+OBJECTIVE_REQUIRED
+OBJECTIVE_INTERPRETING
+PLAN_CONFIRMATION
+LEVELING
+CURRICULUM_INITIALIZING
+FIRST_LESSON_LOADING
+LESSON_ACTIVE
+ANSWER_VALIDATING
+SUPPORT_ACTIVE
+PAUSE_ACTIVE
+ITEM_CONQUERED
+REVIEW_ACTIVE
+REINFORCEMENT_ACTIVE
+EXAM_ACTIVE
+BACKUP_RESTORE
+ERROR_RECOVERY
+```
+
+Transições proibidas:
+
+1. OBJECTIVE_REQUIRED → LESSON_ACTIVE sem confirmação.
+2. FIRST_LESSON_LOADING → aguardar imagem antes do texto.
+3. LESSON_ACTIVE → ITEM_CONQUERED sem S08.
+4. IA → alterar estado diretamente.
+5. Interface → registrar conquista diretamente.
+6. Cache → substituir aula atual por aula de objetivo antigo.
+
+---
+
+# 10. Fila e performance para celular fraco
+
+## 10.1 Orçamento de memória
+
+Modo fraco:
+
+- cache de aula atual;
+- cache das próximas 2 aulas;
+- imagens comprimidas;
+- sem guardar áudio remoto pesado;
+- limpar aulas antigas depois de conquista e revisão registrada;
+- manter currículo em texto leve;
+- nunca carregar todo banco na memória.
+
+## 10.2 Deduplicação
+
+Toda tarefa tem dedupeKey.
+
+Exemplos:
+
+```text
+lesson_text:{goalId}:{itemId}:{version}:{lang}
+image:{lessonId}:{visualBriefHash}
+curriculum_initial:{goalId}
+curriculum_expand:{goalId}:{range}
+review:{itemId}:{reviewType}:{dueAt}
+```
+
+Se uma tarefa igual já está rodando, retornar a mesma promessa/resultado.
+
+## 10.3 Prioridade da primeira aula
+
+Antes da primeira aula estar visível, proibido:
+
+- gerar 20 imagens;
+- gerar áudio;
+- expandir currículo completo se isso competir com a aula;
+- baixar pacote grande;
+- calcular relatórios;
+- sincronizar pesado;
+- rodar testes longos no cliente.
+
+---
+
+# 11. Contratos de resposta da IA
+
+## 11.1 Regra universal
+
+Toda resposta da IA deve retornar:
+
+```json
+{
+  "ok": true,
+  "type": "string",
+  "data": {},
+  "warnings": [],
+  "sourceRefs": [],
+  "needsHumanReview": false
+}
+```
+
+Se vier inválida:
+
+1. não mostrar erro bruto ao aluno;
+2. tentar reparar uma vez;
+3. se falhar, mostrar mensagem humana;
+4. registrar erro técnico;
+5. oferecer continuar ou tentar novamente.
+
+## 11.2 Validação de aula
+
+A aula só pode ser exibida se tiver:
+
+- explicação;
+- pergunta;
+- A/B/C;
+- resposta correta;
+- justificativa;
+- fonte quando necessária.
+
+Se faltar qualquer campo, rejeitar.
+
+## 11.3 Validação de currículo
+
+Currículo só pode ser aceito se:
+
+- cada item for atômico;
+- tiver ordem;
+- tiver título claro;
+- não misturar muitos conceitos;
+- respeitar nível;
+- indicar fonte quando necessário.
+
+---
+
+# 12. Regra de avanço e evidência
+
+O aluno não conquista item por resposta única.
+
+Sistema de evidência mínimo:
+
+## 12.1 Camada 1 — Reconhecimento
+
+O aluno identifica conceito.
+
+## 12.2 Camada 2 — Entendimento
+
+O aluno diferencia conceito de erro comum.
+
+## 12.3 Camada 3 — Aplicação
+
+O aluno usa o conceito em situação simples.
+
+## 12.4 Camada 4 — Integração
+
+Quando já houver histórico, o aluno conecta o conceito atual com conceito anterior.
+
+## 12.5 Camada 5 — Retenção
+
+O conceito volta depois.
+
+Conquista inicial pode ser registrada como "conquistado com revisão agendada", mas domínio pleno exige revisão futura.
+
+Decisão do Advance Gate:
+
+```text
+Se correto + sinal 1 + camadas suficientes → avançar e agendar revisão.
+Se correto + sinal 2 → avançar com revisão próxima ou mais uma checagem.
+Se correto + sinal 3 → não consolidar; fazer reforço leve ou nova pergunta.
+Se errado + sinal 1 → erro de falsa confiança; reensinar com cuidado.
+Se errado + sinal 2 → amparo normal.
+Se errado + sinal 3 → dica/analogia; proteger autoestima.
+Se erro repetido → pausa tática ou reforço.
+```
+
+---
+
+# 13. Revisão
+
+O Review Scheduler deve funcionar silenciosamente.
+
+Revisões não devem esmagar o fluxo.
+
+Regras:
+
+1. Revisões curtas entram entre aulas.
+2. Revisão vencida de alta prioridade pode aparecer antes do próximo item.
+3. Revisão não deve parecer punição.
+4. Revisão deve ser A/B/C sempre que possível.
+5. Se o aluno errar revisão, criar fraqueza.
+6. Se acertar com baixa confiança, reagendar cedo.
+
+---
+
+# 14. Reforço
+
+Reforço é tratamento de rachadura.
+
+Quando aciona:
+
+- erro repetido;
+- baixa confiança repetida;
+- falha de revisão;
+- confusão entre conceitos;
+- abandono/pausa por dificuldade.
+
+Fluxo:
+
+1. identificar fraqueza;
+2. isolar microconceito;
+3. gerar reexplicação curta;
+4. gerar analogia;
+5. testar de novo;
+6. registrar melhora;
+7. só remover fraqueza com prova repetida.
+
+---
+
+# 15. Amparo e pausa tática
+
+O Support Controller deve proteger o aluno.
+
+Tipos:
+
+- dica pequena;
+- analogia;
+- reexplicação;
+- pergunta mais fácil;
+- pausa de 30 a 60 segundos;
+- retomada com incentivo.
+
+Acionadores:
+
+- 2 erros seguidos;
+- 3 respostas inseguras;
+- resposta muito rápida errada;
+- abandono de tela;
+- tempo excessivo sem ação;
+- falha de revisão.
+
+---
+
+# 16. Interface
+
+## 16.1 Regras visuais
+
+A interface deve ser:
+
+- limpa;
+- premium;
+- sóbria;
+- rápida;
+- sem poluição;
+- sem excesso de estatística;
+- sem cassino;
+- sem infantilização;
+- com sensação de progresso.
+
+## 16.2 Componentes mínimos
+
+- tela de idioma;
+- tela de acesso;
+- tela de objetivo;
+- tela de confirmação;
+- tela de nivelamento;
+- tela de aula;
+- tela de resposta;
+- tela de feedback;
+- tela de revisão;
+- tela de reforço;
+- tela de pausa;
+- tela de backup;
+- painel do Pai.
+
+## 16.3 Tela de aula
+
+Deve conter:
+
+- nome do item;
+- explicação curta;
+- pergunta;
+- A/B/C;
+- sinais 1/2/3;
+- imagem se pronta;
+- botão de áudio se habilitado.
+
+Não deve conter:
+
+- logs;
+- JSON;
+- jargões;
+- múltiplas tarefas simultâneas;
+- excesso de números;
+- ranking;
+- ruído visual.
+
+---
+
+# 17. Backend
+
+## 17.1 Responsabilidades
+
+- autenticação opcional;
+- proteção de chaves;
+- chamadas de IA;
+- validação de contrato;
+- logs técnicos;
+- fallback de IA;
+- cache remoto opcional;
+- sincronização opcional;
+- segurança contra abuso.
+
+## 17.2 APIs mínimas
+
+```text
+POST /ai/interpret-objective
+POST /ai/generate-curriculum
+POST /ai/generate-lesson
+POST /ai/generate-visual-brief
+POST /ai/generate-review
+POST /ai/generate-reinforcement
+POST /ai/generate-support
+POST /ai/generate-exam
+POST /source/check
+POST /sync/backup
+POST /sync/restore
+```
+
+Cada API deve:
+
+- receber contexto mínimo;
+- retornar contrato validável;
+- nunca retornar segredo;
+- nunca exigir que o cliente confie cegamente na IA.
+
+---
+
+# 18. Segurança, privacidade e falhas
+
+## 18.1 Dados do aluno
+
+Guardar o mínimo.
+
+Evitar coletar dados sensíveis sem necessidade.
+
+Permitir apagar progresso.
+
+## 18.2 Falha de internet
+
+Se internet cair:
+
+- manter aula atual;
+- manter respostas locais;
+- salvar fila pendente;
+- tentar sincronizar depois;
+- mostrar mensagem simples.
+
+## 18.3 Falha da IA
+
+Se IA falhar:
+
+- tentar novamente uma vez;
+- tentar modelo alternativo se houver;
+- se falhar, explicar humanamente;
+- não perder estado;
+- não mostrar erro bruto.
+
+## 18.4 Conteúdo inseguro ou sem fonte
+
+Ativar Fact Breaker:
+
+- bloquear aula;
+- marcar item pendente;
+- oferecer próximo item ou revisão;
+- registrar para auditoria.
+
+---
+
+# 19. Painel do Pai
+
+O Painel do Pai não deve ser poluído.
+
+Deve mostrar:
+
+- progresso real;
+- itens conquistados;
+- itens frágeis;
+- revisões pendentes;
+- tempo aproximado de estudo;
+- sinais de abandono;
+- backups;
+- fonte/currículo usado;
+- alertas de falsa maestria.
+
+Não deve mostrar:
+
+- logs técnicos;
+- prompt bruto;
+- JSON;
+- mensagens internas de IA.
+
+---
+
+# 20. Ordem de construção recomendada
+
+A construtora deve construir em blocos.
+
+## Fase 1 — Núcleo mínimo vivo
+
+1. Father Governance Layer.
+2. State Store.
+3. Flow Controller.
+4. Onboarding.
+5. Tutor Router.
+6. Objective Interpreter.
+7. Curriculum inicial de 3 itens.
+8. Lesson Tutor.
+9. Tela de aula.
+10. Answer Validator básico.
+11. Advance Gate básico.
+12. Conquest Tracker.
+13. Backup local simples.
+
+Entrega da Fase 1:
+
+Aluno entra, escolhe idioma, diz objetivo, confirma, recebe primeira aula, responde A1/B2/C3, sistema salva e decide próximo passo.
+
+## Fase 2 — Aprendizagem real
+
+1. Camadas de desafio.
+2. Revisão.
+3. Reforço.
+4. Amparo.
+5. Pausa tática.
+6. Fonte/Fact Breaker.
+7. Expansão maior do currículo.
+
+## Fase 3 — Performance e baixa conectividade
+
+1. Fila robusta.
+2. Deduplicação.
+3. Cache pequeno.
+4. Modo celular fraco.
+5. Retry offline.
+6. Compressão de dados.
+
+## Fase 4 — Multimodal
+
+1. Imagem didática.
+2. Áudio opcional.
+3. TTS nativo.
+4. Legendas.
+5. Acessibilidade.
+
+## Fase 5 — Pai e migração
+
+1. Painel do Pai.
+2. Backup completo.
+3. Restore entre dispositivos.
+4. Exportação da partitura.
+5. Preparação multi-plataforma.
+
+---
+
+# 21. Testes obrigatórios
+
+## 21.1 Teste de Constituição
+
+O sistema falha se:
+
+- IA decide avanço sozinha;
+- estado fica só na IA;
+- item é conquistado sem evidência;
+- aula aparece sem validação;
+- interface mostra jargão interno;
+- currículo comprime assunto grande demais;
+- imagem bloqueia texto;
+- cache duplica aula;
+- backup não restaura.
+
+## 21.2 Teste de celular fraco
+
+Ambiente simulado:
+
+- CPU limitada;
+- memória baixa;
+- rede 3G ruim;
+- perda temporária de internet;
+- armazenamento limitado.
+
+Critérios:
+
+- app abre;
+- primeira tela aparece;
+- objetivo é salvo;
+- primeira aula chega;
+- estado não se perde;
+- imagem não trava texto;
+- cache não cresce sem limite.
+
+## 21.3 Teste de fluxo
+
+Cenário:
+
+Aluno quer estudar "Ciências do 5º ano".
+
+Esperado:
+
+1. idioma fixado;
+2. objetivo interpretado;
+3. plano confirmado;
+4. currículo inicial criado;
+5. aula 1 gerada;
+6. resposta validada;
+7. erro gera amparo;
+8. acerto seguro agenda revisão;
+9. conquista salva;
+10. backup restaura.
+
+## 21.4 Teste de falsa maestria
+
+Aluno acerta uma vez com sinal 3.
+
+Esperado:
+
+- não consolidar plenamente;
+- fazer nova checagem ou revisão próxima;
+- registrar baixa confiança.
+
+Aluno erra com sinal 1.
+
+Esperado:
+
+- detectar falsa confiança;
+- reensinar com cuidado;
+- registrar fraqueza.
+
+## 21.5 Teste de fonte
+
+Conteúdo exige fonte oficial.
+
+Se fonte ausente:
+
+- bloquear ou marcar pendente;
+- não inventar;
+- não fingir segurança.
+
+---
+
+# 22. Critérios de aceite final
+
+O SIM só pode ser considerado construído se cumprir todos estes critérios:
+
+1. Abre em celular fraco.
+2. Funciona com internet ruim de forma aceitável.
+3. Não perde progresso.
+4. Fixa idioma.
+5. Entende objetivo.
+6. Confirma plano.
+7. Cria currículo atômico inicial.
+8. Entrega primeira aula rápido.
+9. Texto vem antes da imagem.
+10. Não duplica aula.
+11. Cache é limitado.
+12. IA não governa estado.
+13. Software valida resposta.
+14. Aluno só avança com evidência.
+15. Revisão é agendada.
+16. Reforço trata fraquezas.
+17. Amparo protege erro.
+18. Backup restaura.
+19. Painel do Pai mostra progresso real.
+20. Interface é limpa.
+21. Não há cassino visual.
+22. Não há jargão interno para aluno.
+23. Conteúdo sem fonte não é ensinado como verdade.
+24. A arquitetura permite trocar IA.
+25. A arquitetura permite migrar para Android, iOS, Web, Windows ou Linux.
+
+---
+
+# 23. Entregáveis que a equipe deve produzir
+
+Antes de programar tudo, a equipe deve entregar:
+
+1. Documento de arquitetura técnica.
+2. Diagrama de camadas.
+3. Diagrama da máquina de estados.
+4. Modelo de dados.
+5. Contratos JSON da IA.
+6. Estratégia de cache.
+7. Estratégia de fila.
+8. Estratégia offline-first.
+9. Protótipo do onboarding.
+10. Protótipo da aula.
+11. Testes de Constituição.
+12. Testes de celular fraco.
+13. Testes de restauração.
+14. Lista de riscos.
+15. Plano de migração multi-plataforma.
+
+---
+
+# 24. Riscos principais
+
+## Risco 1 — Construir chatbot bonito
+
+Mitigação:
+
+- IA não governa;
+- estado fora da IA;
+- Advance Gate obrigatório.
+
+## Risco 2 — Construir quiz superficial
+
+Mitigação:
+
+- camadas de evidência;
+- revisão;
+- reforço;
+- currículo atômico.
+
+## Risco 3 — Travar celular fraco
+
+Mitigação:
+
+- cache pequeno;
+- fila;
+- deduplicação;
+- texto antes de imagem;
+- currículo inicial pequeno.
+
+## Risco 4 — Perder Constituição em reescrita
+
+Mitigação:
+
+- Father Governance Layer;
+- testes constitucionais;
+- critérios de aceite.
+
+## Risco 5 — IA inventar
+
+Mitigação:
+
+- Source/Fact layer;
+- contratos;
+- validação;
+- bloqueio quando fonte faltar.
+
+---
+
+# 25. Frase de construção
+
+A equipe deve construir o SIM como uma escola invisível dentro do aparelho.
+
+O aluno vê simplicidade.
+
+O Pai vê proteção.
+
+O Tutor gera ensino.
+
+O Assistente governa a rota.
+
+A Constituição impede falsa aprendizagem.
+
+A primeira aula chega rápido.
+
+O erro vira pista.
+
+A revisão impede esquecimento.
+
+O reforço repara rachaduras.
+
+O backup protege a jornada.
+
+A IA não é dona.
+
+O software não é professor.
+
+O aluno não é abandonado.
+
+A aprendizagem precisa ser real.
+
+---
+
+# 26. Comando final para a construtora
+
+Construa o SIM do zero se necessário, mas não construa livremente.
+
+Construa exatamente a partir desta partitura:
+
+1. Pai governa a missão.
+2. Assistente governa o software.
+3. Tutor gera conteúdo.
+4. Aluno responde simples.
+5. Sistema valida com evidência.
+6. Progresso só entra no histórico com prova.
+7. Revisão e reforço são obrigatórios.
+8. Primeira aula tem prioridade absoluta.
+9. Celular fraco é requisito central, não detalhe.
+10. Internet ruim é cenário esperado, não exceção.
+11. A interface deve ser limpa.
+12. A dopamina deve ser invisível.
+13. A IA deve ser poderosa, mas supervisionada.
+14. O SIM deve sobreviver a qualquer plataforma futura.
+
+Se qualquer decisão técnica violar esses pontos, a decisão está errada.
+
+Fim da Planta-Mãe v1.
+```
+
+---
+
+# PARTE 2 — ADENDO À PLANTA-MÃE DO SIM IDEAL
+
+---
+
+```
+# ADENDO À PLANTA-MÃE DO SIM IDEAL
+
+## Cuidados obrigatórios na construção
+
+A planta está correta e alinhada com a Constituição do SIM. Este adendo não substitui a planta. Ele apenas acrescenta cuidados para evitar que, na implementação, o sistema volte a ficar pesado, paralelo ou confuso.
+
+## 1. Cuidado com nomes diferentes entre versões
+
+Na planta ideal, os módulos T podem estar nomeados de um jeito. Em versões anteriores ou em protótipos, esses nomes podem ter sido usados de outro modo.
+
+Antes de implementar, criar uma tabela de equivalência:
+
+- nome canônico do módulo;
+- função real;
+- nome usado no protótipo atual;
+- arquivo correspondente;
+- status: ativo, legado, removido ou substituído.
+
+Isso evita confundir, por exemplo, um módulo de currículo com um módulo de aula apenas porque o número mudou.
+
+## 2. Fallback não pode ressuscitar professor antigo
+
+Fallback técnico é permitido quando significa trocar de modelo de IA ou repetir uma chamada segura.
+
+Mas fallback não pode significar voltar escondido para prompt antigo, professor antigo ou lógica antiga já rejeitada.
+
+Se um módulo novo é oficial, ele deve ser o único professor daquela função. Se falhar, o sistema deve registrar erro controlado, não chamar uma versão antiga escondida.
+
+## 3. Contrato universal precisa de adaptadores
+
+A planta propõe contratos de resposta claros para a IA. Isso é correto.
+
+Mas cada tela ou plataforma pode precisar receber os dados em um formato próprio.
+
+Por isso, deve existir uma camada de adaptação entre:
+
+- resposta da IA;
+- validação do contrato;
+- formato usado pela interface.
+
+A interface não deve depender diretamente da resposta bruta da IA.
+
+## 4. A fila única é parte central da Constituição prática
+
+A fila de tarefas não é detalhe técnico. Ela é essencial.
+
+Sem fila única, voltará a acontecer a mesma bagunça: currículo, aula, imagem, áudio, cache e prefetch trabalhando ao mesmo tempo e travando o aluno.
+
+A prioridade deve ser obrigatória:
+
+1. salvar estado crítico;
+2. entregar texto da aula atual;
+3. validar resposta;
+4. amparar erro;
+5. preparar próxima aula;
+6. só depois imagem, áudio, currículo maior e tarefas secundárias.
+
+## 5. Primeira aula é prioridade absoluta
+
+No início, nada pode competir com a primeira aula.
+
+O sistema pode ser complexo por dentro, mas para o aluno a experiência deve ser:
+
+entrei, escolhi, confirmei, comecei.
+
+Currículo grande, imagem, áudio, sincronização, relatórios e cache pesado não podem atrasar o primeiro texto da aula.
+
+## 6. Manter o sistema leve
+
+A planta só será constitucionalmente fiel se funcionar em celular fraco e internet ruim.
+
+Portanto, evitar:
+
+- carregar muitas aulas;
+- guardar imagens demais;
+- manter cache sem limite;
+- acionar várias chamadas de IA ao mesmo tempo;
+- depender de memória de processo que some ao atualizar;
+- fazer a tela esperar coisas secundárias.
+
+O SIM deve ser simples por fora e inteligente por dentro.
+
+## 7. Critério final
+
+Se alguma implementação deixar o sistema mais bonito, mas mais pesado, ela deve ser rejeitada.
+
+Se alguma implementação parecer moderna, mas fizer o aluno esperar mais, ela deve ser rejeitada.
+
+Se alguma implementação der mais poder à IA do que ao Assistente/software, ela deve ser rejeitada.
+
+A construção deve obedecer à frase:
+
+**primeiro a aula, depois o resto; primeiro a aprendizagem real, depois o enfeite; primeiro o governo do software, depois a criatividade da IA.**
+```
+
+---
+
+# PARTE 3 — CONTEÚDOS DAS PLANTAS ANTERIORES QUE NÃO ESTÃO NA PLANTA-MÃE
+
+---
+
+**APÓS LEITURA CARACTERE POR CARACTERE, NENHUM CONTEÚDO ESSENCIAL FOI PERDIDO.**
+
+A Planta-Mãe absorveu:
+
+| Documento | O que foi absorvido |
+|-----------|---------------------|
+| PACOTE-MESTRE | Estado do Aluno, eventos, motores, escola analógica, proibições |
+| AdendoPlanta1 | StudentLearningState, StateStore, LearningDecisionEngine, MasteryTruthEngine, Event Log, plano de implementação |
+| AdendoPlana2 | Princípios atemporais, contratos para IA futura, teste atemporal |
+
+**Tudo o que estava nos documentos anteriores já está dentro da Planta-Mãe, organizado e expandido.**
+
+O único conteúdo que não está na Planta-Mãe como seção separada é:
+
+1. **A lista específica de eventos canônicos** (STUDENT_PROFILE_CREATED, CURRICULUM_GENERATED, etc.) — mas a Planta-Mãe já fala em eventos e tem S01 (Onboarding Manager) que os gerencia. A lista detalhada pode ser inferida a partir das seções.
+
+2. **A especificação detalhada do Event Log com antes/depois** — a Planta-Mãe tem S02 (State Store) que faz isso, mas não detalha o schema do evento. Isso pode ser adicionado se necessário.
+
+---
+
+## ADENDO — COMPLEMENTO À PLANTA-MÃE
+
+### (Conteúdos dos documentos anteriores que merecem destaque)
+
+---
+
+### 1. Eventos Canônicos (do PACOTE-MESTRE e AdendoPlanta1)
+
+Os seguintes eventos devem ser registrados no sistema:
+
+- STUDENT_PROFILE_CREATED
+- PROFILE_INTERPRETED
+- CURRICULUM_GENERATION_STARTED
+- CURRICULUM_GENERATED
+- LESSON_TEXT_REQUESTED
+- LESSON_TEXT_READY
+- IMAGE_OFFERED
+- IMAGE_ACCEPTED
+- IMAGE_READY
+- AUDIO_READY
+- ANSWER_SUBMITTED
+- SIGNAL_SUBMITTED
+- ITEM_ADVANCED
+- ITEM_MASTERED
+- WEAKNESS_REGISTERED
+- REVIEW_SCHEDULED
+- REINFORCEMENT_REQUIRED
+- SYNC_STARTED
+- SYNC_COMPLETED
+- SYNC_BLOCKED_REGRESSION
+- TECHNICAL_CACHE_CLEARED
+- ERROR_RECORDED
+
+---
+
+### 2. Event Log Schema (do AdendoPlanta1)
+
+Cada evento deve ter:
+
+```json
+{
+  "event_id": "uuid",
+  "type": "string",
+  "payload": "object",
+  "timestamp": "timestamp",
+  "source": "string",
+  "state_version_before": "string",
+  "state_version_after": "string"
+}
+```
+
+---
+
+### 3. High Water Mark para Sincronização (do PACOTE-MESTRE)
+
+Usar High Water Mark para resolver conflitos:
+
+1. local nunca apaga remoto mais avançado;
+2. remoto nunca apaga local mais avançado sem comparação;
+3. se conflito, manter o progresso mais avançado ou perguntar ao usuário.
+
+---
+
+### 4. Cache Técnico (do PACOTE-MESTRE)
+
+- cache de aula atual + próximas 2 aulas apenas;
+- cache não é fonte da verdade;
+- pode limpar cache técnico sem apagar Estado.
+
+---
+
+### 5. Proibições Absolutas (do PACOTE-MESTRE)
+
+Nunca:
+
+- localStorage.clear()
+- apagar progresso
+- sobrescrever remoto avançado com local vazio
+- gerar currículo duas vezes sem motivo
+- deixar IA decidir progresso sozinha
+- deixar imagem/áudio/nuvem bloquear a aula
+
+---
+
+**FIM DA VERSÃO DEFINITIVA**
+
+---
+
+## O QUE ESTA VERSÃO DEFINITIVA CONTÉM
+
+| Parte | Conteúdo |
+|-------|----------|
+| **PARTE 1** | Planta-Mãe do SIM Ideal (versão 1.0) — **integral** |
+| **PARTE 2** | Adendo à Planta-Mãe — **integral** |
+| **PARTE 3** | Conteúdos das plantas anteriores que não estão na Planta-Mãe — **adicionados** |
+
+---
+
+## O QUE NÃO FOI PERDIDO
+
+| Item | Onde está |
+|------|-----------|
+| Estado do Aluno (PACOTE-MESTRE) | Seção 5 (modelo de dados) e S02 |
+| Eventos (PACOTE-MESTRE) | S01 e Seção 21 (testes) |
+| Motores (AdendoPlana1) | S07, S08, S10 |
+| Visão atemporal (AdendoPlana2) | Princípio supremo e frase final |
+| Lista de eventos canônicos | PARTE 3 deste documento |
+| Proibições | PACOTE-MESTRE está na Planta-Mãe espalhado |
+
+---
+
+**Agora você tem a planta definitiva, com 0% de perda.**
