@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/main.dart';
 import 'package:sim_mobile/shared/widgets/shared_widgets.dart';
@@ -159,7 +160,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(480, 1200));
     final session = LabSession()
-      ..authed = true
+      ..authed = false
       ..authReady = true
       ..credits = 3;
     final store = session.canonicalStore!;
@@ -273,6 +274,102 @@ void main() {
     expect(cloud.deleteCalls, 1);
     expect(find.text('Química na conta'), findsNothing);
     expect(find.text('Geometria editada'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2300));
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('drawer_local_actions_test pagina aulas locais', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(480, 1200));
+    final session = LabSession()
+      ..authed = false
+      ..authReady = true
+      ..credits = 3;
+    final store = session.canonicalStore!;
+    for (var i = 1; i <= 31; i++) {
+      store.writeState(_drawerState('lesson-$i', 'Aula $i', i % 3));
+    }
+    session.lessonLocalId = 'lesson-1';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showAulaMenu(context, session),
+            child: const Text('open paged drawer'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open paged drawer'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('30/31'), findsOneWidget);
+    expect(find.text('Carregar mais'), findsOneWidget);
+    await tester.ensureVisible(find.text('Carregar mais'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carregar mais'));
+    await tester.pumpAndSettle();
+    expect(find.text('31/31'), findsOneWidget);
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('drawer_backup_import_export_test exports and imports backup', (
+    WidgetTester tester,
+  ) async {
+    String? clipboardText;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          final data = call.arguments as Map;
+          clipboardText = data['text']?.toString();
+          return null;
+        }
+        if (call.method == 'Clipboard.getData') {
+          return {'text': clipboardText};
+        }
+        return null;
+      },
+    );
+    await tester.binding.setSurfaceSize(const Size(480, 1200));
+    final session = LabSession()
+      ..authed = true
+      ..authReady = true
+      ..credits = 3;
+    final store = session.canonicalStore!;
+    store.writeState(_drawerState('lesson-export', 'Aula exportada', 1));
+    session.lessonLocalId = 'lesson-export';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showAulaMenu(context, session),
+            child: const Text('open backup drawer'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open backup drawer'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Exportar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    final clipboard = await Clipboard.getData('text/plain');
+    expect(clipboard?.text, contains('sim-student-learning-backup'));
+
+    await tester.tap(find.textContaining('Importar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(find.byType(TextField).last, clipboard!.text!);
+    await tester.tap(find.widgetWithText(TextButton, '⤒ Importar').last);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(session.lessonLocalId, 'lesson-export');
+    expect(store.listLocalStates(), hasLength(1));
     await tester.pump(const Duration(milliseconds: 2300));
 
     await tester.binding.setSurfaceSize(null);

@@ -517,9 +517,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     controller.dispose();
     if (raw == null) return;
     try {
-      final parsed = jsonDecode(raw);
-      if (parsed is! Map) throw const FormatException('backup invalido');
-      final state = store.importBackup(JsonMap.from(parsed));
+      final state = store.importBackup(store.parseBackupText(raw));
       widget.session.lessonLocalId = state.lessonLocalId;
       _flash(t('drawer_import_cloud_ok'));
       setState(() {});

@@ -257,6 +257,31 @@ class StudentCurriculumStatus {
     'totalCount': totalCount,
     if (error != null) 'error': error,
   };
+
+  factory StudentCurriculumStatus.fromJson(JsonMap json) {
+    return StudentCurriculumStatus(
+      status: _curriculumStatusFromJson(json['status']),
+      expansionStatus: _curriculumStatusFromJson(json['expansionStatus']),
+      updatedAt: (json['updatedAt'] ?? '').toString(),
+      objectiveKey: (json['objectiveKey'] ?? '').toString(),
+      initialCount: (json['initialCount'] as num?)?.toInt() ?? 0,
+      totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
+      error: json['error'] as String?,
+    );
+  }
+}
+
+CurriculumStatusValue _curriculumStatusFromJson(Object? value) {
+  final raw = value?.toString() ?? '';
+  return CurriculumStatusValue.values.firstWhere(
+    (status) => status.name == raw,
+    orElse: () => switch (raw) {
+      'initial_loading' => CurriculumStatusValue.initialLoading,
+      'initial_ready' => CurriculumStatusValue.initialReady,
+      'partial_ready' => CurriculumStatusValue.partialReady,
+      _ => CurriculumStatusValue.empty,
+    },
+  );
 }
 
 class LessonCurrent {
@@ -911,9 +936,14 @@ class StudentLearningState {
           'sync_status_typed',
         }.contains(key),
       );
-    final ready = (json['readyLessonMaterials'] as Map? ?? const {}).map(
-      (key, value) => MapEntry(key.toString(), JsonMap.from(value as Map)),
-    );
+    final ready =
+        ((json['readyLessonMaterials'] ?? json['ready_lesson_materials'])
+                    as Map? ??
+                const {})
+            .map(
+              (key, value) =>
+                  MapEntry(key.toString(), JsonMap.from(value as Map)),
+            );
     return StudentLearningState(
       stateVersion:
           (json['stateVersion'] as num?)?.toInt() ??
@@ -929,7 +959,11 @@ class StudentLearningState {
       curriculum: json['curriculum'] is Map
           ? StudentCurriculum.fromJson(JsonMap.from(json['curriculum'] as Map))
           : null,
-      curriculumStatus: null,
+      curriculumStatus: json['curriculumStatus'] is Map
+          ? StudentCurriculumStatus.fromJson(
+              JsonMap.from(json['curriculumStatus'] as Map),
+            )
+          : null,
       current: json['current'] is Map
           ? LessonCurrent.fromJson(JsonMap.from(json['current'] as Map))
           : null,
@@ -961,18 +995,26 @@ class StudentLearningState {
       auxRooms: json['auxRooms'] is Map
           ? JsonMap.from(json['auxRooms'] as Map)
           : null,
-      currentLessonMaterial: json['currentLessonMaterial'] is Map
-          ? JsonMap.from(json['currentLessonMaterial'] as Map)
+      currentLessonMaterial:
+          (json['currentLessonMaterial'] ?? json['current_lesson_material'])
+              is Map
+          ? JsonMap.from(
+              (json['currentLessonMaterial'] ?? json['current_lesson_material'])
+                  as Map,
+            )
           : null,
       readyLessonMaterials: ready,
-      queuedActions: (json['queuedActions'] as List? ?? const [])
-          .whereType<Map>()
-          .map((entry) => JsonMap.from(entry))
-          .toList(),
-      inflightJobs: (json['inflightJobs'] as List? ?? const [])
-          .whereType<Map>()
-          .map((entry) => JsonMap.from(entry))
-          .toList(),
+      queuedActions:
+          ((json['queuedActions'] ?? json['queued_actions']) as List? ??
+                  const [])
+              .whereType<Map>()
+              .map((entry) => JsonMap.from(entry))
+              .toList(),
+      inflightJobs:
+          ((json['inflightJobs'] ?? json['inflight_jobs']) as List? ?? const [])
+              .whereType<Map>()
+              .map((entry) => JsonMap.from(entry))
+              .toList(),
       truth: json['truth_typed'] is Map
           ? StudentMasteryTruth.fromJson(
               JsonMap.from(json['truth_typed'] as Map),
@@ -1042,10 +1084,10 @@ StudentLearningState mergeStudentLearningStateFromCloud(
   LessonProgress? mergedProgress;
   if (lp != null && rp != null) {
     final mergedConcluidos = mergeConcluidos(lp.concluidos, rp.concluidos);
-    final greaterMainAdvances =
-        lp.mainAdvances > rp.mainAdvances ? lp.mainAdvances : rp.mainAdvances;
-    final baseProgress =
-        _progressRank(lp) >= _progressRank(rp) ? lp : rp;
+    final greaterMainAdvances = lp.mainAdvances > rp.mainAdvances
+        ? lp.mainAdvances
+        : rp.mainAdvances;
+    final baseProgress = _progressRank(lp) >= _progressRank(rp) ? lp : rp;
     mergedProgress = baseProgress.copyWith(
       concluidos: mergedConcluidos,
       mainAdvances: greaterMainAdvances,
