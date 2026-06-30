@@ -38,6 +38,9 @@ import '../../sim/ui/widgets/cyber_step_shell.dart';
 import '../../sim/ui/widgets/sim_preparation_experience.dart';
 import '../../sim/ui/widgets/sim_typewriter.dart';
 import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/auxiliary/doubt_input_sheet.dart';
+import '../../sim/auxiliary/doubt_t02_caller.dart';
+import '../../sim/auxiliary/lesson_doubt_controller.dart';
 import '../../sim/ui/widgets/doubt_progress_bar.dart';
 
 import '../../core/utils/sim_constants.dart';
@@ -705,6 +708,89 @@ class LabSession extends ChangeNotifier {
   }
 
   void toggleDoubt() => lessonUiState.toggleDoubt();
+
+  Future<void> submitDoubt(DoubtInputDraft input) async {
+    final validation = input.validate();
+    if (validation != null) {
+      setDoubt(
+        DoubtState(
+          status: DoubtStatus.error,
+          progress: 0,
+          sheetOpen: true,
+          error: validation,
+        ),
+      );
+      return;
+    }
+    if (lessonUiState.doubtOpen) lessonUiState.toggleDoubt();
+    final snapshot = aulaSnapshot;
+    final content = snapshot?.conteudo;
+    if (prefs == null) {
+      setDoubt(const DoubtState(status: DoubtStatus.processing, progress: 15));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      setDoubt(
+        const DoubtState(
+          status: DoubtStatus.explaining,
+          progress: 100,
+          response: DoubtResponse(
+            explanation:
+                'A dúvida foi recebida. Observe que frações equivalentes mantêm a mesma proporção.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (content == null) {
+      setDoubt(
+        const DoubtState(
+          status: DoubtStatus.error,
+          progress: 0,
+          error: defaultDoubtError,
+        ),
+      );
+      return;
+    }
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) {
+      setDoubt(
+        const DoubtState(
+          status: DoubtStatus.error,
+          progress: 0,
+          error: defaultDoubtError,
+        ),
+      );
+      return;
+    }
+    final state = _activeCanonicalState;
+    final profile = state?.profile;
+    final controller = LessonDoubtController(
+      caller: DoubtT02Caller(
+        client: SimServerT02Client(config: _serverConfig()),
+      ),
+    );
+    setDoubt(const DoubtState(status: DoubtStatus.processing, progress: 15));
+    await controller.submitDoubt(
+      lessonLocalId: id,
+      profile: AuxRoomProfile(
+        stableLang: profile?.stableLang ?? stableLang ?? selectedLanguageCode,
+        academicLevel:
+            profile?.academicLevel ?? profile?.nivel ?? 'ensino_medio',
+        preferredName: profile?.preferredName ?? preferredName,
+        notes: studentProfileNotes.isNotEmpty ? studentProfileNotes : null,
+        extra: profile?.extra ?? const {},
+      ),
+      itemText: snapshot?.itemText ?? content.question,
+      currentContent: '${content.explanation}\n\n${content.question}'.trim(),
+      layer: currentAulaLayer,
+      itemIdx: (state?.current?.itemIdx ?? state?.progress?.itemIdx ?? 0),
+      marker: snapshot?.itemMarker ?? state?.current?.marker,
+      input: input,
+    );
+    setDoubt(controller.state);
+    if (controller.state.status == DoubtStatus.explaining) {
+      _persistActiveLessonToCloud();
+    }
+  }
 
   Future<void> toggleAudio() async {
     if (audioLoading) return;

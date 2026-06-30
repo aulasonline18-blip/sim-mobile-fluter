@@ -3,8 +3,12 @@
 Base da auditoria: 2026-06-30.
 
 - SimWeb: `/root/sim-work/sim-web`, branch `main`, commit `d113cf4` (`Lovable update`).
-- SimApp Flutter: `/root/sim-mobile-fluter`, branch `main`, commit `d8b2362` (`test: prove sim vital onboarding flow`).
-- Fonte primária desta missão: código real do SimWeb. Prints reais ainda precisam ser capturados com o SimWeb rodando.
+- SimApp Flutter: `/root/sim-mobile-fluter`, branch `main`, commit `7f06676` (`docs: map amparo interface parity`).
+- Fonte primária desta missão: SimWeb rodando + código real do SimWeb.
+- Capturas reais ja obtidas do SimWeb em 390x844:
+  - `docs/interface-screenshots/simweb/portal-390x844.png`
+  - `docs/interface-screenshots/simweb/login-390x844.png`
+  - `docs/interface-screenshots/simweb/idioma-390x844.png` (rota protegida/sem sessao renderizou branco; referencia visual continua pelo codigo ate haver sessao autenticada capturavel).
 
 ## Inventario De Telas E Estados SimWeb
 
@@ -26,7 +30,7 @@ Base da auditoria: 2026-06-30.
 | Revisao | `AuxRoomScreens.tsx` | Tela escolha 5/10, preparing com mesmo robo, questoes auxiliares com A/B/C e sinais, feedback, voltar. | `lib/features/classroom/aux_room_screens.dart` | PARCIAL. Fluxo existe; precisa comparar escolha 5/10, header, progress e feedback. | Choose, preparing, question, result, failed. |
 | Recuperacao | `AuxRoomScreens.tsx` | Intro/preparing/ready/failed/done/question com mesma estrutura de aux. | `lib/features/classroom/aux_room_screens.dart` | PARCIAL. Fluxo existe; precisa comparar intro, done, erro e retorno. | Intro, preparing, question, done. |
 | Amparo/sala auxiliar | `src/cyber/aula/AuxRoomScreens.tsx`, `src/sim/lesson/studentAuxRoomService.ts` | Amparo aparece como sala auxiliar quando regra pedagogica pede; usa padrao aux/prep. | `lib/sim/classroom/amparo_controller.dart`, `aux_room_screens.dart` | INCONCLUSIVO. Precisa mapear tela concreta do Web para amparo e equivalente Flutter. | Tela de amparo se acionavel. |
-| Drawer/historico | `src/cyber/AulaDrawer.tsx` | Sheet lateral estilo ChatGPT; nova aula, lista local/nuvem, busca, renomear, apagar, backup import/export, logout, status/painel. | `shared_widgets.dart` (`showAulaMenu`) e `portal_flow.dart` drawer | FALHA/PARCIAL. Flutter drawer atual e bem mais simples; nao ha prova de busca, renomear, apagar, import/export, lista nuvem/local e status compactos como Web. | Drawer aberto, busca, renomear, apagar, cloud/local. |
+| Drawer/historico | `src/cyber/AulaDrawer.tsx` | Sheet lateral estilo ChatGPT; nova aula, recarregar creditos logado, lista local/nuvem, busca, paginacao 30+30, renomear, apagar local-first com tombstone, abrir local/cloud, backup import/export, exportar status, logout, solicitar exclusao, status compacto. | `shared_widgets.dart` (`showAulaMenu`) e `portal_flow.dart` drawer | FALHA/PARCIAL. Flutter drawer atual tem historico/busca/footer e acoes basicas, mas ainda nao prova lista cloud/local, paginacao 30+30, renomear/apagar por item, recarregar creditos dentro do drawer, logout e exclusao de conta como Web. | Drawer aberto, busca, renomear, apagar, cloud/local, carregar mais. |
 | Creditos | `src/routes/creditos.tsx` | Header com back, titulo `pay_my_credits`, balance card, recharge card, packs 100/200/500 com `Zap`/loading, hosted checkout, erros, modal embedded se modo legado. | `lib/features/billing/billing_and_simple_pages.dart` (`CreditsLabScreen`) | FALHA/PARCIAL. Flutter tem tela simplificada com saldo e packs; faltam header Web, balance visual, loading por pack, erro hosted, banner/test mode/modal. | Loading auth, saldo, packs, loading pack, erro checkout. |
 | Conclusao | `LessonStateScreens.tsx`, `SimPreparationExperience stage=done` | Tela full com robo done, ready true, CTA done. | `LessonDoneScreen` | PARCIAL. Usa mesmo widget, precisa comparar CTA e destino. | Done. |
 | Loading | `LessonStateScreens.tsx`, `LessonMainScreen.tsx` | Auth loading simples, curriculum hydrating spinner, aula loading card com label theory/progresso/retry. | Flutter `PhaseBoundaryScreen`, `AulaLabScreen` | PARCIAL. Estados existem; precisa comparar mensagens/stages e o fato de Flutter esconde prep se `prefs == null`. | Auth, hydrating, aula loading. |
@@ -51,7 +55,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 | A/B/C | `LessonMainScreen.tsx` | `AnswerButton` | Corrigido: Flutter usa `A`, `B`, `C` sem ponto e mantem acao real. Ainda falta prova visual de borda/sombra por screenshot. | Media | Capturar screenshot Web/Flutter para aprovar visual. | IGUAL FUNCIONALMENTE |
 | Sinais 1/2/3 | `SinalBtn` Web | `_SinalRow` Flutter | Corrigido: tocar 1/2/3 envia o sinal imediatamente, sem botao intermediario. Ainda falta prova visual por screenshot. | Media | Capturar screenshot Web/Flutter para aprovar visual. | IGUAL FUNCIONALMENTE |
 | Feedback | `FeedbackBox` Web | `_FeedbackBox` Flutter | Precisa confirmar glow/border/next inline. | Media | Screenshot/teste. | PARCIAL |
-| Duvida | `DoubtInputSheet.tsx` | `_DoubtInputSheet` | Parcialmente corrigido: duvida aparece apos resposta concluida e abre sheet de texto com contador/envio. Ainda falta suporte visual/funcional de foto/camera/galeria como Web. | Alta | Conectar imagem da duvida ou documentar decisao humana para remover/adiar. | PARCIAL |
+| Duvida | `DoubtInputSheet.tsx` | `_DoubtInputSheet`, `LabSession.submitDoubt` | Corrigido funcionalmente: duvida aparece apos resposta concluida, sheet tem texto, contador, anexo, camera, galeria, chip de foto, validacao compartilhada e envio real para `LessonDoubtController`/T02. Ainda falta screenshot comparativo protegido/autenticado para aprovar visualmente. | Alta | Capturar Web/Flutter autenticado para aprovar visual. | IGUAL FUNCIONALMENTE |
 | Revisao | `AuxRoomScreens.tsx` | `ReviewRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Recuperacao | `AuxRoomScreens.tsx` | `RecoveryRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Amparo | `lesson-pipeline-runtime.ts`, `T02Service.ts`, `routes/pai.tsx` | `AmparoController`, `LessonAnswerProgressController`, `FatherPanel` | Mapeado: no Web nao ha sala visual separada de amparo no fluxo principal; amparo e modo T02/estado e aparece no Painel do Pai. Flutter tem controlador e status equivalente. | Baixa | Capturar Painel do Pai quando SimWeb rodar. | IGUAL FUNCIONALMENTE |
@@ -65,11 +69,38 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 
 ## Diferencas Criticas Ja Encontradas
 
-1. Duvida Flutter ainda nao tem foto/camera/galeria como `DoubtInputSheet.tsx` do Web.
-2. Drawer Flutter ainda nao prova paridade total com cloud/local, renomear, apagar e lista paginada do Web.
-3. Ainda faltam screenshots reais Web/Flutter para aprovar visualmente portal, login, idioma, objetivo, preparacao, aula, drawer e creditos.
+1. Drawer Flutter ainda nao prova paridade total com cloud/local, renomear, apagar e lista paginada do Web.
+2. Ainda faltam screenshots reais Web/Flutter para aprovar visualmente portal, login, idioma, objetivo, preparacao, aula, drawer e creditos.
+3. Duvida Flutter ja tem camera/galeria e chamada real de T02, mas ainda precisa screenshot comparativo autenticado para marcar `APROVADO`.
 4. Amparo foi mapeado como comportamento/estado, nao como tela propria; falta apenas screenshot do Painel do Pai.
 5. Comentarios com mojibake ainda podem existir, mas textos visiveis auditados nesta rodada foram corrigidos nos pontos alterados.
+
+## Contrato De Paridade Do Drawer SimWeb
+
+Fonte: `/root/sim-work/sim-web/src/cyber/AulaDrawer.tsx` no commit `d113cf4`.
+
+| Area | Comportamento SimWeb | Prova de codigo | Status Flutter |
+|---|---|---|---|
+| Abertura/fechamento | Backdrop escuro, aside lateral esquerdo `88vw`, max `360px`, header `menu`, botao fechar. | `AulaDrawer` renderiza backdrop e `<aside role="dialog">`. | PARCIAL: Flutter tem drawer/menu, precisa screenshot comparativa. |
+| Nova aula | `handleNovaAula` congela aula ativa, limpa onboarding/curriculo, fecha e navega para `/cyber/aula`. | `cyberLessons.freezeActive()`, `clearOnboarding()`, `clearCurriculo()`, `navigate({ to: "/cyber/aula" })`. | PARCIAL: precisa provar limpeza/rota equivalente. |
+| Recarregar creditos | Aparece somente autenticado; navega para `/creditos` preservando `returnTo`. | Botao condicionado por `authState === "in"`. | AUSENTE/PARCIAL no drawer Flutter; tela de creditos existe fora. |
+| Auth | Ao abrir, chama `supabase.auth.getSession()`, assina `onAuthStateChange`, define `checking/in/out`. | `useEffect` com `supabase.auth.getSession()` e subscription. | AUSENTE/PARCIAL: Flutter drawer nao prova separacao por auth. |
+| Lista nuvem | Usa `useSimLessonsList(open && authState === "in")`, filtra estados deletados, busca por tema/idioma/nivel/id. | `cloudList`, `filteredCloudList`, `matchesLessonSearch`. | AUSENTE: Flutter nao tem lista de aulas da conta no drawer. |
+| Lista local | Usa `cyberLessons.listSummaries()`, remove duplicados ja presentes na nuvem por id/tema. | `localOnly = lessons.filter(...)`. | PARCIAL: Flutter lista local/canonica, mas nao prova dedupe com nuvem. |
+| Busca | Campo de busca filtra nuvem e local, mostra contador `shownRows/totalRows`. | `lessonSearch`, `drawer_search_placeholder`, contador. | PARCIAL: busca existe, precisa paridade visual/contagem. |
+| Paginacao | Mostra 30 linhas inicialmente e carrega mais 30 por clique. | `DRAWER_INITIAL_VISIBLE = 30`, `DRAWER_PAGE_SIZE = 30`, `drawer_load_more`. | AUSENTE/PARCIAL: Flutter precisa limite e carregar mais. |
+| Abrir local | Tenta `cyberLessons.restoreToSession`; se falhar busca estado remoto por `lessonLocalId`, hidrata, ativa, navega, dispara evento. | `handleAbrir`, `getStudentStateByLesson`, `hydrateStudentLearningStateFromCloud`, `notifyActiveLessonChanged`. | PARCIAL: retomar existe em partes, precisa prova por UI e estado. |
+| Abrir nuvem | Usa snapshot ou busca remoto, hidrata, cacheia `lessonId`, ativa, navega e dispara evento. | `handleAbrirCloud`, `cacheLessonCloudId`. | AUSENTE no drawer Flutter. |
+| Renomear local | Botao `✎`, input inline, confirma com `✓` ou Enter, cancela com Escape. | `handleRenomearStart`, `handleRenomearConfirm`, `cyberLessons.rename`. | AUSENTE/PARCIAL: nao ha prova de rename inline. |
+| Renomear nuvem | Botao `✎`, input inline, atualiza `StudentLearningStateService.rename` e agenda sync. | `handleRenomearCloudConfirm`, `StudentLearningSync.enqueuePatch`. | AUSENTE. |
+| Apagar local | Confirma, deleta local-first, opcionalmente nuvem por localId, refetch, mostra erro cloud. | `handleApagar`, `deleteLesson`, `drawer_delete_cloud_error`. | AUSENTE/PARCIAL: nao ha prova de apagar por item com tombstone/sync. |
+| Apagar nuvem | Confirma, `deleteLesson`, remove espelho local, refetch, erro claro. | `handleApagarCloud`, `removeLocalMirrorFor`. | AUSENTE. |
+| Exportar backup | Gera `sim-backup-YYYY-MM-DD.txt` com `exportCyberBackup()`. | `handleExport`. | PARCIAL: Flutter exporta para clipboard/dialog, nao arquivo identico. |
+| Importar backup | File input `.json/.txt`, parse, importa local, se logado enfileira sync, drain, pull e refetch. | `handleImportFile`, `parseCyberBackup`, `StudentLearningSync.drain`. | PARCIAL: Flutter importa texto/clipboard; falta nuvem/sync como Web. |
+| Exportar status | Gera `sim-status-YYYY-MM-DD.txt` via `fatherPanel.buildStatusReport`. | `handleExportStatus`. | PARCIAL: Flutter mostra/exporta status simples; precisa comparar conteudo. |
+| Status compacto | Footer exibe avancados/total, concluidos ok, pendentes. | `status.avancados`, `status.total`, `status.concluidos`, `status.pendentes`. | PARCIAL: precisa comparar UI e fonte de dados. |
+| Logout | Cancela queries, limpa query cache, `supabase.auth.signOut`, limpa onboarding/curriculo/creditos cache, congela aula e navega login. | `handleLogout`. | AUSENTE/PARCIAL no drawer Flutter. |
+| Exclusao de conta | Link para `/conta/deletar` quando autenticado. | `<Link to="/conta/deletar">Solicitar exclusão da conta</Link>`. | AUSENTE. |
 
 ## Plano De Captura Visual
 
@@ -78,21 +109,30 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 - Rodar Flutter widget/integration screenshots equivalentes se o ambiente suportar.
 - Sem prints, esta matriz permanece `PARCIAL` e nao pode ser marcada como B.
 
-Tentativa executada em 2026-06-30:
+Tentativas executadas em 2026-06-30:
 
 - `npx bun install`: passou usando o `bun.lock` do SimWeb.
-- `npx bun run dev --host 0.0.0.0 --port 4177`: falhou.
+- `npx bun run dev --host 0.0.0.0 --port 4177`: falhou com Node `18.19.1`.
 - Motivo 1: Vite requer Node `20.19+` ou `22.12+`; VM tem Node `18.19.1`.
 - Motivo 2: a config `@lovable.dev/vite-tanstack-config` tentou `require()` de `lovable-tagger/dist/index.js` ESM e abortou com `ERR_REQUIRE_ESM`.
-- Resultado: screenshots reais do SimWeb ainda nao foram capturados nesta VM. A referencia desta rodada ficou baseada no codigo real do SimWeb.
+- Ajuste autorizado de ambiente, sem alterar comportamento do SimWeb: usei Node 22 temporario via `npx -p node@22` apenas no `PATH` do comando de dev server.
+- Comando que subiu o SimWeb: `PATH="$(dirname $(npx -y -p node@22 which node)):$PATH" npx bun run dev --host 0.0.0.0 --port 4177`.
+- Dev server respondeu em `http://127.0.0.1:4177/`.
+- `npx -y playwright install chromium`: instalou Chromium/FFmpeg/headless shell no cache `/root/.cache/ms-playwright/` para captura.
+- Capturas Playwright geradas:
+  - Portal: `npx -y playwright screenshot --viewport-size=390,844 http://127.0.0.1:4177/ docs/interface-screenshots/simweb/portal-390x844.png`.
+  - Login: `npx -y playwright screenshot --viewport-size=390,844 http://127.0.0.1:4177/login docs/interface-screenshots/simweb/login-390x844.png`.
+  - Idioma: `npx -y playwright screenshot --viewport-size=390,844 http://127.0.0.1:4177/cyber/idioma docs/interface-screenshots/simweb/idioma-390x844.png`; sem sessao autenticada, a captura ficou em branco, entao idioma/objetivo/aula protegidos ainda dependem de sessao real ou especificacao por codigo.
 
 ## Status Atual
 
 Nao estamos em B. Progresso desta rodada:
 
 - `flutter analyze`: passou.
-- `flutter test`: passou, 155 testes.
-- `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`: passou, APK gerado.
-- Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida textual, creditos com estrutura Web, drawer export/import/status com acao real e mojibake visivel em pontos alterados.
+- `flutter test`: passou, 157 testes.
+- `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`: passou, APK gerado em `build/app/outputs/flutter-apk/app-release.apk`.
+- APK: 55.108.644 bytes; SHA256 `b54174402b39abebb9966c606f982c92e8ce74f8e534ce0772a5527a6c249c9e`.
+- Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida com texto/camera/galeria e T02 real, creditos com estrutura Web, drawer export/import/status com acao real e mojibake visivel em pontos alterados.
+- Capturado SimWeb real para portal e login; rota idioma sem sessao ficou em branco.
 
-Ainda falta para B: captura visual real do SimWeb/Flutter, duvida com imagem, drawer completo cloud/local/renomear/apagar e aprovacao visual tela por tela.
+Ainda falta para B: captura visual real do SimWeb/Flutter em rotas autenticadas, drawer completo cloud/local/renomear/apagar/paginacao e aprovacao visual tela por tela.

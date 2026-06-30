@@ -39,6 +39,7 @@ dependencies:
   url_launcher: ^6.3.0
   audioplayers: ^6.1.0
   google_fonts: ^6.2.1
+  image_picker: ^1.2.2
 
 dev_dependencies:
   flutter_test:

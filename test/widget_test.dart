@@ -112,10 +112,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Enviar dúvida'), findsWidgets);
     expect(
-      find.text('Escreva sua dúvida sobre a explicação ou exercício.'),
+      find.text(
+        'Escreva sua dúvida ou envie uma foto do exercício, resolução, fórmula, gráfico ou tabela.',
+      ),
       findsOneWidget,
     );
     expect(find.byType(TextField), findsWidgets);
+    await tester.tap(find.byIcon(Icons.attach_file).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Tirar foto'), findsOneWidget);
+    expect(find.text('Escolher imagem'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'Nao entendi a conta.');
+    await tester.tap(find.text('Enviar dúvida').last);
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(session.doubt.status.name, 'explaining');
+    expect(session.doubt.response?.explanation, contains('frações'));
 
     await tester.binding.setSurfaceSize(null);
   });

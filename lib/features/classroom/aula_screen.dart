@@ -1,9 +1,11 @@
 // ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -38,6 +40,7 @@ import '../../sim/ui/widgets/cyber_step_shell.dart';
 import '../../sim/ui/widgets/sim_preparation_experience.dart';
 import '../../sim/ui/widgets/sim_typewriter.dart';
 import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/auxiliary/doubt_input_sheet.dart';
 import '../../sim/ui/widgets/doubt_progress_bar.dart';
 
 import '../../core/utils/sim_constants.dart';
@@ -103,12 +106,15 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _DoubtInputSheet(
         controller: _doubtController,
-        onSubmit: (text) {
-          widget.session.toggleDoubt();
+        busy: widget.session.doubt.status == DoubtStatus.processing,
+        onSubmit: (draft) {
+          if (widget.session.doubtOpen) widget.session.toggleDoubt();
+          Navigator.of(context).pop();
+          unawaited(widget.session.submitDoubt(draft));
           _doubtController.clear();
         },
         onClose: () {
-          widget.session.toggleDoubt();
+          if (widget.session.doubtOpen) widget.session.toggleDoubt();
           _doubtController.clear();
         },
       ),
@@ -1245,12 +1251,14 @@ class _FixedBubbleState extends State<_FixedBubble>
 class _DoubtInputSheet extends StatefulWidget {
   const _DoubtInputSheet({
     required this.controller,
+    required this.busy,
     required this.onSubmit,
     required this.onClose,
   });
 
   final TextEditingController controller;
-  final void Function(String text) onSubmit;
+  final bool busy;
+  final void Function(DoubtInputDraft input) onSubmit;
   final VoidCallback onClose;
 
   @override
@@ -1258,7 +1266,52 @@ class _DoubtInputSheet extends StatefulWidget {
 }
 
 class _DoubtInputSheetState extends State<_DoubtInputSheet> {
+  final ImagePicker _picker = ImagePicker();
+  DoubtImagePayload? _image;
+  bool _menuOpen = false;
   String? _error;
+
+  Future<void> _pickImage(ImageSource source) async {
+    setState(() {
+      _error = null;
+      _menuOpen = false;
+    });
+    try {
+      final picked = await _picker.pickImage(source: source);
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      final mime = picked.mimeType ?? 'image/jpeg';
+      final payload = DoubtImagePayload(
+        name: picked.name.isEmpty ? 'foto-da-duvida.jpg' : picked.name,
+        type: mime,
+        size: bytes.length,
+        dataUrl: 'data:$mime;base64,${base64Encode(bytes)}',
+      );
+      final validation = DoubtInputDraft(image: payload).validate();
+      if (validation != null && validation != emptyDoubtMessage) {
+        setState(() => _error = validation);
+        return;
+      }
+      setState(() => _image = payload);
+    } catch (_) {
+      setState(() => _error = imageOnlyMessage);
+    }
+  }
+
+  void _submit() {
+    final draft = DoubtInputDraft(text: widget.controller.text, image: _image);
+    final validation = draft.validate();
+    if (validation != null) {
+      setState(() => _error = validation);
+      return;
+    }
+    widget.onSubmit(draft);
+    setState(() {
+      _image = null;
+      _error = null;
+      _menuOpen = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1301,10 +1354,49 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Escreva sua dúvida sobre a explicação ou exercício.',
+                  'Escreva sua dúvida ou envie uma foto do exercício, resolução, fórmula, gráfico ou tabela.',
                   style: TextStyle(color: simMuted, fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: 14),
+                if (_image != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: simBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Foto: ${_image!.name}',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: simDark,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _image = null),
+                          child: const Text(
+                            'Remover',
+                            style: TextStyle(
+                              color: simDark,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -1333,6 +1425,64 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                         onChanged: (_) => setState(() => _error = null),
                       ),
                       Positioned(
+                        left: 0,
+                        bottom: 0,
+                        child: GestureDetector(
+                          onTap: widget.busy
+                              ? null
+                              : () => setState(() => _menuOpen = !_menuOpen),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.attach_file,
+                              color: simDark,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_menuOpen)
+                        Positioned(
+                          left: 0,
+                          bottom: 38,
+                          child: Container(
+                            width: 210,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: simBorder),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x26000000),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _DoubtImageMenuLine(
+                                  label: 'Tirar foto',
+                                  onTap: () =>
+                                      unawaited(_pickImage(ImageSource.camera)),
+                                ),
+                                _DoubtImageMenuLine(
+                                  label: 'Escolher imagem',
+                                  onTap: () => unawaited(
+                                    _pickImage(ImageSource.gallery),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Positioned(
                         right: 0,
                         bottom: 0,
                         child: Text(
@@ -1359,16 +1509,7 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: () {
-                      final clean = widget.controller.text.trim();
-                      if (clean.isEmpty) {
-                        setState(
-                          () => _error = 'Escreva sua dúvida antes de enviar.',
-                        );
-                        return;
-                      }
-                      widget.onSubmit(clean);
-                    },
+                    onPressed: widget.busy ? null : _submit,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: simDark,
                       side: const BorderSide(color: simBorder),
@@ -1376,8 +1517,8 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Enviar dúvida',
+                    child: Text(
+                      widget.busy ? 'Enviando...' : 'Enviar dúvida',
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -1386,6 +1527,32 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DoubtImageMenuLine extends StatelessWidget {
+  const _DoubtImageMenuLine({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: simDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
