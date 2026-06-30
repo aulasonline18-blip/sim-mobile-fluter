@@ -13,132 +13,124 @@ visual/funcional do SimWeb para capturar fluxo autenticado com credito infinito.
 - Nao mexi em T00.
 - Nao mexi em T02.
 - Nao mexi no servidor.
-- Nao registrei senha, token ou segredo.
-- Logs OAuth brutos foram removidos porque continham URLs longas de estado OAuth.
+- Nao registrei senha, token ou segredo no repositorio.
+- A senha provisoria foi usada somente na sessao interativa de login Google.
 
 ## Ambiente
 
-- SimWeb local: `/root/sim-work/sim-web`, branch `main`, commit `d113cf4`.
-- SimWeb local foi iniciado com Node 22 temporario:
-  `PATH="$(dirname $(npx -y -p node@22 which node)):$PATH" npx bun run dev --host 0.0.0.0 --port 4177`.
-- O login Google no SimWeb local caiu em `404` na rota `~oauth/initiate`, porque a rota OAuth Lovable Cloud nao existe no dev local.
-- SimWeb publicado usado para tentativa OAuth real:
-  `https://gemini-aid-pal.lovable.app/login?returnTo=%2Fcyber%2Fidioma`.
+- SimWeb publicado usado para captura real:
+  `https://gemini-aid-pal.lovable.app`.
 - Ferramentas de captura:
-  - Playwright temporario em `/tmp/sim-capture-tools`.
-  - `xvfb` instalado na VM para tentar navegador headed.
+  - Playwright temporario fora dos repositorios em `/tmp/sim-capture-tools`.
+  - Xvfb para navegador headed durante o login Google.
+- Storage autenticado temporario salvo fora do repositorio:
+  `/tmp/simweb-google-live-state.json`.
 
 ## Resultado Da Autenticacao
 
 Email usado: `ccrfoodgy1@gmail.com`.
 
-Nao consegui concluir login.
+Login Google concluido apos confirmacao manual pelo celular do usuario.
 
-Tentativas:
+URL autenticada confirmada apos login:
 
-1. SimWeb local, Playwright headless:
-   - Login renderizou.
-   - Clique em Google abriu `~oauth/initiate`.
-   - Resultado: `404 Page not found`.
-
-2. SimWeb publicado, Playwright headless:
-   - Google abriu.
-   - Email foi preenchido.
-   - Resultado: Google recusou com `This browser or app may not be secure`.
-
-3. SimWeb publicado, Playwright headed via Xvfb:
-   - Google abriu.
-   - Email foi preenchido.
-   - Resultado: Google pediu senha.
-   - Nao usei senha.
-
-4. SimWeb publicado, `Try another way`:
-   - Google mostrou opcoes `Enter your password`, `Use your passkey`, `Try another way`.
-   - `Use your passkey` ficou em `Complete sign-in using your passkey`, sem concluir.
-   - Nova tentativa em `Try another way` terminou em bloqueio:
-     `You're trying to sign in on a device Google doesn't recognize... you can't sign in here right now.`
+- `https://gemini-aid-pal.lovable.app/cyber/idioma`
 
 ## Confirmacao De Credito Infinito
 
-Nao confirmada nesta rodada.
+Confirmada visualmente no SimWeb autenticado.
 
-Motivo: o login Google da conta de teste nao foi concluido na VM, entao nao foi
-possivel abrir `/creditos` autenticado nem iniciar aula real com essa conta.
+Provas:
+
+- `docs/interface-screenshots/simweb-live-google/01-portal-auth-390x844.png`
+- `docs/interface-screenshots/simweb-live-google/02-drawer-auth-390x844.png`
+- `docs/interface-screenshots/simweb-live-google/03-creditos-390x844.png`
+- `docs/interface-screenshots/simweb-live-google/capture-log-sanitized.json`
+
+O saldo exibido no portal/drawer foi `999999`, usado como sinal visual da conta
+de credito infinito.
 
 ## Prints Capturados
 
-Tentativa local:
+Diretorio principal:
 
-- `docs/interface-screenshots/simweb-google-auth/01-login-390x844.png`
-- `docs/interface-screenshots/simweb-google-auth/02-google-start-390x844.png`
+- `docs/interface-screenshots/simweb-live-google/`
 
-Tentativa publicada headless:
+Capturas autenticadas principais:
 
-- `docs/interface-screenshots/simweb-google-prod/01-login-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod/02-google-start-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod/03-after-email-390x844.png`
+- Portal: `01-portal-auth-390x844.png`
+- Drawer: `02-drawer-auth-390x844.png`
+- Creditos: `03-creditos-390x844.png`
+- Idioma autenticado: `04-idioma-390x844.png`
+- Objetivo vazio: `05-objetivo-vazio-390x844.png`
+- Anexos base: `06-anexos-base-390x844.png`
+- Anexos menu aberto: `06-anexos-menu-390x844.png`
+- Objetivo preenchido: `07-objetivo-preenchido-390x844.png`
+- Preparacao/curriculo: `08-preparacao-inicio-390x844.png`
+- Placement/nivelamento: `14c-placement-choice-390x844.png`
+- Aula real: `15c-aula-real-390x844.png`
+- Alternativa B selecionada: `16c-alternativa-b-390x844.png`
+- Feedback: `17c-feedback-390x844.png`
+- Duvida: `18c-duvida-390x844.png`
+- Revisao: `20c-revisao-390x844.png`
 
-Tentativa publicada headed:
+Captura auxiliar que provou abertura da aula a partir do placement:
 
-- `docs/interface-screenshots/simweb-google-prod-headed/01-login-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-headed/02-google-start-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-headed/03-after-email-390x844.png`
+- `placement-after-force-click.png`
 
-Tentativa `Try another way`:
+## Logs Da Captura
 
-- `docs/interface-screenshots/simweb-google-prod-headed-alt/01-login-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-headed-alt/02-google-start-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-headed-alt/03-password-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-headed-alt/04-try-another-way-390x844.png`
+Logs sanitizados salvos:
 
-Tentativa passkey:
+- `docs/interface-screenshots/simweb-live-google/capture-log-sanitized.json`
+- `docs/interface-screenshots/simweb-live-google/classroom3-capture-log-sanitized.json`
+- `docs/interface-screenshots/simweb-live-google/attachment-capture-log-sanitized.json`
 
-- `docs/interface-screenshots/simweb-google-prod-passkey/01-selection-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-passkey/02-passkey-390x844.png`
+Evidencias registradas:
 
-Tentativa final de mais metodos:
-
-- `docs/interface-screenshots/simweb-google-prod-moreways/01-selection-390x844.png`
-- `docs/interface-screenshots/simweb-google-prod-moreways/02-moreways-390x844.png`
+- `/api/bootstrap-t00` foi chamado e respondeu no fluxo real.
+- O primeiro item `FQ01` apareceu no fluxo capturado.
+- A rota chegou a `/cyber/curriculo`, `/cyber/placement` e `/cyber/aula`.
+- A tela de objetivo expos o botao `Abrir menu de anexos`.
+- O Web registrou aviso de `StudentLearningStateMirror`, observado como
+  evidencia de runtime do produto publicado, sem alteracao feita.
 
 ## Telas Solicitadas
 
 Capturadas com esta conta:
 
-- Login publico do SimWeb.
-- Fluxo Google ate selecao/desafio de autenticacao.
-- Bloqueios Google.
-
-Nao capturadas com esta conta:
-
-- Portal autenticado.
-- Drawer autenticado.
-- Idioma autenticado.
-- Objetivo vazio autenticado.
-- Anexos autenticado.
-- Objetivo preenchido autenticado.
+- Portal.
+- Drawer.
+- Idioma.
+- Objetivo vazio.
+- Anexos.
+- Objetivo preenchido.
 - Preparacao.
 - Aula real.
 - Duvida.
 - Revisao.
-- Recuperacao.
 - Feedback.
-- Creditos autenticado.
-- Estados reais de erro/loading dentro da aula.
+- Creditos.
+
+Nao capturadas nesta rodada:
+
+- Recuperacao real.
+- Estado de erro natural dentro da aula.
+- Loading isolado alem da preparacao/curriculo.
+- Comparativos Flutter equivalentes tela por tela.
 
 ## Bloqueio Para B
 
-Ainda existe bloqueio para B.
+Ainda existe bloqueio para declarar B.
 
-Para capturar as telas reais autenticadas do SimWeb com essa conta, falta uma
-forma de concluir a autenticacao Google na VM. O Google recusou o ambiente novo
-e nao ofereceu confirmacao por celular suficiente para concluir login; pediu
-senha/passkey ou bloqueou por dispositivo desconhecido.
+Esta rodada capturou a referencia real autenticada do SimWeb, mas B restante
+exige tambem:
 
-Opcoes seguras para continuar:
+- Capturas equivalentes do Flutter.
+- Comparacao visual tela por tela.
+- Correcao das diferencas encontradas.
+- Drawer cloud completo com paridade funcional.
+- Testes e build release passando depois das correcoes.
 
-1. Fornecer uma sessao ja autenticada/exportada do navegador autorizado.
-2. Logar manualmente essa conta em um navegador persistente da VM via VNC/noVNC
-   ou outro acesso visual aprovado.
-3. Usar outro metodo oficial de teste que nao exija senha nem manipule credito.
-
+Status atual: a referencia SimWeb autenticada avancou, mas B ainda nao foi
+atingido.

@@ -1,0 +1,194 @@
+[
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: d89fba1a-d3d4-48ae-a138-ee4871c961b4"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "info",
+    "text": "[cloudPull] StudentLearningState pull complete {studentStates: 22, legacy: tombstones_only}"
+  },
+  {
+    "type": "buttons",
+    "buttons": [
+      {
+        "i": 0,
+        "text": "Abrir menu de anexos",
+        "aria": "Abrir menu de anexos",
+        "html": "<button type=\"button\" aria-label=\"Abrir menu de anexos\" aria-expanded=\"false\" class=\"absolute bottom-3 left-3 p-1.5 rounded-md hover:bg-black/5 transition-colors\" style=\"color: var(--foreground);\"><svg xmlns=\"http://www."
+      },
+      {
+        "i": 1,
+        "text": "Salvar e continuar",
+        "aria": null,
+        "html": "<button class=\"w-full rounded-2xl text-[18px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] flex items-center justify-center gap-3 px-6\" style=\"min-height: 64px; backgro"
+      },
+      {
+        "i": 2,
+        "text": "1/5",
+        "aria": "Tamanho da letra: nível 1 de 5. Toque para aumentar.",
+        "html": "<button aria-label=\"Tamanho da letra: nível 1 de 5. Toque para aumentar.\" class=\"fixed bottom-3 right-3 z-50 glass w-12 h-12 flex flex-col items-center justify-center transition-transform active:scale-95 hover:-translate"
+      }
+    ]
+  },
+  {
+    "type": "body",
+    "text": "Ficha pedagógica\nConte sobre quem vai estudar\nResumo do aluno e do pedido\nCAMPO OBRIGATÓRIO\nEscreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.\nAnexar arquivoTirar fotoEscolher imagem\n98/1500\n\nQuanto mais você contar, melhor o professor adapta a aula: idade, série, matéria, objetivo, prazo, dificuldades, jeito de aprender, atenção, leitura, contas, confiança e qualquer cuidado importante.\n\nComo prefere ser chamado?\nSalvar e continuar\n1/5"
+  }
+]

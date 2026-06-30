@@ -1,0 +1,1077 @@
+[
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/assets/lessons.functions-zaYlfL6F.js"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/assets/credits.functions-BEr9T-Ot.js"
+  },
+  {
+    "type": "pageerror",
+    "text": "Error: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: d89fba1a-d3d4-48ae-a138-ee4871c961b4"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "shot",
+    "name": "01-portal-auth",
+    "url": "https://gemini-aid-pal.lovable.app/",
+    "body": "999999\nMENU\n✕\n＋\nNova aula\nHISTÓRICO DE AULAS\n\nNenhuma aula salva ainda.\n\n⤓ Exportar\n⤒ Importar\nⓘ Status\nSIM\n\nMentor de Inteligência Inteligente\n\nInteligência artificial guiada para aprendizado real - adaptado ao aluno, supervisionada pelo sistema, feita para transformar esforço em progresso real.\n\nComeçar\n\nSIM v1 • Cyber-Premium\n\nAjude a melhorar o SIM.\n\nEnvie sugestões, relate dificuldades e fale direto com o desenvolvedor.\n\n1/5\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "02-drawer-auth",
+    "url": "https://gemini-aid-pal.lovable.app/",
+    "body": "999999\nMENU\n✕\n＋\nNova aula\n⚡\nRecarregar créditos\nRECARREGAR\nHISTÓRICO DE AULAS\n21/21\nExercícios dos conteúdos visto na 6°,7° série cada assunto .matemática Brasil\n58% · 32/55\n✎\n🗑\nRevisar e praticar todos os conteúdos de Matemática do 6º e 7º ano do Ensino Fundamental (Brasil).\n0% · 0/0\n✎\n🗑\nEncontro vocálicos e consonantais,digrafos,separação silábica,acentuação gráfica e ortografia,uso de hífen,estrutura e formação de palavras português Brasil\n60% · 21/35\n✎\n🗑\nRazão e proporção, matemática Brasil\n100% · 5/5\n✎\n🗑\nPoligonos matemática Brasil\n100% · 24/24\n✎\n🗑\nEquação do 1° grau, geometria planas matemática ensino fundamental Brasil\n100% · 10/10\n✎\n🗑\nFração:comparação,fração de um número,adição e subtração,multiplicação e divisão,uso do mdc e mmc na fração. Matemática Brasil\n100% · 25/25\n✎\n🗑\nAbordagem da fração: soma,subtração,divisão e multiplicação matemática Brasil\n100% · 5/5\n✎\n🗑\nprim"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/creditos"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/assets/credits.functions-BEr9T-Ot.js"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/assets/creditos-D6dvPcrc.js"
+  },
+  {
+    "type": "pageerror",
+    "text": "Error: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: d89fba1a-d3d4-48ae-a138-ee4871c961b4"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "shot",
+    "name": "03-creditos",
+    "url": "https://gemini-aid-pal.lovable.app/creditos",
+    "body": "Meus créditos\n\nSALDO ATUAL\n\n999,999\ncréditos\n\n999999 ganhos · 0 usados\n\nRECARREGAR\n\n1 aula = 3 créditos · pagamento seguro em USD\n\n100 créditos\ncerca de 33 aulas\n200 créditos\ncerca de 66 aulas\n500 créditos\ncerca de 166 aulas\n1/5"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: d89fba1a-d3d4-48ae-a138-ee4871c961b4"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "shot",
+    "name": "04-idioma",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/idioma",
+    "body": "Step 1 of 5\nChoose your language\n\nSIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.\n\n🇺🇸\nEnglish · English\n🇧🇷\nPortuguese · Português\n🇪🇸\nSpanish · Español\n🇫🇷\nFrench · Français\n🇯🇵\nJapanese · 日本語\n🌐\nOther language\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "05-objetivo-vazio",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/objeto",
+    "body": "Step 1 of 5\nChoose your language\n\nSIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.\n\n🇺🇸\nEnglish · English\n🇧🇷\nPortuguese · Português\n🇪🇸\nSpanish · Español\n🇫🇷\nFrench · Français\n🇯🇵\nJapanese · 日本語\n🌐\nOther language\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "07-objetivo-preenchido",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/objeto",
+    "body": "Ficha pedagógica\nConte sobre quem vai estudar\nResumo do aluno e do pedido\nCAMPO OBRIGATÓRIO\nEscreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.\n114/1500\n\nQuanto mais você contar, melhor o professor adapta a aula: idade, série, matéria, objetivo, prazo, dificuldades, jeito de aprender, atenção, leitura, contas, confiança e qualquer cuidado importante.\n\nComo prefere ser chamado?\nSalvar e continuar\n1/5"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_PAYLOAD] {freeTextChars: 114, attachmentsCount: 0, totalExtractedChars: 0}"
+  },
+  {
+    "type": "console",
+    "level": "error",
+    "text": "Error: <svg> attribute height: Expected length, \"auto\"."
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/api/bootstrap-t00"
+  },
+  {
+    "type": "shot",
+    "name": "08-preparacao-inicio",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/curriculo",
+    "body": "Preparando seu perfil…\n\nEnquanto sua aula é preparada…\n\nO SIM está dividindo o tópico em passos menores.\n\nA IA não vai apenas responder.\n\nEla vai tentar ensinar do melhor jeito para você.\n\nSe algo parecer difícil, o caminho pode mudar.\n\nSe você errar, o erro vira uma pista.\n\nSe você entender, o SIM te ajuda a avançar.\n\nTodo dia, a IA fica mais poderosa.\n\nO SIM traz esse poder para o estudo.\n\nEstudar pode ficar mais leve, claro e eficiente.\n\nSua aula está quase pronta.\n\nRespire. Aprender pode ser mais fácil do que você imagina.\n\nPreparando…\n\nVocê poderá pular a animação assim que a aula ficar pronta.\n\n1/5"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_PROFILE_RECEIVED] {source: t00_profile, mapped: false}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 1, marker: FQ01}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_FIRST_ITEM_RECEIVED] {marker: FQ01}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_FIRST_ITEM_RECEIVED_AT] {lessonLocalId: cyber-1l5l1uu, marker: FQ01, ts: 1782800923287, elapsedMs: 6093}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 1, state.curriculumStatus.status: streaming, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 1}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 1}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T02_MATERIAL_QUEUE_STARTED] {key: t02|lesson|cyber-1l5l1uu|FQ01|1|session|Portuguese|iniciante (nível incerto, ajustar), source: lesson, priority: active}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[Module 2] Payload enviado: {\"item_name\":\"Identificar a estrutura da função f\",\"stable_lang\":\"Portuguese\",\"academic_level\":\"iniciante (nível incerto, ajustar)\",\"layer\":1,\"err_count\":0,\"mode\":\"session\",\"conquest_history\":[],\"marker\":\"FQ01\",\"student_profile_internal\":{\"source\":\"T00\",\"profile\":\"INPUT CLASSIFICATION: A\\nSECONDARY CLASSIFICATION: NONE\\nMATERIAL RECEIVED: Free text\\nVISUAL/PDF/READABILITY: N/A\\nSTUDENT OBJECTIVE: Estudar função quadrática para prova, focando em vértice, raízes, gráfic"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 2, marker: FQ02}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 2, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 2}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 2}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 3, marker: FQ03}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 3, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 3}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 3}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 4, marker: FQ04}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 4, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 4}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 4}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 5, marker: FQ05}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 5, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 5}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 5}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 6, marker: FQ06}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 6, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 6}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 6}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 7, marker: FQ07}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 7, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 7}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 7}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 8, marker: FQ08}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 8, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 8}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 8}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 9, marker: FQ09}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 9, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 9}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 9}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 10, marker: FQ10}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 10, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 10}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 10}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 11, marker: FQ11}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 11, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 11}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 11}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 12, marker: FQ12}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 12, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 12}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 12}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 13, marker: FQ13}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 13, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 13}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 13}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 14, marker: FQ14}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 14, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 14}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 14}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 15, marker: FQ15}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 15, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 15}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 15}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 16, marker: FQ16}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 16, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 16}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 16}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 17, marker: FQ17}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 17, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 17}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 17}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 18, marker: FQ18}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 18, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 18}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 18}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 19, marker: FQ19}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 19, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 19}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 19}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 20, marker: FQ20}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 20, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 20}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 20}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 21, marker: FQ21}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 21, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 21}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 21}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 22, marker: FQ22}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 22, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 22}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 22}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[Module 2] RAW_GEMINI_RESPONSE (tentativa 1, finishReason=stop): {\n  \"explanation\": \"Uma função quadrática (ou do 2º grau) é reconhecida pela sua lei de formação f(x) = ax² + bx + c. O segredo para identificá-la é observar o maior expoente da variável x: ele deve ser obrigatoriamente 2. Os números 'a', 'b' e 'c' são os coeficientes, onde o 'a' nunca pode ser zero, pois é ele quem garante que a função seja do 2º grau e define se a parábola está voltada para cima ou para baixo.\",\n  \"question\": \"Qu"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T02_MATERIAL_QUEUE_READY] {key: t02|lesson|cyber-1l5l1uu|FQ01|1|session|Portuguese|iniciante (nível incerto, ajustar), source: lesson}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[AUDIT] [VISUAL_ROUTER_N2] {key: lesson:v1:m2:v2:cyber-1l5l1uu:Portuguese:iniciante (nível in, t02Suggested: software, verdict: svg, reason: N2_LOCKED_DOMAIN_SVG, matched: Array(1)}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T02_MATERIAL_QUEUE_STARTED] {key: t02|lesson|cyber-1l5l1uu|FQ01|2|session|Portuguese|iniciante (nível incerto, ajustar), source: lesson, priority: active}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[Module 2] Payload enviado: {\"item_name\":\"Identificar a estrutura da função f\",\"stable_lang\":\"Portuguese\",\"academic_level\":\"iniciante (nível incerto, ajustar)\",\"layer\":2,\"err_count\":0,\"mode\":\"session\",\"conquest_history\":[],\"marker\":\"FQ01\",\"student_profile_internal\":{\"source\":\"T00\",\"profile\":\"INPUT CLASSIFICATION: A\\nSECONDARY CLASSIFICATION: NONE\\nMATERIAL RECEIVED: Free text\\nVISUAL/PDF/READABILITY: N/A\\nSTUDENT OBJECTIVE: Estudar função quadrática para prova, focando em vértice, raízes, gráfic"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T02_MATERIAL_QUEUE_STARTED] {key: t02|lesson|cyber-1l5l1uu|FQ01|3|session|Portuguese|iniciante (nível incerto, ajustar), source: lesson, priority: active}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[Module 2] Payload enviado: {\"item_name\":\"Identificar a estrutura da função f\",\"stable_lang\":\"Portuguese\",\"academic_level\":\"iniciante (nível incerto, ajustar)\",\"layer\":3,\"err_count\":0,\"mode\":\"session\",\"conquest_history\":[],\"marker\":\"FQ01\",\"student_profile_internal\":{\"source\":\"T00\",\"profile\":\"INPUT CLASSIFICATION: A\\nSECONDARY CLASSIFICATION: NONE\\nMATERIAL RECEIVED: Free text\\nVISUAL/PDF/READABILITY: N/A\\nSTUDENT OBJECTIVE: Estudar função quadrática para prova, focando em vértice, raízes, gráfic"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 23, marker: FQ23}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 23, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 23}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 23}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 24, marker: FQ24}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 24, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 24}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 24}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_ITEM_RECEIVED] {order: 25, marker: FQ25}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_SLS_AFTER_PARTIAL_WRITE] {lessonLocalId: cyber-1l5l1uu, state.curriculo.items.length: 25, state.curriculumStatus.status: partial_ready, state.bootstrap_engine: StudentExperienceEngineV2:T00, stateCurriculoItemsLength: 25}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_CURRICULUM_PARTIAL_READY] {count: 25}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T00_PROFILE_RECEIVED] {source: t00_profile, mapped: true}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[Module 2] RAW_GEMINI_RESPONSE (tentativa 1, finishReason=stop): {\n  \"explanation\": \"Para identificar se uma função é quadrática (2º grau), ela deve seguir a estrutura f(x) = ax² + bx + c. O segredo está no expoente: o maior expoente da variável x deve ser obrigatoriamente 2. Além disso, o coeficiente 'a' (quem acompanha o x²) nunca pode ser zero, pois isso 'mataria' o termo quadrático e transformaria a função em uma reta (1º grau). Os termos 'bx' e 'c' podem ser zero, mas o 'ax²' é a identidade"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T02_MATERIAL_QUEUE_READY] {key: t02|lesson|cyber-1l5l1uu|FQ01|2|session|Portuguese|iniciante (nível incerto, ajustar), source: lesson}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[AUDIT] [VISUAL_ROUTER_N2] {key: lesson:v1:m2:v2:cyber-1l5l1uu:Portuguese:iniciante (nível in, t02Suggested: software, verdict: svg, reason: N2_KEYWORDS_SVG, matched: Array(4)}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[Module 2] RAW_GEMINI_RESPONSE (tentativa 1, finishReason=stop): {\n  \"explanation\": \"Para modelar situações reais com funções quadráticas, precisamos identificar os coeficientes a, b e c na forma f(x) = ax² + bx + c. O coeficiente 'a' acompanha o termo ao quadrado e define a concavidade; o 'b' acompanha o x; e o 'c' é o termo independente (onde o gráfico corta o eixo y). Em problemas de trajetória, como o lançamento de uma bola, o termo ax² geralmente representa a gravidade, bx a velocidade inic"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[T02_MATERIAL_QUEUE_READY] {key: t02|lesson|cyber-1l5l1uu|FQ01|3|session|Portuguese|iniciante (nível incerto, ajustar), source: lesson}"
+  },
+  {
+    "type": "shot",
+    "name": "09-aula-ou-erro",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/placement",
+    "body": "Nivelamento\nPor onde você quer começar?\n\nVocê pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.\n\nComeçar do início\nFazer teste rápido\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "10-aula-real",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/placement",
+    "body": "Nivelamento\nPor onde você quer começar?\n\nVocê pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.\n\nComeçar do início\nFazer teste rápido\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "11-alternativa-b",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/placement",
+    "body": "Nivelamento\nPor onde você quer começar?\n\nVocê pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.\n\nComeçar do início\nFazer teste rápido\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "12-feedback",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/placement",
+    "body": "Nivelamento\nPor onde você quer começar?\n\nVocê pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.\n\nComeçar do início\nFazer teste rápido\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "13-duvida",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/placement",
+    "body": "Nivelamento\nPor onde você quer começar?\n\nVocê pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.\n\nComeçar do início\nFazer teste rápido\n1/5"
+  },
+  {
+    "type": "missing_natural_screen",
+    "screen": "revisao",
+    "reason": "button_not_visible"
+  },
+  {
+    "type": "missing_natural_screen",
+    "screen": "recuperacao",
+    "reason": "not_naturally_triggered"
+  }
+]

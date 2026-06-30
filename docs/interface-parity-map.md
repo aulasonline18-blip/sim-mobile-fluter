@@ -9,7 +9,7 @@ Base da auditoria: 2026-06-30.
   - `docs/interface-screenshots/simweb/portal-390x844.png`
   - `docs/interface-screenshots/simweb/login-390x844.png`
   - `docs/interface-screenshots/simweb/idioma-390x844.png` (rota protegida/sem sessao renderizou branco; referencia visual continua pelo codigo ate haver sessao autenticada capturavel).
-- Capturas autenticadas reais do SimWeb obtidas em 390x844:
+- Capturas autenticadas reais antigas do SimWeb obtidas em 390x844:
   - `docs/interface-screenshots/simweb-auth/portal-auth-390x844.png`
   - `docs/interface-screenshots/simweb-auth/drawer-auth-390x844.png`
   - `docs/interface-screenshots/simweb-auth/idioma-auth-390x844.png`
@@ -19,7 +19,23 @@ Base da auditoria: 2026-06-30.
   - `docs/interface-screenshots/simweb-auth/preparacao-start-390x844.png`
   - `docs/interface-screenshots/simweb-auth/aula-or-error-390x844.png`
   - Log: `docs/interface-screenshots/simweb-auth/capture-log.json`.
-- Resultado real da captura autenticada: o fluxo Web chegou a `/cyber/curriculo`, chamou `/api/bootstrap-t00` e recebeu `503` por credito insuficiente (`Seus creditos acabaram`). Por isso aula, duvida, revisao e recuperacao autenticadas nao foram capturadas nesta conta.
+- Capturas autenticadas reais do SimWeb com a conta Google de teste em 390x844:
+  - `docs/interface-screenshots/simweb-live-google/01-portal-auth-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/02-drawer-auth-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/03-creditos-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/04-idioma-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/05-objetivo-vazio-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/06-anexos-menu-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/07-objetivo-preenchido-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/08-preparacao-inicio-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/14c-placement-choice-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/15c-aula-real-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/16c-alternativa-b-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/17c-feedback-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/18c-duvida-390x844.png`
+  - `docs/interface-screenshots/simweb-live-google/20c-revisao-390x844.png`
+  - Logs: `docs/interface-screenshots/simweb-live-google/capture-log-sanitized.json`, `docs/interface-screenshots/simweb-live-google/classroom3-capture-log-sanitized.json`, `docs/interface-screenshots/simweb-live-google/attachment-capture-log-sanitized.json`.
+- Resultado real da captura Google autenticada: o fluxo Web mostrou saldo `999999`, chamou `/api/bootstrap-t00`, recebeu item `FQ01`, passou por curriculo/placement/aula e permitiu capturar aula, feedback, duvida e revisao. Recuperacao real e comparativos Flutter equivalentes ainda nao foram capturados.
 
 ## Inventario De Telas E Estados SimWeb
 
@@ -80,11 +96,11 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 
 ## Diferencas Criticas Ja Encontradas
 
-1. Capturas autenticadas reais do SimWeb existem para portal, drawer, idioma, objetivo/anexos e erro de preparacao por credito.
-2. Aula, duvida, revisao e recuperacao do SimWeb nao foram capturadas porque a conta autenticada criada para auditoria recebeu `503` em `/api/bootstrap-t00` por credito insuficiente.
+1. Capturas autenticadas reais do SimWeb existem para portal, drawer, creditos, idioma, objetivo/anexos, preparacao, placement, aula, feedback, duvida e revisao.
+2. Recuperacao real ainda nao foi capturada nesta rodada; aula, duvida e revisao foram capturadas com a conta Google de teste com saldo `999999`.
 3. Capturas Flutter equivalentes ainda nao existem: `flutter test` com screenshot travou no ambiente headless e `flutter run -d web-server` renderizou tela branca por erro do Passkeys Web SDK ausente. Configurar `web/`/Passkeys seria mudanca de produto e nao foi feita.
 4. Drawer cloud Flutter esta funcionalmente coberto por teste widget para listar, deduplicar, abrir, renomear e apagar; falta prova visual equivalente.
-5. Sem capturas Flutter comparativas e sem aula Web autenticada, nenhuma tela pode ser marcada `APROVADO`.
+5. Sem capturas Flutter comparativas tela por tela, nenhuma tela pode ser marcada `APROVADO`.
 
 ## Contrato De Paridade Do Drawer SimWeb
 
@@ -137,7 +153,9 @@ Tentativas executadas em 2026-06-30:
 - Ajuste autorizado de captura autenticada, sem alterar produto SimWeb: instalei Playwright temporario fora dos repositorios em `/tmp/sim-capture-tools` (`npm install playwright@latest --no-save`).
 - Cadastro autenticado real criado pelo fluxo Web em `/login` e storage salvo em `/tmp/simweb-auth-state.json`. A captura autenticada confirmou token Supabase real e rota protegida `/cyber/idioma`.
 - Capturas autenticadas Playwright geradas em `docs/interface-screenshots/simweb-auth/`.
-- Bloqueio real da aula Web: ao salvar objetivo, o Web chamou `/api/bootstrap-t00` e recebeu `503`; a tela exibiu `Nao consegui preparar agora. Seus creditos acabaram. Compre creditos para continuar estudando.`. Portanto aula/duvida/revisao/recuperacao nao foram capturadas com esta conta.
+- Captura Google autenticada com `ccrfoodgy1@gmail.com`: login concluido por confirmacao no celular do usuario; saldo `999999` confirmado visualmente; fluxo real capturado ate curriculo, placement, aula, feedback, duvida e revisao em `docs/interface-screenshots/simweb-live-google/`.
+- O menu de anexos foi capturado em `/cyber/objeto` com o botao Web `Abrir menu de anexos`.
+- Recuperacao real ainda nao foi capturada.
 - Tentativa de captura Flutter por `flutter test` com arquivo temporario de screenshot: bloqueada, a chamada de captura travou o harness headless. O arquivo temporario foi removido e nao houve alteracao de produto.
 - Tentativa de captura Flutter por `flutter run -d web-server --web-port 5080`: o servidor subiu, mas a tela ficou branca. Console Playwright registrou `Passkeys Web SDK not loaded` e `TypeError: Cannot read properties of undefined (reading 'init')`. Nao configurei `web/` nem bundle de Passkeys porque isso seria alteracao de produto fora do escopo.
 

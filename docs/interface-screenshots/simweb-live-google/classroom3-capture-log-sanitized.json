@@ -1,0 +1,238 @@
+[
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[useSimRealtime] canal StudentLearningState ativo: d89fba1a-d3d4-48ae-a138-ee4871c961b4"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "console",
+    "level": "warning",
+    "text": "[StudentLearningStateMirror] writeStudentLearningState falhou TypeError: Cannot read properties of undefined (reading 'slice')\n    at dc (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:85260)\n    at TS (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:92476)\n    at GM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:93566)\n    at async KM (https://gemini-aid-pal.lovable.app/assets/index-BYFGoxzQ.js:55:94024)"
+  },
+  {
+    "type": "shot",
+    "name": "14c-placement-choice",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/placement",
+    "body": "Nivelamento\nPor onde você quer começar?\n\nVocê pode começar do início, ou fazer um teste rápido pra eu já te colocar no ponto certo.\n\nComeçar do início\nFazer teste rápido\n1/5"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/assets/credits.functions-BEr9T-Ot.js"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/assets/lessons.functions-zaYlfL6F.js"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[AUDIT] [S12_DECISION] {key: lesson:v1:m2:v2:cyber-1l5l1uu:Portuguese:iniciante (nível in, priority: active, generate: true, hasSvg: false, reason: S12_SOFTWARE_ROUTE_FROM_PROMPT}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[AUDIT] [VISUAL_ROUTER_N2] {key: lesson:v1:m2:v2:cyber-1l5l1uu:Portuguese:iniciante (nível in, t02Suggested: software, verdict: svg, reason: N2_LOCKED_DOMAIN_SVG, matched: Array(1)}"
+  },
+  {
+    "type": "shot",
+    "name": "15c-aula-real",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/aula",
+    "body": "MENU\n✕\n＋\nNova aula\nHISTÓRICO DE AULAS\n\nNenhuma aula salva ainda.\n\n⤓ Exportar\n⤒ Importar\nⓘ Status\nITEM 1 // 25 · CAMADA 1/3\nREVISÃO\nTEORIA\nFQ01 · IDENTIFICAR A ESTRUTURA DA FUNÇÃO F(X) = AX² + BX + C E O PAPEL DO COEFICIENTE 'A'.\n\nUma função quadrática (ou do 2º grau) é reconhecida pela sua lei de formação f(x) = ax² + bx + c. O segredo para identificá-la é observar o maior expoente da variável x: ele deve ser obrigatoriamente 2. Os números 'a', 'b' e 'c' são os coeficientes\n\n1/5"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[AUDIT] [VISUAL_ROUTER_N3] {key: lesson:v1:m2:v2:cyber-1l5l1uu:Portuguese:iniciante (nível in, verdict: svg, reason: The request asks for a mathematical structure diag…nted by precise geometric shapes and text labels., hasSvg: true}"
+  },
+  {
+    "type": "console",
+    "level": "log",
+    "text": "[AUDIT] [VISUAL_ROUTER_SVG_DELIVERED] {key: lesson:v1:m2:v2:cyber-1l5l1uu:Portuguese:iniciante (nível in}"
+  },
+  {
+    "type": "shot",
+    "name": "16c-alternativa-b",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/aula",
+    "body": "MENU\n✕\n＋\nNova aula\nHISTÓRICO DE AULAS\n\nNenhuma aula salva ainda.\n\n⤓ Exportar\n⤒ Importar\nⓘ Status\nITEM 1 // 25 · CAMADA 1/3\nREVISÃO\nTEORIA\nFQ01 · IDENTIFICAR A ESTRUTURA DA FUNÇÃO F(X) = AX² + BX + C E O PAPEL DO COEFICIENTE 'A'.\n\nUma função quadrática (ou do 2º grau) é reconhecida pela sua lei de formação f(x) = ax² + bx + c. O segredo para identificá-la é observar o maior expoente da variável x: ele deve ser obrigatoriamente 2. Os números 'a', 'b' e 'c' são os coeficientes, onde o 'a' nunca pode ser zero, pois é ele quem garante que a função seja do 2º grau e define se a parábola está voltada para cima ou para baixo.\n\nDESAFIO\nQual das seguintes expressões representa uma função quadrática (do 2º grau)?\nA\nf(x) = 3x + 5\nB\nf(x) = 2x² - 4x + 1\nC\nf(x) = x³ + x² - 2\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "17c-feedback",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/aula",
+    "body": "MENU\n✕\n＋\nNova aula\nHISTÓRICO DE AULAS\n\nNenhuma aula salva ainda.\n\n⤓ Exportar\n⤒ Importar\nⓘ Status\nITEM 1 // 25 · CAMADA 1/3\nREVISÃO\nTEORIA\nFQ01 · IDENTIFICAR A ESTRUTURA DA FUNÇÃO F(X) = AX² + BX + C E O PAPEL DO COEFICIENTE 'A'.\n\nUma função quadrática (ou do 2º grau) é reconhecida pela sua lei de formação f(x) = ax² + bx + c. O segredo para identificá-la é observar o maior expoente da variável x: ele deve ser obrigatoriamente 2. Os números 'a', 'b' e 'c' são os coeficientes, onde o 'a' nunca pode ser zero, pois é ele quem garante que a função seja do 2º grau e define se a parábola está voltada para cima ou para baixo.\n\nDESAFIO\nQual das seguintes expressões representa uma função quadrática (do 2º grau)?\nA\nf(x) = 3x + 5\nB\nf(x) = 2x² - 4x + 1\nC\nf(x) = x³ + x² - 2\n1/5"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "url": "https://gemini-aid-pal.lovable.app/api/generate-lesson-audio"
+  },
+  {
+    "type": "shot",
+    "name": "18c-duvida",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/aula",
+    "body": "MENU\n✕\n＋\nNova aula\nHISTÓRICO DE AULAS\n\nNenhuma aula salva ainda.\n\n⤓ Exportar\n⤒ Importar\nⓘ Status\nITEM 1 // 25 · CAMADA 1/3\nREVISÃO\nTEORIA\nFQ01 · IDENTIFICAR A ESTRUTURA DA FUNÇÃO F(X) = AX² + BX + C E O PAPEL DO COEFICIENTE 'A'.\n\nUma função quadrática (ou do 2º grau) é reconhecida pela sua lei de formação f(x) = ax² + bx + c. O segredo para identificá-la é observar o maior expoente da variável x: ele deve ser obrigatoriamente 2. Os números 'a', 'b' e 'c' são os coeficientes, onde o 'a' nunca pode ser zero, pois é ele quem garante que a função seja do 2º grau e define se a parábola está voltada para cima ou para baixo.\n\nDESAFIO\nQual das seguintes expressões representa uma função quadrática (do 2º grau)?\nA\nf(x) = 3x + 5\nB\nf(x) = 2x² - 4x + 1\nC\nf(x) = x³ + x² - 2\n1/5"
+  },
+  {
+    "type": "shot",
+    "name": "20c-revisao",
+    "url": "https://gemini-aid-pal.lovable.app/cyber/aula",
+    "body": "Quantas questões de revisão?\n5\n10\nVoltar para aula\n1/5"
+  },
+  {
+    "type": "missing_natural_screen",
+    "screen": "recuperacao",
+    "reason": "not_naturally_triggered_after_first_answer"
+  }
+]
