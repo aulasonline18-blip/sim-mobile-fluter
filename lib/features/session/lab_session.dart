@@ -1,10 +1,61 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class LabSession extends ChangeNotifier {
   LabSession({
     StudentStateStore? canonicalStore,
     this._attachmentClient,
-    this._prefs,
+    this.prefs,
   }) : canonicalStore =
            canonicalStore ??
            StudentStateStore(local: MemoryStudentStateLocalStorage()) {
@@ -14,7 +65,7 @@ class LabSession extends ChangeNotifier {
     lessonUiState.addListener(_notifyFromChild);
   }
 
-  final SharedPreferences? _prefs;
+  final SharedPreferences? prefs;
   final StudentStateStore? canonicalStore;
   final SimServerAttachmentClient? _attachmentClient;
 
@@ -32,7 +83,7 @@ class LabSession extends ChangeNotifier {
   late final SimOrganismProvider simOrganismProvider = SimOrganismProvider(
     canonicalStore: canonicalStore!,
     aiConfig: _serverConfig(),
-    prefs: _prefs!,
+    prefs: prefs!,
   );
   SimOrganism? _activeOrganism;
   LessonRuntimeSnapshot? aulaSnapshot;
@@ -251,7 +302,7 @@ class LabSession extends ChangeNotifier {
   Future<void> launchExperience() async {
     final id = lessonLocalId;
     if (id == null || id.trim().isEmpty) return;
-    if (_prefs == null && route == '/cyber/curriculo') return;
+    if (prefs == null && route == '/cyber/curriculo') return;
     if (entryStatus == 't00_running' ||
         entryStatus == 't02_running' ||
         entryStatus == 'primeira_aula_pronta') {
@@ -473,8 +524,8 @@ class LabSession extends ChangeNotifier {
 
   LessonContent _devLessonContent() => const LessonContent(
     explanation:
-        'Vamos estudar frações equivalentes com uma explicação curta antes do desafio.',
-    question: 'Qual alternativa representa uma fração equivalente a 1/2?',
+        'Vamos estudar fraÃ§Ãµes equivalentes com uma explicaÃ§Ã£o curta antes do desafio.',
+    question: 'Qual alternativa representa uma fraÃ§Ã£o equivalente a 1/2?',
     options: {
       AnswerLetter.A: '1/3',
       AnswerLetter.B: '2/4',
@@ -520,7 +571,7 @@ class LabSession extends ChangeNotifier {
       history: const [],
       conteudo: content,
       itemMarker: 'M-1',
-      itemText: 'Frações equivalentes',
+      itemText: 'FraÃ§Ãµes equivalentes',
     );
   }
 
@@ -530,7 +581,7 @@ class LabSession extends ChangeNotifier {
     aulaRuntimeError = null;
     notifyListeners();
     try {
-      if (_prefs == null) {
+      if (prefs == null) {
         aulaSnapshot = _devAulaSnapshot();
         return;
       }
@@ -576,7 +627,7 @@ class LabSession extends ChangeNotifier {
       (value) => value.name == letter,
       orElse: () => AnswerLetter.A,
     );
-    if (_prefs == null) {
+    if (prefs == null) {
       aulaSnapshot = _devAulaSnapshot(phase: ClassroomPhase.expanded(answer));
       notifyListeners();
       return;
@@ -594,7 +645,7 @@ class LabSession extends ChangeNotifier {
       3 => DecisionSignal.three,
       _ => DecisionSignal.one,
     };
-    if (_prefs == null) {
+    if (prefs == null) {
       aulaSnapshot = _devAulaSnapshot(
         phase: ClassroomPhase.completed(
           message: 'aula_fb_correct',
@@ -682,10 +733,10 @@ class LabSession extends ChangeNotifier {
       );
       audioPlaying = started;
       if (!started) {
-        audioError = 'Áudio ainda não está disponível.';
+        audioError = 'Ãudio ainda nÃ£o estÃ¡ disponÃ­vel.';
       }
     } catch (_) {
-      audioError = 'Não foi possível preparar o áudio agora.';
+      audioError = 'NÃ£o foi possÃ­vel preparar o Ã¡udio agora.';
       audioPlaying = false;
     } finally {
       audioLoading = false;
@@ -732,4 +783,7 @@ String _deriveLessonLocalId(String objetivo, String idioma) {
   final unsigned = h & 0xFFFFFFFF;
   return 'cyber-${unsigned.toRadixString(36)}';
 }
+
+
+
 

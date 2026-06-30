@@ -1,55 +1,24 @@
-import 'dart:async';
-import 'dart:io';
-import 'dart:ui';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'sim/billing/sim_server_billing_clients.dart';
+import 'core/utils/sim_constants.dart';
+import 'features/auth/login_screen.dart';
+import 'features/billing/billing_and_simple_pages.dart';
+import 'features/classroom/aula_screen.dart';
+import 'features/onboarding/onboarding_screens.dart';
+import 'features/onboarding/preparation_and_placement.dart';
+import 'features/portal/portal_flow.dart';
+import 'features/session/lab_session.dart';
 import 'sim/cloud/sim_server_cloud_functions.dart';
 import 'sim/cloud/supabase_flutter_session_provider.dart';
 import 'sim/cloud/supabase_student_state_cloud_storage.dart';
-import 'sim/config/sim_environment.dart';
 import 'sim/external_ai/sim_ai_server_config.dart';
-import 'sim/external_ai/sim_server_ai_clients.dart';
-import 'sim/external_ai/sim_server_attachment_client.dart';
-import 'sim/classroom/classroom_models.dart';
-import 'sim/classroom/lesson_runtime_engine.dart';
-import 'sim/classroom/lesson_main_view_model.dart';
-import 'sim/experience/student_experience_types.dart';
-import 'sim/organism/sim_organism.dart';
-import 'sim/organism/sim_organism_provider.dart';
-import 'session/auth_session.dart';
-import 'session/entry_form_state.dart';
-import 'session/lesson_ui_state.dart';
-import 'session/navigation_state.dart';
-import 'sim/lesson/lesson_models.dart';
-import 'sim/media/audio_core.dart';
-import 'sim/media/audio_preference.dart';
-import 'sim/media/lesson_audio_controller.dart';
-import 'sim/media/student_lesson_media_service.dart';
 import 'sim/state/shared_prefs_state_storage.dart';
-import 'sim/state/student_learning_state.dart';
 import 'sim/state/student_state_store.dart';
-import 'sim/ui/sim_i18n.dart';
-import 'sim/ui/widgets/cyber_step_shell.dart';
-import 'sim/ui/widgets/sim_preparation_experience.dart';
-import 'sim/ui/widgets/sim_typewriter.dart';
-import 'sim/auxiliary/aux_room_models.dart';
-import 'sim/ui/widgets/doubt_progress_bar.dart';
 
-part 'app_shell/sim_constants.dart';
-part 'app_shell/lab_session.dart';
-part 'app_shell/portal_flow.dart';
-part 'app_shell/login_screen.dart';
-part 'app_shell/onboarding_screens.dart';
-part 'app_shell/preparation_and_placement.dart';
-part 'app_shell/aula_screen.dart';
-part 'app_shell/aux_room_screens.dart';
-part 'app_shell/aula_widgets.dart';
-part 'app_shell/billing_and_simple_pages.dart';
-part 'app_shell/shared_widgets.dart';
+export 'features/session/lab_session.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -161,3 +130,5 @@ class _SimAppState extends State<SimApp> {
     );
   }
 }
+
+

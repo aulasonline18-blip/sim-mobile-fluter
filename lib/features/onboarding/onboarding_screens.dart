@@ -1,5 +1,56 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class IdiomaScreen extends StatefulWidget {
   const IdiomaScreen({required this.session, super.key});
 
@@ -17,7 +68,7 @@ class _IdiomaScreenState extends State<IdiomaScreen> {
       widget.session.chooseLanguage(code, name);
       Future.delayed(const Duration(milliseconds: 160), () {
         if (mounted) {
-          // navigation is handled by session state change — just trigger it
+          // navigation is handled by session state change â€” just trigger it
         }
       });
     }
@@ -43,7 +94,7 @@ class _IdiomaScreenState extends State<IdiomaScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'SIM will use this language for the app, lessons, explanations, images, audio and all guidance — from this point onward.',
+            'SIM will use this language for the app, lessons, explanations, images, audio and all guidance â€” from this point onward.',
             style: TextStyle(color: simMuted, fontSize: 18, height: 1.45),
           ),
           const SizedBox(height: 28),
@@ -60,7 +111,7 @@ class _IdiomaScreenState extends State<IdiomaScreen> {
               code: 'other',
               name: 'Other language',
               native: '',
-              flag: '🌐',
+              flag: 'ðŸŒ',
             ),
             active: session.selectedLanguageCode == 'other',
             onTap: () => _pick('other', session.otherLanguage.trim()),
@@ -120,7 +171,7 @@ class _OtherLanguageBoxState extends State<OtherLanguageBox> {
             controller: controller,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: 'e.g. Italian, German, Arabic, Kiribati…',
+              hintText: 'e.g. Italian, German, Arabic, Kiribatiâ€¦',
               border: InputBorder.none,
             ),
             style: const TextStyle(color: simDark, fontSize: 18),
@@ -273,7 +324,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Campo obrigatório',
+                            'Campo obrigatÃ³rio',
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 12,
@@ -283,7 +334,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            'Escreva o que você quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
+                            'Escreva o que vocÃª quer estudar. Se anexar um arquivo ou foto, explique o que deseja aprender com ele.',
                             style: TextStyle(
                               color: simMuted,
                               fontSize: 13,
@@ -344,7 +395,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                           style: const TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: _kMono,
+                            fontFamily: kMono,
                           ),
                         ),
                       ),
@@ -359,7 +410,7 @@ class _ObjetoScreenState extends State<ObjetoScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Conte do seu jeito: idade, série, matéria, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
+                  'Conte do seu jeito: idade, sÃ©rie, matÃ©ria, tema, prova, prazo, dificuldade ou foto/lista que precisa estudar.',
                   style: TextStyle(color: simMuted, fontSize: 13, height: 1.35),
                 ),
                 if (widget.session.attachments.isNotEmpty &&
@@ -527,10 +578,10 @@ class AttachmentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = attachment.type.startsWith('image/')
-        ? '📷'
+        ? 'ðŸ“·'
         : attachment.type == 'application/pdf'
-        ? '📄'
-        : '📝';
+        ? 'ðŸ“„'
+        : 'ðŸ“';
     final suffix =
         attachment.status == 'uploading' || attachment.status == 'processing'
         ? ' lendo...'
@@ -555,7 +606,7 @@ class AttachmentChip extends StatelessWidget {
           InkWell(
             onTap: onRemove,
             child: const Text(
-              '✕',
+              'âœ•',
               style: TextStyle(color: simMuted, fontSize: 13),
             ),
           ),
@@ -628,5 +679,7 @@ class MenuLine extends StatelessWidget {
     );
   }
 }
+
+
 
 

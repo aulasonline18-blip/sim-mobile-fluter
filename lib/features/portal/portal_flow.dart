@@ -1,5 +1,56 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class SimFrame extends StatelessWidget {
   const SimFrame({required this.child, super.key});
 
@@ -57,11 +108,11 @@ class PortalScreen extends StatelessWidget {
                     PortalHeroCard(session: session),
                     const SizedBox(height: 16),
                     const Text(
-                      'SIM v1  •  Cyber-Premium',
+                      'SIM v1  â€¢  Cyber-Premium',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
-                        fontFamily: _kMono,
+                        fontFamily: kMono,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -81,7 +132,7 @@ class PortalScreen extends StatelessWidget {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: _kMono,
+                            fontFamily: kMono,
                           ),
                         ),
                       ),
@@ -97,7 +148,7 @@ class PortalScreen extends StatelessWidget {
   }
 
   void _showLabDrawer(BuildContext context) {
-    _showSimDrawer(
+    showSimDrawer(
       context,
       session: session,
       body: (ctx) => _PortalDrawerBody(session: session, ctx: ctx),
@@ -153,7 +204,7 @@ class _PortalDrawerBody extends StatelessWidget {
           },
         ),
         MenuLine(
-          label: 'Solicitar exclusão da conta',
+          label: 'Solicitar exclusÃ£o da conta',
           onTap: () {
             close();
             session.openSupport('/conta/deletar');
@@ -216,7 +267,7 @@ class PortalHeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          // §3.3(b) título SIM
+          // Â§3.3(b) tÃ­tulo SIM
           const Text(
             'SIM',
             style: TextStyle(
@@ -227,7 +278,7 @@ class PortalHeroCard extends StatelessWidget {
               letterSpacing: -1.36, // -0.02em de 68px
             ),
           ),
-          // §3.3(c) tagline
+          // Â§3.3(c) tagline
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -256,7 +307,7 @@ class PortalHeroCard extends StatelessWidget {
               ),
             ],
           ),
-          // §3.3(d) parágrafo institucional
+          // Â§3.3(d) parÃ¡grafo institucional
           const SizedBox(height: 24),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 34 * 9.5),
@@ -291,7 +342,7 @@ class PortalHeroCard extends StatelessWidget {
               ),
             ),
           ),
-          // §3.3(e) botão principal
+          // Â§3.3(e) botÃ£o principal
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -309,7 +360,7 @@ class PortalHeroCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Mini círculo branco 36×36 com ícone Play
+                    // Mini cÃ­rculo branco 36Ã—36 com Ã­cone Play
                     Container(
                       width: 36,
                       height: 36,
@@ -436,7 +487,7 @@ class HelpCard extends StatelessWidget {
               style: const TextStyle(
                 color: simMuted,
                 fontSize: 11,
-                fontFamily: _kMono,
+                fontFamily: kMono,
               ),
             ),
           ],
@@ -512,5 +563,7 @@ class ContactButton extends StatelessWidget {
     );
   }
 }
+
+
 
 

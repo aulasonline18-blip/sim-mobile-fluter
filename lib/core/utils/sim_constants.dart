@@ -1,10 +1,10 @@
-﻿part of '../main.dart';
-
+﻿import 'package:flutter/material.dart';
+import '../../sim/config/sim_environment.dart';
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 
-// JetBrains Mono font family name â€” used instead of _kMono
+// JetBrains Mono font family name â€” used instead of kMono
 // so TextStyle objects can remain const.
-const String _kMono = 'JetBrains Mono';
+const String kMono = 'JetBrains Mono';
 const simSupabaseAnonKey = 'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
 const simAuthRedirectUrl = 'sim-mobile://login-callback';
 const simApiBaseUrl = SimEnvironment.apiBaseUrl;
@@ -64,4 +64,6 @@ const objectiveRequiredMessage =
     'Campo obrigatÃ³rio. Escreva o que vocÃª quer estudar.';
 const objectiveRequiredWithAttachmentMessage =
     'Você anexou um arquivo. Agora escreva o que deseja estudar com ele.';
+
+
 

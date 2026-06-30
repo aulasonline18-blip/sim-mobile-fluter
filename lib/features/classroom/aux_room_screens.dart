@@ -1,7 +1,58 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class _LessonDoneScreen extends StatelessWidget {
-  const _LessonDoneScreen({required this.session});
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
+class LessonDoneScreen extends StatelessWidget {
+  const LessonDoneScreen({required this.session, super.key});
 
   final LabSession session;
 
@@ -56,10 +107,10 @@ class AuxRoomCard extends StatelessWidget {
   }
 }
 
-// §AUX _AuxQuestionScreen
+// Â§AUX _AuxQuestionScreen
 // Full-screen aux question: header (back btn + 3px progress bar + mono label),
 // glass theory card, question h2, A/B/C option buttons with signal row on selection,
-// FeedbackBox with ▶ next button in result state.
+// FeedbackBox with â–¶ next button in result state.
 class _AuxQuestionScreen extends StatelessWidget {
   const _AuxQuestionScreen({
     required this.mode,
@@ -159,7 +210,7 @@ class _AuxQuestionScreen extends StatelessWidget {
                   Text(
                     headerLabel.toUpperCase(),
                     style: TextStyle(
-                      fontFamily: _kMono,
+                      fontFamily: kMono,
                       fontSize: 11,
                       color: simMuted,
                       letterSpacing: 0.18 * 11,
@@ -264,7 +315,7 @@ class _SinalBtn extends StatelessWidget {
             '$n. $label',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontFamily: _kMono,
+              fontFamily: kMono,
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: simDark,
@@ -339,7 +390,7 @@ class _AuxOptionTile extends StatelessWidget {
                     child: Text(
                       letterStr,
                       style: TextStyle(
-                        fontFamily: _kMono,
+                        fontFamily: kMono,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: selected ? Colors.white : simDark,
@@ -437,7 +488,7 @@ class _AuxFeedbackBox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
-                '▶',
+                'â–¶',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14,
@@ -452,9 +503,9 @@ class _AuxFeedbackBox extends StatelessWidget {
   }
 }
 
-// §REVROOM ReviewRoomScreen
-class _ReviewRoomScreen extends StatelessWidget {
-  const _ReviewRoomScreen({required this.session});
+// Â§REVROOM ReviewRoomScreen
+class ReviewRoomScreen extends StatelessWidget {
+  const ReviewRoomScreen({required this.session, super.key});
   final LabSession session;
 
   @override
@@ -701,9 +752,9 @@ class _ReviewRoomScreen extends StatelessWidget {
   }
 }
 
-// §RECROOM RecoveryRoomScreen
-class _RecoveryRoomScreen extends StatelessWidget {
-  const _RecoveryRoomScreen({required this.session});
+// Â§RECROOM RecoveryRoomScreen
+class RecoveryRoomScreen extends StatelessWidget {
+  const RecoveryRoomScreen({required this.session, super.key});
   final LabSession session;
 
   @override
@@ -866,7 +917,9 @@ class _RecoveryRoomScreen extends StatelessWidget {
   }
 }
 
-// AUL-1: Fixed header — menu btn + 3px progress bar + header label chip +
-// audio toggle + Revisão button (mono, uppercase, BookOpenCheck icon).
+// AUL-1: Fixed header â€” menu btn + 3px progress bar + header label chip +
+// audio toggle + RevisÃ£o button (mono, uppercase, BookOpenCheck icon).
 // Matches LessonMainScreen.tsx header exactly.
+
+
 

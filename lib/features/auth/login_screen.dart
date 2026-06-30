@@ -1,5 +1,56 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({required this.session, super.key});
 
@@ -77,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 448),
               child: Column(
                 children: [
-                  // §4.1 Logo
+                  // Â§4.1 Logo
                   Container(
                     width: 64,
                     height: 64,
@@ -119,12 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 12,
-                      fontFamily: _kMono,
+                      fontFamily: kMono,
                       letterSpacing: 0.25 * 12,
                     ),
                   ),
                   const SizedBox(height: 32),
-                  // §4.2 Glass card — bg card #F9FAFB, border, radius 18
+                  // Â§4.2 Glass card â€” bg card #F9FAFB, border, radius 18
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -177,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   color: simMuted,
                                   fontSize: 12,
-                                  fontFamily: _kMono,
+                                  fontFamily: kMono,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -273,11 +324,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: widget.session.goPortal,
                     child: const Text(
-                      '← Back to portal',
+                      'â† Back to portal',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
-                        fontFamily: _kMono,
+                        fontFamily: kMono,
                       ),
                     ),
                   ),
@@ -292,7 +343,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: _kMono,
+                            fontFamily: kMono,
                           ),
                         ),
                       ),
@@ -304,7 +355,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: simMuted,
                             fontSize: 12,
-                            fontFamily: _kMono,
+                            fontFamily: kMono,
                           ),
                         ),
                       ),
@@ -316,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       color: simMuted,
                       fontSize: 11,
-                      fontFamily: _kMono,
+                      fontFamily: kMono,
                     ),
                   ),
                 ],
@@ -353,5 +404,7 @@ class GoogleMark extends StatelessWidget {
     );
   }
 }
+
+
 
 

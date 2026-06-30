@@ -1,5 +1,56 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class CreditsLabScreen extends StatelessWidget {
   const CreditsLabScreen({required this.session, super.key});
 
@@ -16,7 +67,7 @@ class CreditsLabScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Créditos',
+                  'CrÃ©ditos',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 24,
@@ -30,17 +81,17 @@ class CreditsLabScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 CreditPackButton(
-                  title: '100 créditos',
+                  title: '100 crÃ©ditos',
                   subtitle: t('pay_pack_lessons_100'),
                   onTap: session.openCheckoutReturn,
                 ),
                 CreditPackButton(
-                  title: '200 créditos',
+                  title: '200 crÃ©ditos',
                   subtitle: t('pay_pack_lessons_200'),
                   onTap: session.openCheckoutReturn,
                 ),
                 CreditPackButton(
-                  title: '500 créditos',
+                  title: '500 crÃ©ditos',
                   subtitle: t('pay_pack_lessons_500'),
                   onTap: session.openCheckoutReturn,
                 ),
@@ -125,7 +176,7 @@ class CheckoutReturnScreen extends StatelessWidget {
     return SimpleLabPage(
       title: 'Retorno do pagamento',
       body:
-          'O pagamento volta para o SIM, valida a sessão do checkout e devolve o aluno para a aula ou para tentar novamente.',
+          'O pagamento volta para o SIM, valida a sessÃ£o do checkout e devolve o aluno para a aula ou para tentar novamente.',
       primary: 'Continuar aula',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,
@@ -164,8 +215,8 @@ class LegalLabScreen extends StatelessWidget {
     return SimpleLabPage(
       title: title,
       body: title == 'Privacidade'
-          ? 'Página de privacidade preservada como ambiente de apoio do SIM.'
-          : 'Página de termos preservada como ambiente de apoio do SIM.',
+          ? 'PÃ¡gina de privacidade preservada como ambiente de apoio do SIM.'
+          : 'PÃ¡gina de termos preservada como ambiente de apoio do SIM.',
       primary: 'Voltar',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,
@@ -189,7 +240,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Solicitar exclusão da conta',
+                  'Solicitar exclusÃ£o da conta',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 24,
@@ -198,7 +249,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Digite DELETAR para registrar a solicitação de exclusão. A execução real acontece no servidor, sem chave secreta dentro do app.',
+                  'Digite DELETAR para registrar a solicitaÃ§Ã£o de exclusÃ£o. A execuÃ§Ã£o real acontece no servidor, sem chave secreta dentro do app.',
                   style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
                 ),
                 const SizedBox(height: 16),
@@ -219,7 +270,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: 18),
                 PrimaryWideButton(
-                  label: 'Solicitar exclusão da conta',
+                  label: 'Solicitar exclusÃ£o da conta',
                   onTap: session.requestAccountDeletion,
                 ),
                 const SizedBox(height: 10),
@@ -302,5 +353,7 @@ class SimpleLabPage extends StatelessWidget {
     );
   }
 }
+
+
 
 

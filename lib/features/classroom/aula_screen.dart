@@ -1,5 +1,56 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class AulaLabScreen extends StatefulWidget {
   const AulaLabScreen({required this.session, super.key});
 
@@ -124,7 +175,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final feedbackKey = phase?.message;
     final nextKey = viewModel?.nextLabel ?? '';
     final locked = viewModel?.locked ?? false;
-    // Effective answer selection — uses local state when runtime has no position
+    // Effective answer selection â€” uses local state when runtime has no position
     final effectiveSelected = content != null ? selected : _localAnswerSel;
     final effectiveExpanded = content != null ? isExpanded : _localExpanded;
     // Gate question display until typewriter finishes (visualTheoryReady).
@@ -132,20 +183,20 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     // new explanation arrives (SimTypewriter restarts itself via didUpdateWidget,
     // so _theoryDoneKey becomes stale automatically).
     final explanationKey = content?.explanation;
-    final theoryReady = session._prefs == null
+    final theoryReady = session.prefs == null
         ? content != null
         : explanationKey != null && _theoryDoneKey == explanationKey;
 
     if (isDone) {
-      return _LessonDoneScreen(session: session);
+      return LessonDoneScreen(session: session);
     }
 
     // Full-screen review/recovery room overlays
     if (session.reviewRoom != null) {
-      return _ReviewRoomScreen(session: session);
+      return ReviewRoomScreen(session: session);
     }
     if (session.recoveryRoom != null) {
-      return _RecoveryRoomScreen(session: session);
+      return RecoveryRoomScreen(session: session);
     }
 
     return Scaffold(
@@ -157,7 +208,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 112, 16, 128),
               children: [
-                // Past answered questions — dimmed, non-interactive
+                // Past answered questions â€” dimmed, non-interactive
                 // Sliding window: last 4 entries keep image, older entries show text only
                 Builder(
                   builder: (context) {
@@ -188,7 +239,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                 // Active content card
                 if (session.aulaRuntimeLoading && content == null) ...[
                   const SizedBox(height: 8),
-                  // AUL-3: Loading phase — glass-soft card matching LessonMainScreen.tsx
+                  // AUL-3: Loading phase â€” glass-soft card matching LessonMainScreen.tsx
                   Container(
                     constraints: const BoxConstraints(minHeight: 280),
                     padding: const EdgeInsets.all(24),
@@ -222,7 +273,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               child: Text(
                                 t('aula_theory').toUpperCase(),
                                 style: TextStyle(
-                                  fontFamily: _kMono,
+                                  fontFamily: kMono,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: simDark,
@@ -235,7 +286,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         const SizedBox(height: 16),
                         Builder(
                           builder: (_) {
-                            final copy = _loadingCopy(session.entryStatus);
+                            final copy = loadingCopy(session.entryStatus);
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -298,7 +349,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                   ),
                 ],
 
-                // Theory card — only when content is loaded
+                // Theory card â€” only when content is loaded
                 if (content != null) ...[
                   SimCard(
                     key: _activeKey,
@@ -311,7 +362,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             Text(
                               t('aula_theory'),
                               style: TextStyle(
-                                fontFamily: _kMono,
+                                fontFamily: kMono,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: simMuted,
@@ -322,7 +373,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  '· ${_headerLabelText(viewModel.headerLabel)}',
+                                  'Â· ${headerLabelText(viewModel.headerLabel)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -335,7 +386,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        if (session._prefs == null)
+                        if (session.prefs == null)
                           Text(
                             content.explanation,
                             style: const TextStyle(
@@ -360,15 +411,15 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               _scrollToBottom();
                             },
                           ),
-                        // Doubt: processing → progress bar
+                        // Doubt: processing â†’ progress bar
                         if (session.doubt.status == DoubtStatus.processing) ...[
                           const SizedBox(height: 12),
                           DoubtProgressBar(
                             progress: session.doubt.progress.toDouble(),
-                            label: 'Analisando sua dúvida...',
+                            label: 'Analisando sua dÃºvida...',
                           ),
                         ],
-                        // Doubt: explaining / error → explanation card
+                        // Doubt: explaining / error â†’ explanation card
                         if (session.doubt.status == DoubtStatus.explaining ||
                             session.doubt.status == DoubtStatus.error) ...[
                           const SizedBox(height: 12),
@@ -391,7 +442,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Explicação da sua dúvida',
+                                  'ExplicaÃ§Ã£o da sua dÃºvida',
                                   style: TextStyle(
                                     color: simDark,
                                     fontSize: 15,
@@ -479,7 +530,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                   const SizedBox(height: 10),
                 ],
 
-                // Challenge/question block — hidden while doubt sheet is open to avoid duplicate B. finders
+                // Challenge/question block â€” hidden while doubt sheet is open to avoid duplicate B. finders
                 if (!session.doubtOpen && theoryReady && content != null) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -491,7 +542,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           child: Text(
                             t('aula_challenge'),
                             style: TextStyle(
-                              fontFamily: _kMono,
+                              fontFamily: kMono,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: simMuted,
@@ -539,7 +590,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           onTap: () => session.chooseAulaAnswer('C'),
                         ),
 
-                        // Sinal 1/2/3 — appears after A/B/C selection
+                        // Sinal 1/2/3 â€” appears after A/B/C selection
                         if (effectiveExpanded) ...[
                           const SizedBox(height: 14),
                           _SinalRow(onSignal: session.submitAulaSignal),
@@ -557,10 +608,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                   ),
                 ], // end challenge block
-                // FeedbackBox + Dúvida button + Próximo
+                // FeedbackBox + DÃºvida button + PrÃ³ximo
                 if (isCompleted && feedbackKey != null) ...[
                   const SizedBox(height: 10),
-                  // "Dúvida" button (spec: concluido state, before FeedbackBox)
+                  // "DÃºvida" button (spec: concluido state, before FeedbackBox)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: GestureDetector(
@@ -587,8 +638,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ),
                         child: Text(
                           session.doubt.status == DoubtStatus.processing
-                              ? 'Dúvida...'
-                              : 'Dúvida',
+                              ? 'DÃºvida...'
+                              : 'DÃºvida',
                           style: TextStyle(
                             color:
                                 session.doubt.status == DoubtStatus.processing
@@ -604,8 +655,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                   const SizedBox(height: 10),
                   _FeedbackBox(
                     isCorrect: wasCorrect ?? false,
-                    message: _feedbackText(feedbackKey),
-                    nextLabel: _nextBtnText(nextKey),
+                    message: feedbackText(feedbackKey),
+                    nextLabel: nextBtnText(nextKey),
                     nextReady:
                         !locked &&
                         session.doubt.status != DoubtStatus.processing,
@@ -681,11 +732,11 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               showReviewButton: true,
               progress: viewModel?.progress.toDouble(),
               headerLabel: viewModel != null
-                  ? _headerLabelText(viewModel.headerLabel)
+                  ? headerLabelText(viewModel.headerLabel)
                   : null,
             ),
           ),
-          // FixedBubble — fixed bottom-center overlay while audio plays
+          // FixedBubble â€” fixed bottom-center overlay while audio plays
           if (session.audioEnabled && session.audioPlaying)
             Positioned(
               bottom: 24,
@@ -995,7 +1046,7 @@ class _SinalRowState extends State<_SinalRow> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontFamily: _kMono,
+                          fontFamily: kMono,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: simDark,
@@ -1041,7 +1092,7 @@ class _SinalRowState extends State<_SinalRow> {
   }
 }
 
-// Loading pulse bar — animates w-1/2 pulse, matches loading card bar in LessonMainScreen.tsx
+// Loading pulse bar â€” animates w-1/2 pulse, matches loading card bar in LessonMainScreen.tsx
 class _PulseBar extends StatefulWidget {
   const _PulseBar();
   @override
@@ -1170,7 +1221,7 @@ class _FixedBubbleState extends State<_FixedBubble>
   }
 }
 
-// §DS DoubtInputSheet — bottom-sheet modal matching DoubtInputSheet.tsx
+// Â§DS DoubtInputSheet â€” bottom-sheet modal matching DoubtInputSheet.tsx
 class _DoubtInputSheet extends StatefulWidget {
   const _DoubtInputSheet({
     required this.controller,
@@ -1279,5 +1330,7 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
     );
   }
 }
+
+
 
 

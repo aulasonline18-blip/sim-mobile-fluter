@@ -1,5 +1,55 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../../features/session/lab_session.dart';
+import '../../features/portal/portal_flow.dart';
+import '../../features/auth/login_screen.dart';
+import '../../features/onboarding/onboarding_screens.dart';
+import '../../features/onboarding/preparation_and_placement.dart';
+import '../../features/classroom/aula_screen.dart';
+import '../../features/classroom/aux_room_screens.dart';
+import '../../features/classroom/aula_widgets.dart';
+import '../../features/billing/billing_and_simple_pages.dart';
 class PrimaryWideButton extends StatelessWidget {
   const PrimaryWideButton({
     required this.label,
@@ -123,7 +173,7 @@ class AnswerButton extends StatelessWidget {
                     child: Text(
                       label,
                       style: const TextStyle(
-                        fontFamily: _kMono,
+                        fontFamily: kMono,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: simDark,
@@ -290,7 +340,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               Text(
                 t('menu').toUpperCase(),
                 style: TextStyle(
-                  fontFamily: _kMono,
+                  fontFamily: kMono,
                   fontSize: 11,
                   letterSpacing: 0.22 * 11,
                   color: muted,
@@ -307,7 +357,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   ),
                   alignment: Alignment.center,
                   child: const Text(
-                    '✕',
+                    'âœ•',
                     style: TextStyle(
                       color: text,
                       fontSize: 16,
@@ -351,7 +401,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   child: Row(
                     children: [
                       const Text(
-                        '＋',
+                        'ï¼‹',
                         style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
                       const SizedBox(width: 12),
@@ -368,7 +418,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Recarregar créditos
+              // Recarregar crÃ©ditos
               GestureDetector(
                 onTap: () {
                   widget.onClose();
@@ -387,7 +437,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   ),
                   child: Row(
                     children: [
-                      const Text('⚡', style: TextStyle(fontSize: 14)),
+                      const Text('âš¡', style: TextStyle(fontSize: 14)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -402,7 +452,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                       Text(
                         'TOP UP',
                         style: TextStyle(
-                          fontFamily: _kMono,
+                          fontFamily: kMono,
                           fontSize: 10,
                           color: muted,
                           letterSpacing: 0.8,
@@ -426,7 +476,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                 Text(
                   t('historico').toUpperCase(),
                   style: TextStyle(
-                    fontFamily: _kMono,
+                    fontFamily: kMono,
                     fontSize: 10,
                     letterSpacing: 0.22 * 10,
                     color: muted,
@@ -488,9 +538,9 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                                   ),
                                 ),
                                 Text(
-                                  '$pct% · $advances/$total',
+                                  '$pct% Â· $advances/$total',
                                   style: TextStyle(
-                                    fontFamily: _kMono,
+                                    fontFamily: kMono,
                                     fontSize: 10,
                                     color: muted,
                                     letterSpacing: 0.5,
@@ -526,7 +576,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                       Text(
                         t('drawer_progress'),
                         style: TextStyle(
-                          fontFamily: _kMono,
+                          fontFamily: kMono,
                           fontSize: 11,
                           color: muted,
                         ),
@@ -535,7 +585,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                       Text(
                         '$advances/$total',
                         style: TextStyle(
-                          fontFamily: _kMono,
+                          fontFamily: kMono,
                           fontSize: 11,
                           color: text,
                         ),
@@ -547,17 +597,17 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               Row(
                 children: [
                   _DrawerFooterBtn(
-                    label: '⤓ ${t("exportar")}',
+                    label: 'â¤“ ${t("exportar")}',
                     onTap: () => _flash('Em breve'),
                   ),
                   const SizedBox(width: 6),
                   _DrawerFooterBtn(
-                    label: '⤒ ${t("importar")}',
+                    label: 'â¤’ ${t("importar")}',
                     onTap: () => _flash('Em breve'),
                   ),
                   const SizedBox(width: 6),
                   _DrawerFooterBtn(
-                    label: 'ⓘ ${t("status")}',
+                    label: 'â“˜ ${t("status")}',
                     onTap: () => _flash('Em breve'),
                   ),
                 ],
@@ -606,7 +656,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   session.openSupport('/conta/deletar');
                 },
                 child: Text(
-                  'Solicitar exclusão da conta',
+                  'Solicitar exclusÃ£o da conta',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: muted,
@@ -664,7 +714,7 @@ class _DrawerFooterBtn extends StatelessWidget {
 }
 
 // DR-1..DR-6: Left-side panel drawer (88vw max 360, bg #F0F0F0)
-void _showSimDrawer(
+void showSimDrawer(
   BuildContext context, {
   required LabSession session,
   required Widget Function(BuildContext ctx) body,
@@ -715,7 +765,7 @@ void _showSimDrawer(
                             child: const Padding(
                               padding: EdgeInsets.all(8),
                               child: Text(
-                                '✕',
+                                'âœ•',
                                 style: TextStyle(
                                   color: simDark,
                                   fontSize: 16,
@@ -760,16 +810,16 @@ class SupportedLang {
 }
 
 const supportedLangs = <SupportedLang>[
-  SupportedLang(code: 'en', name: 'English', native: 'English', flag: '🇺🇸'),
+  SupportedLang(code: 'en', name: 'English', native: 'English', flag: 'ðŸ‡ºðŸ‡¸'),
   SupportedLang(
     code: 'pt',
     name: 'Portuguese',
-    native: 'Português',
-    flag: '🇧🇷',
+    native: 'PortuguÃªs',
+    flag: 'ðŸ‡§ðŸ‡·',
   ),
-  SupportedLang(code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸'),
-  SupportedLang(code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷'),
-  SupportedLang(code: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵'),
+  SupportedLang(code: 'es', name: 'Spanish', native: 'EspaÃ±ol', flag: 'ðŸ‡ªðŸ‡¸'),
+  SupportedLang(code: 'fr', name: 'French', native: 'FranÃ§ais', flag: 'ðŸ‡«ðŸ‡·'),
+  SupportedLang(code: 'ja', name: 'Japanese', native: 'æ—¥æœ¬èªž', flag: 'ðŸ‡¯ðŸ‡µ'),
 ];
 
 class LanguageButton extends StatelessWidget {
@@ -788,7 +838,7 @@ class LanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = language.native.isEmpty
         ? language.name
-        : '${language.name} · ${language.native}';
+        : '${language.name} Â· ${language.native}';
     return SizedBox(
       width: double.infinity,
       height: 64,
@@ -1083,7 +1133,7 @@ class CreditsPill extends StatelessWidget {
   }
 }
 
-// §3.1 BackgroundDecor — gradiente vertical + anéis radiais laterais
+// Â§3.1 BackgroundDecor â€” gradiente vertical + anÃ©is radiais laterais
 class BackgroundDecor extends StatelessWidget {
   const BackgroundDecor({super.key});
 
@@ -1091,7 +1141,7 @@ class BackgroundDecor extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Camada 0: gradiente 180deg #FFFFFF 0% → #F3F4F6 60% → #FFFFFF 100%
+        // Camada 0: gradiente 180deg #FFFFFF 0% â†’ #F3F4F6 60% â†’ #FFFFFF 100%
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -1103,7 +1153,7 @@ class BackgroundDecor extends StatelessWidget {
           ),
           child: SizedBox.expand(),
         ),
-        // Camada 1: anéis radiais esquerda (top 25%, left -6px, 160×420)
+        // Camada 1: anÃ©is radiais esquerda (top 25%, left -6px, 160Ã—420)
         Positioned(
           top: MediaQuery.of(context).size.height * 0.25,
           left: -6,
@@ -1112,7 +1162,7 @@ class BackgroundDecor extends StatelessWidget {
             child: _RadialRings(width: 160, height: 420),
           ),
         ),
-        // Camada 2: anéis radiais direita (bottom 40px, 160×380)
+        // Camada 2: anÃ©is radiais direita (bottom 40px, 160Ã—380)
         Positioned(
           bottom: 40,
           right: 0,
@@ -1211,4 +1261,7 @@ BoxDecoration primaryButtonDecoration({required double radius}) {
     ],
   );
 }
+
+
+
 

@@ -1,5 +1,56 @@
-part of '../main.dart';
+﻿// ignore_for_file: unused_import, unnecessary_import
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_server_billing_clients.dart';
+import '../../sim/cloud/sim_server_cloud_functions.dart';
+import '../../sim/cloud/supabase_flutter_session_provider.dart';
+import '../../sim/cloud/supabase_student_state_cloud_storage.dart';
+import '../../sim/config/sim_environment.dart';
+import '../../sim/external_ai/sim_ai_server_config.dart';
+import '../../sim/external_ai/sim_server_ai_clients.dart';
+import '../../sim/external_ai/sim_server_attachment_client.dart';
+import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/lesson_runtime_engine.dart';
+import '../../sim/classroom/lesson_main_view_model.dart';
+import '../../sim/experience/student_experience_types.dart';
+import '../../sim/organism/sim_organism.dart';
+import '../../sim/organism/sim_organism_provider.dart';
+import '../../session/auth_session.dart';
+import '../../session/entry_form_state.dart';
+import '../../session/lesson_ui_state.dart';
+import '../../session/navigation_state.dart';
+import '../../sim/lesson/lesson_models.dart';
+import '../../sim/media/audio_core.dart';
+import '../../sim/media/audio_preference.dart';
+import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/student_lesson_media_service.dart';
+import '../../sim/state/shared_prefs_state_storage.dart';
+import '../../sim/state/student_learning_state.dart';
+import '../../sim/state/student_state_store.dart';
+import '../../sim/ui/sim_i18n.dart';
+import '../../sim/ui/widgets/cyber_step_shell.dart';
+import '../../sim/ui/widgets/sim_preparation_experience.dart';
+import '../../sim/ui/widgets/sim_typewriter.dart';
+import '../../sim/auxiliary/aux_room_models.dart';
+import '../../sim/ui/widgets/doubt_progress_bar.dart';
+
+import '../../core/utils/sim_constants.dart';
+import '../session/lab_session.dart';
+import '../portal/portal_flow.dart';
+import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screens.dart';
+import '../onboarding/preparation_and_placement.dart';
+import '../classroom/aula_screen.dart';
+import '../classroom/aux_room_screens.dart';
+import '../classroom/aula_widgets.dart';
+import '../billing/billing_and_simple_pages.dart';
+import '../../shared/widgets/shared_widgets.dart';
 class PhaseBoundaryScreen extends StatefulWidget {
   const PhaseBoundaryScreen({required this.session, super.key});
 
@@ -40,7 +91,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
     final error = widget.session.entryError;
     final isError = status == 'erro';
     final isCredits =
-        error?.toLowerCase().contains('crédito') == true ||
+        error?.toLowerCase().contains('crÃ©dito') == true ||
         error?.toLowerCase().contains('credit') == true;
     final simStage = _toSimStage(status);
     final isReady = status == 'primeira_aula_pronta';
@@ -60,7 +111,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          'Não consegui preparar agora.',
+                          'NÃ£o consegui preparar agora.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
@@ -136,7 +187,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                       ),
                     ),
                     Expanded(
-                      child: widget.session._prefs == null
+                      child: widget.session.prefs == null
                           ? const SizedBox.shrink()
                           : SingleChildScrollView(
                               child: SimPreparationExperience(
@@ -303,7 +354,7 @@ class _PlacementQuestion extends StatelessWidget {
         Text(
           t('placement_question_of', {'n': '1', 'total': '1'}),
           style: TextStyle(
-            fontFamily: _kMono,
+            fontFamily: kMono,
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: simMuted,
@@ -324,7 +375,7 @@ class _PlacementQuestion extends StatelessWidget {
         const SizedBox(height: 8),
         SecondaryWideButton(label: 'B. Sei uma parte', onTap: onDone),
         const SizedBox(height: 8),
-        SecondaryWideButton(label: 'C. Preciso começar guiado', onTap: onDone),
+        SecondaryWideButton(label: 'C. Preciso comeÃ§ar guiado', onTap: onDone),
       ],
     );
   }
@@ -362,11 +413,11 @@ class _PlacementResult extends StatelessWidget {
   }
 }
 
-// Loading card copy — mirrors entryLoadingCopy() in LessonMainScreen.tsx
-(String, String) _loadingCopy(String status) => switch (status) {
+// Loading card copy â€” mirrors entryLoadingCopy() in LessonMainScreen.tsx
+(String, String) loadingCopy(String status) => switch (status) {
   'pedido_recebido' => (
     'Recebi seu pedido.',
-    'A sala já abriu. Estou começando a entender seu objetivo.',
+    'A sala jÃ¡ abriu. Estou comeÃ§ando a entender seu objetivo.',
   ),
   't00_running' => (
     'Entendendo seu objetivo...',
@@ -374,55 +425,55 @@ class _PlacementResult extends StatelessWidget {
   ),
   'first_item_ready' => (
     'Primeiro tema encontrado.',
-    'Já tenho o ponto inicial. Agora vou preparar a primeira explicação.',
+    'JÃ¡ tenho o ponto inicial. Agora vou preparar a primeira explicaÃ§Ã£o.',
   ),
   't02_running' || 't02_first_lesson_running' => (
     'Preparando sua primeira aula...',
-    'O professor já recebeu o primeiro tema e está escrevendo a explicação.',
+    'O professor jÃ¡ recebeu o primeiro tema e estÃ¡ escrevendo a explicaÃ§Ã£o.',
   ),
   'primeira_aula_pronta' || 'first_lesson_ready' => (
     'A primeira aula chegou.',
     'Estou abrindo o material.',
   ),
   'failed_t00' => (
-    'Não consegui entender o objetivo.',
-    'Tente novamente com uma descrição um pouco mais direta do que deseja estudar.',
+    'NÃ£o consegui entender o objetivo.',
+    'Tente novamente com uma descriÃ§Ã£o um pouco mais direta do que deseja estudar.',
   ),
   'failed_t02' => (
-    'Não consegui preparar a aula.',
-    'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponível.',
+    'NÃ£o consegui preparar a aula.',
+    'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponÃ­vel.',
   ),
   'blocked_credits' => (
-    'Créditos insuficientes.',
-    'Adicione créditos para gerar a próxima aula real.',
+    'CrÃ©ditos insuficientes.',
+    'Adicione crÃ©ditos para gerar a prÃ³xima aula real.',
   ),
   _ => (
     t('preparing_lesson'),
-    'A sala já abriu. Estou buscando a explicação do primeiro tema.',
+    'A sala jÃ¡ abriu. Estou buscando a explicaÃ§Ã£o do primeiro tema.',
   ),
 };
 
-String _feedbackText(String key) => switch (key) {
-  'aula_fb_correct' => 'Exato! Você domina este ponto.',
-  'aula_fb_correct_rev' => 'Certo, mas vamos reforçar.',
+String feedbackText(String key) => switch (key) {
+  'aula_fb_correct' => 'Exato! VocÃª domina este ponto.',
+  'aula_fb_correct_rev' => 'Certo, mas vamos reforÃ§ar.',
   'aula_fb_dont_know' => 'Acertou no chute. Vamos revisar com cuidado.',
-  'aula_fb_redo' => 'Não foi dessa vez. Vamos tentar de novo.',
-  'aula_fb_review_none' => 'Ótimo! Revisão concluída.',
-  'aula_fb_review_light' => 'Quase lá. Mais um reforço.',
-  'aula_fb_review_heavy' => 'Precisa de mais prática neste ponto.',
+  'aula_fb_redo' => 'NÃ£o foi dessa vez. Vamos tentar de novo.',
+  'aula_fb_review_none' => 'Ã“timo! RevisÃ£o concluÃ­da.',
+  'aula_fb_review_light' => 'Quase lÃ¡. Mais um reforÃ§o.',
+  'aula_fb_review_heavy' => 'Precisa de mais prÃ¡tica neste ponto.',
   _ => key,
 };
 
-String _nextBtnText(String key) => switch (key) {
-  'aula_next' => 'Próximo',
-  'aula_next_item' => 'Próximo tópico',
+String nextBtnText(String key) => switch (key) {
+  'aula_next' => 'PrÃ³ximo',
+  'aula_next_item' => 'PrÃ³ximo tÃ³pico',
   'aula_consolidate' => 'Consolidar',
-  'aula_layer_label_2' => 'Próxima camada',
+  'aula_layer_label_2' => 'PrÃ³xima camada',
   'aula_layer_label_3' => 'Camada final',
-  _ => 'Avançar',
+  _ => 'AvanÃ§ar',
 };
 
-String _headerLabelText(String key) {
+String headerLabelText(String key) {
   if (key.startsWith('aula_item_of:')) {
     final rest = key.substring('aula_item_of:'.length);
     final parts = rest.split(':');
@@ -434,10 +485,12 @@ String _headerLabelText(String key) {
       'aula_layer_3' => 'Camada 3',
       _ => layerKey,
     };
-    return 'Item $fraction · $layer';
+    return 'Item $fraction Â· $layer';
   }
-  if (key.startsWith('aula_review_review:')) return 'Revisão';
+  if (key.startsWith('aula_review_review:')) return 'RevisÃ£o';
   return key;
 }
+
+
 
 
