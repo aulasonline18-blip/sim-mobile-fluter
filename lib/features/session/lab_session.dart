@@ -1,5 +1,6 @@
 // ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -274,6 +275,160 @@ class LabSession extends ChangeNotifier {
 
   Future<void> signOutReal() => authSession.signOutReal();
 
+  void startNewLessonFromDrawer() {
+    lessonLocalId = null;
+    entryForm
+      ..freeText = ''
+      ..preferredName = ''
+      ..attachmentsText = ''
+      ..studentProfileNotes = ''
+      ..clearAttachments()
+      ..resetLanguage();
+    lessonUiState
+      ..entryStatus = 'idle'
+      ..entryError = null
+      ..placementStarted = false
+      ..placementDone = false
+      ..doubtOpen = false
+      ..reviewRoom = null
+      ..recoveryRoom = null
+      ..resetDoubt();
+    navigationState.openRoute('/cyber/aula');
+    notifyListeners();
+  }
+
+  void openCreditsFromDrawer() {
+    const target = '/cyber/aula';
+    if (!authed) {
+      goLogin(target: target);
+      return;
+    }
+    returnTo = target;
+    navigationState.openRoute('/creditos?returnTo=/cyber/aula');
+    notifyListeners();
+  }
+
+  Future<bool> openDrawerLocalLesson(String lessonLocalId) async {
+    final local = _readExistingLocalState(lessonLocalId);
+    if (local != null && !_stateDeleted(local)) {
+      this.lessonLocalId = lessonLocalId;
+      navigationState.openRoute('/cyber/aula');
+      unawaited(openAulaRuntime());
+      return true;
+    }
+    return openDrawerCloudLesson(lessonLocalId);
+  }
+
+  Future<bool> deleteDrawerLocalLesson(String lessonLocalId) async {
+    final store = canonicalStore;
+    if (store == null) return false;
+    store.tombstoneLesson(lessonLocalId);
+    var cloudOk = true;
+    if (authed) {
+      cloudOk = await deleteDrawerCloudLesson(lessonLocalId);
+    }
+    if (this.lessonLocalId == lessonLocalId) {
+      this.lessonLocalId = null;
+      navigationState.goPortal();
+    }
+    notifyListeners();
+    return cloudOk;
+  }
+
+  String buildDrawerBackupText() {
+    final store = canonicalStore;
+    if (store == null) {
+      throw StateError('Backup indisponivel.');
+    }
+    final states = store.listLocalStates(includeDeleted: false);
+    if (states.isEmpty) {
+      throw StateError('Nenhuma aula para exportar.');
+    }
+    final snapshots = <String, dynamic>{};
+    final lessons = <Map<String, dynamic>>[];
+    for (final state in states) {
+      snapshots[state.lessonLocalId] = state.toJson();
+      lessons.add(_cyberLessonFromState(state));
+    }
+    final file = <String, dynamic>{
+      'magic': 'SIM_CYBER_BACKUP_V1',
+      'exportedAt': DateTime.now().millisecondsSinceEpoch,
+      'lessons': lessons,
+      'studentLearningStates': snapshots,
+    };
+    final encoded = base64.encode(utf8.encode(jsonEncode(file)));
+    return [
+      'SIM — BACKUP DE AULA',
+      'SIM_CYBER_V1_BEGIN',
+      encoded,
+      'SIM_CYBER_V1_END',
+    ].join('\n');
+  }
+
+  Future<File> writeDrawerBackupFile(String text) async {
+    final stamp = DateTime.now().toIso8601String().substring(0, 10);
+    final file = File('${Directory.systemTemp.path}/sim-backup-$stamp.txt');
+    return file.writeAsString(text);
+  }
+
+  String buildDrawerStatusText() {
+    final id = lessonLocalId;
+    final store = canonicalStore;
+    if (id == null || store == null) {
+      throw StateError('Curriculo nao encontrado.');
+    }
+    final state = store.readState(id);
+    final progress = state.progress;
+    final curriculum = state.curriculum;
+    return [
+      'SIM - STATUS PEDAGOGICO',
+      'Objetivo: ${state.profile.objetivo ?? '-'}',
+      'Topico: ${curriculum?.topic ?? '-'}',
+      'Item: ${state.current?.marker ?? '-'}',
+      'Camada: ${state.current?.layer.name ?? '-'}',
+      'Progresso: ${progress?.concluidos.length ?? 0}/${curriculum?.totalItems ?? 0}',
+      'Tentativas: ${state.attempts.length}',
+    ].join('\n');
+  }
+
+  Future<File> writeDrawerStatusFile(String text) async {
+    final stamp = DateTime.now().toIso8601String().substring(0, 10);
+    final file = File('${Directory.systemTemp.path}/sim-status-$stamp.txt');
+    return file.writeAsString(text);
+  }
+
+  Future<StudentLearningState> importDrawerBackup(String raw) async {
+    final store = canonicalStore;
+    if (store == null) {
+      throw StateError('Backup indisponivel.');
+    }
+    final backup = store.parseBackupText(raw);
+    final ids = _lessonIdsFromBackup(backup);
+    final state = store.importBackup(backup);
+    lessonLocalId = state.lessonLocalId;
+    if (authed) {
+      final session = await _drawerSession();
+      if (session != null) {
+        for (final id in ids.isEmpty ? <String>[state.lessonLocalId] : ids) {
+          final imported = _readExistingLocalState(id);
+          if (imported == null || _stateDeleted(imported)) continue;
+          await _cloudFunctionsForDrawer().persistStudentState(
+            PersistStudentStateInput(
+              lessonLocalId: id,
+              state: imported,
+              clientUpdatedAt: imported.updatedAt,
+              clientScore: scoreOfStudentLearningState(imported),
+              schemaVersion: studentLearningStateSchemaVersion,
+            ),
+            session,
+          );
+        }
+      }
+    }
+    notifyListeners();
+    return state;
+  }
+
   Future<void> _warmUpServer() async {
     try {
       final client = HttpClient();
@@ -468,6 +623,99 @@ class LabSession extends ChangeNotifier {
     }
     navigationState.openRoute('/creditos');
     notifyListeners();
+  }
+
+  Map<String, dynamic> _cyberLessonFromState(StudentLearningState state) {
+    final curriculum = state.curriculum;
+    final progress = state.progress;
+    final layerNumber = switch (progress?.layer ??
+        state.current?.layer ??
+        LessonLayer.l1) {
+      LessonLayer.l1 => 1,
+      LessonLayer.l2 => 2,
+      LessonLayer.l3 => 3,
+    };
+    return {
+      'id': state.lessonLocalId,
+      'name':
+          state.profile.objetivo ?? curriculum?.topic ?? state.lessonLocalId,
+      'createdAt': state.createdAt,
+      'updatedAt': state.updatedAt,
+      'onboarding': {
+        ...state.profile.toJson(),
+        'lessonLocalId': state.lessonLocalId,
+        'objetivo': state.profile.objetivo ?? curriculum?.topic ?? '',
+        'stableLang': state.profile.stableLang ?? state.profile.language ?? '',
+      },
+      'curriculo': {
+        'topic': curriculum?.topic ?? state.profile.objetivo ?? '',
+        'geradoEm': curriculum?.generatedAt ?? state.updatedAt,
+        'provisional': curriculum?.provisional ?? false,
+        'items': [
+          for (final item in curriculum?.items ?? const <CurriculumItem>[])
+            {
+              ...item.toJson(),
+              'id': item.marker,
+              'title': item.title ?? item.text,
+              'titulo': item.title ?? item.text,
+              'item_name': item.text,
+              'microitem_for_teacher': item.microitemForTeacher ?? item.text,
+            },
+        ],
+      },
+      'progress': {
+        'itemIdx': progress?.itemIdx ?? state.current?.itemIdx ?? 0,
+        'layer': layerNumber,
+        'erros': progress?.erros ?? 0,
+        'amparoLvl': progress?.amparoLvl ?? 0,
+        'historia': progress?.historia ?? const <String>[],
+        'mainAdvances': progress?.mainAdvances ?? 0,
+        'concluidos': progress?.concluidos ?? const <String>[],
+        'pendentes':
+            progress?.pendentesMarkers
+                .map((marker) => {'marker': marker})
+                .toList() ??
+            const <Map<String, dynamic>>[],
+        'tentativas': [
+          for (final attempt in state.attempts)
+            {
+              'marker': attempt.marker,
+              'layer': switch (attempt.layer) {
+                LessonLayer.l1 => 1,
+                LessonLayer.l2 => 2,
+                LessonLayer.l3 => 3,
+              },
+              'letra': attempt.letra.name,
+              'sinal': attempt.sinal.value,
+              'correct': attempt.correct,
+              'ts': attempt.ts,
+            },
+        ],
+      },
+    };
+  }
+
+  Set<String> _lessonIdsFromBackup(Map<String, dynamic> backup) {
+    final ids = <String>{};
+    final states = backup['studentLearningStates'];
+    if (states is Map) {
+      ids.addAll(
+        states.keys.map((key) => key.toString()).where((key) => key.isNotEmpty),
+      );
+    }
+    final lessons = backup['lessons'];
+    if (lessons is List) {
+      for (final lesson in lessons.whereType<Map>()) {
+        final id = lesson['id']?.toString().trim();
+        if (id != null && id.isNotEmpty) ids.add(id);
+      }
+    }
+    final state = backup['state'];
+    if (state is Map) {
+      final id = state['lessonLocalId']?.toString().trim();
+      if (id != null && id.isNotEmpty) ids.add(id);
+    }
+    return ids;
   }
 
   void openSupport(String path) {

@@ -318,14 +318,16 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
 
   void _handleNovaAula() {
     widget.onClose();
-    widget.session.goPortal();
+    widget.session.startNewLessonFromDrawer();
   }
 
-  void _handleOpenLesson(String lessonLocalId) {
-    widget.session.lessonLocalId = lessonLocalId;
-    widget.session.route = '/cyber/aula';
-    widget.onClose();
-    unawaited(widget.session.openAulaRuntime());
+  Future<void> _handleOpenLesson(String lessonLocalId) async {
+    final ok = await widget.session.openDrawerLocalLesson(lessonLocalId);
+    if (ok) {
+      widget.onClose();
+      return;
+    }
+    _flash(t('curriculo_nao_encontrado'));
   }
 
   Future<void> _refreshCloudLessons() async {
@@ -426,15 +428,12 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
       ),
     );
     if (ok != true) return;
-    final store = widget.session.canonicalStore;
-    if (store == null) return;
-    store.tombstoneLesson(state.lessonLocalId);
-    if (widget.session.lessonLocalId == state.lessonLocalId) {
-      widget.session.lessonLocalId = null;
-      widget.session.goPortal();
-    }
+    final deleted = await widget.session.deleteDrawerLocalLesson(
+      state.lessonLocalId,
+    );
+    if (!deleted) _flash(t('drawer_delete_cloud_error'));
     setState(() {});
-    _flash(t('drawer_delete_error'));
+    _flash('Aula apagada.');
   }
 
   Future<void> _handleDeleteCloud(StudentStateSummaryRow row) async {
@@ -469,25 +468,17 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
   }
 
   Future<void> _handleExportBackup() async {
-    final id = widget.session.lessonLocalId;
-    final store = widget.session.canonicalStore;
-    if (id == null || store == null) {
+    try {
+      final backup = widget.session.buildDrawerBackupText();
+      final file = await widget.session.writeDrawerBackupFile(backup);
+      await Clipboard.setData(ClipboardData(text: backup));
+      _flash('${t('drawer_backup_exported')} ${file.path}');
+    } catch (_) {
       _flash(t('curriculo_nao_encontrado'));
-      return;
     }
-    final backup = store.exportBackup(id);
-    await Clipboard.setData(
-      ClipboardData(text: const JsonEncoder.withIndent('  ').convert(backup)),
-    );
-    _flash(t('drawer_backup_exported'));
   }
 
   Future<void> _handleImportBackup() async {
-    final store = widget.session.canonicalStore;
-    if (store == null) {
-      _flash(t('backup_invalido'));
-      return;
-    }
     final controller = TextEditingController();
     final raw = await showDialog<String>(
       context: context,
@@ -517,9 +508,9 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     controller.dispose();
     if (raw == null) return;
     try {
-      final state = store.importBackup(store.parseBackupText(raw));
-      widget.session.lessonLocalId = state.lessonLocalId;
+      await widget.session.importDrawerBackup(raw);
       _flash(t('drawer_import_cloud_ok'));
+      await _refreshCloudLessons();
       setState(() {});
     } catch (_) {
       _flash(t('backup_invalido'));
@@ -527,26 +518,14 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
   }
 
   Future<void> _handleExportStatus() async {
-    final id = widget.session.lessonLocalId;
-    final store = widget.session.canonicalStore;
-    if (id == null || store == null) {
+    try {
+      final status = widget.session.buildDrawerStatusText();
+      final file = await widget.session.writeDrawerStatusFile(status);
+      await Clipboard.setData(ClipboardData(text: status));
+      _flash('${t('drawer_status_exported')} ${file.path}');
+    } catch (_) {
       _flash(t('curriculo_nao_encontrado'));
-      return;
     }
-    final state = store.readState(id);
-    final progress = state.progress;
-    final curriculum = state.curriculum;
-    final status = [
-      'SIM - STATUS PEDAGOGICO',
-      'Objetivo: ${state.profile.objetivo ?? '-'}',
-      'Topico: ${curriculum?.topic ?? '-'}',
-      'Item: ${state.current?.marker ?? '-'}',
-      'Camada: ${state.current?.layer.name ?? '-'}',
-      'Progresso: ${progress?.concluidos.length ?? 0}/${curriculum?.totalItems ?? 0}',
-      'Tentativas: ${state.attempts.length}',
-    ].join('\n');
-    await Clipboard.setData(ClipboardData(text: status));
-    _flash(t('drawer_status_exported'));
   }
 
   Future<void> _handleLogout() async {
@@ -680,7 +659,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               GestureDetector(
                 onTap: () {
                   widget.onClose();
-                  session.openCredits();
+                  session.openCreditsFromDrawer();
                 },
                 child: Container(
                   width: double.infinity,
@@ -826,7 +805,8 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                         active: session.lessonLocalId == lesson.lessonLocalId,
                         renaming: _renamingLessonId == lesson.lessonLocalId,
                         renameController: _renameCtrl,
-                        onOpen: () => _handleOpenLesson(lesson.lessonLocalId),
+                        onOpen: () =>
+                            unawaited(_handleOpenLesson(lesson.lessonLocalId)),
                         onStartRename: () => _startRename(lesson),
                         onConfirmRename: _confirmRename,
                         onCancelRename: () =>
@@ -952,52 +932,54 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   style: const TextStyle(color: simDark, fontSize: 11),
                 ),
               ],
-              const SizedBox(height: 8),
-              // Logout button
-              GestureDetector(
-                onTap: _handleLogout,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: border),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.logout, size: 16, color: text),
-                      const SizedBox(width: 8),
-                      Text(
-                        t('logout'),
-                        style: const TextStyle(
-                          color: text,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+              if (session.authed) ...[
+                const SizedBox(height: 8),
+                // Logout button
+                GestureDetector(
+                  onTap: _handleLogout,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: border),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.logout, size: 16, color: text),
+                        const SizedBox(width: 8),
+                        Text(
+                          t('logout'),
+                          style: const TextStyle(
+                            color: text,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              GestureDetector(
-                onTap: () {
-                  widget.onClose();
-                  session.openSupport('/conta/deletar');
-                },
-                child: Text(
-                  'Solicitar exclusão da conta',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: muted,
-                    fontSize: 11,
-                    decoration: TextDecoration.underline,
-                    decorationColor: muted,
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () {
+                    widget.onClose();
+                    session.openSupport('/conta/deletar');
+                  },
+                  child: Text(
+                    'Solicitar exclusão da conta',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: muted,
+                      fontSize: 11,
+                      decoration: TextDecoration.underline,
+                      decorationColor: muted,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
