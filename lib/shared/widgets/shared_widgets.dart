@@ -1,8 +1,10 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -50,6 +52,7 @@ import '../../features/classroom/aula_screen.dart';
 import '../../features/classroom/aux_room_screens.dart';
 import '../../features/classroom/aula_widgets.dart';
 import '../../features/billing/billing_and_simple_pages.dart';
+
 class PrimaryWideButton extends StatelessWidget {
   const PrimaryWideButton({
     required this.label,
@@ -303,6 +306,89 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     widget.session.goPortal();
   }
 
+  Future<void> _handleExportBackup() async {
+    final id = widget.session.lessonLocalId;
+    final store = widget.session.canonicalStore;
+    if (id == null || store == null) {
+      _flash(t('curriculo_nao_encontrado'));
+      return;
+    }
+    final backup = store.exportBackup(id);
+    await Clipboard.setData(
+      ClipboardData(text: const JsonEncoder.withIndent('  ').convert(backup)),
+    );
+    _flash(t('drawer_backup_exported'));
+  }
+
+  Future<void> _handleImportBackup() async {
+    final store = widget.session.canonicalStore;
+    if (store == null) {
+      _flash(t('backup_invalido'));
+      return;
+    }
+    final controller = TextEditingController();
+    final raw = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('importar')),
+        content: TextField(
+          controller: controller,
+          minLines: 6,
+          maxLines: 10,
+          decoration: const InputDecoration(
+            hintText: 'Cole o JSON do backup aqui.',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(t('fechar')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: Text(t('importar')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (raw == null) return;
+    try {
+      final parsed = jsonDecode(raw);
+      if (parsed is! Map) throw const FormatException('backup invalido');
+      final state = store.importBackup(JsonMap.from(parsed));
+      widget.session.lessonLocalId = state.lessonLocalId;
+      _flash(t('drawer_import_cloud_ok'));
+      setState(() {});
+    } catch (_) {
+      _flash(t('backup_invalido'));
+    }
+  }
+
+  Future<void> _handleExportStatus() async {
+    final id = widget.session.lessonLocalId;
+    final store = widget.session.canonicalStore;
+    if (id == null || store == null) {
+      _flash(t('curriculo_nao_encontrado'));
+      return;
+    }
+    final state = store.readState(id);
+    final progress = state.progress;
+    final curriculum = state.curriculum;
+    final status = [
+      'SIM - STATUS PEDAGOGICO',
+      'Objetivo: ${state.profile.objetivo ?? '-'}',
+      'Topico: ${curriculum?.topic ?? '-'}',
+      'Item: ${state.current?.marker ?? '-'}',
+      'Camada: ${state.current?.layer.name ?? '-'}',
+      'Progresso: ${progress?.concluidos.length ?? 0}/${curriculum?.totalItems ?? 0}',
+      'Tentativas: ${state.attempts.length}',
+    ].join('\n');
+    await Clipboard.setData(ClipboardData(text: status));
+    _flash(t('drawer_status_exported'));
+  }
+
   Future<void> _handleLogout() async {
     widget.onClose();
     await widget.session.signOutReal();
@@ -357,7 +443,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   ),
                   alignment: Alignment.center,
                   child: const Text(
-                    'âœ•',
+                    '✕',
                     style: TextStyle(
                       color: text,
                       fontSize: 16,
@@ -401,7 +487,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   child: Row(
                     children: [
                       const Text(
-                        'ï¼‹',
+                        '+',
                         style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
                       const SizedBox(width: 12),
@@ -418,7 +504,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Recarregar crÃ©ditos
+              // Recarregar créditos
               GestureDetector(
                 onTap: () {
                   widget.onClose();
@@ -437,7 +523,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   ),
                   child: Row(
                     children: [
-                      const Text('âš¡', style: TextStyle(fontSize: 14)),
+                      const Text('⚡', style: TextStyle(fontSize: 14)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -538,7 +624,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                                   ),
                                 ),
                                 Text(
-                                  '$pct% Â· $advances/$total',
+                                  '$pct% · $advances/$total',
                                   style: TextStyle(
                                     fontFamily: kMono,
                                     fontSize: 10,
@@ -597,18 +683,18 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               Row(
                 children: [
                   _DrawerFooterBtn(
-                    label: 'â¤“ ${t("exportar")}',
-                    onTap: () => _flash('Em breve'),
+                    label: '⤓ ${t("exportar")}',
+                    onTap: _handleExportBackup,
                   ),
                   const SizedBox(width: 6),
                   _DrawerFooterBtn(
-                    label: 'â¤’ ${t("importar")}',
-                    onTap: () => _flash('Em breve'),
+                    label: '⤒ ${t("importar")}',
+                    onTap: _handleImportBackup,
                   ),
                   const SizedBox(width: 6),
                   _DrawerFooterBtn(
-                    label: 'â“˜ ${t("status")}',
-                    onTap: () => _flash('Em breve'),
+                    label: 'ⓘ ${t("status")}',
+                    onTap: _handleExportStatus,
                   ),
                 ],
               ),
@@ -656,7 +742,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                   session.openSupport('/conta/deletar');
                 },
                 child: Text(
-                  'Solicitar exclusÃ£o da conta',
+                  'Solicitar exclusão da conta',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: muted,
@@ -765,7 +851,7 @@ void showSimDrawer(
                             child: const Padding(
                               padding: EdgeInsets.all(8),
                               child: Text(
-                                'âœ•',
+                                '✕',
                                 style: TextStyle(
                                   color: simDark,
                                   fontSize: 16,
@@ -810,16 +896,16 @@ class SupportedLang {
 }
 
 const supportedLangs = <SupportedLang>[
-  SupportedLang(code: 'en', name: 'English', native: 'English', flag: 'ðŸ‡ºðŸ‡¸'),
+  SupportedLang(code: 'en', name: 'English', native: 'English', flag: '🇺🇸'),
   SupportedLang(
     code: 'pt',
     name: 'Portuguese',
-    native: 'PortuguÃªs',
-    flag: 'ðŸ‡§ðŸ‡·',
+    native: 'Português',
+    flag: '🇧🇷',
   ),
-  SupportedLang(code: 'es', name: 'Spanish', native: 'EspaÃ±ol', flag: 'ðŸ‡ªðŸ‡¸'),
-  SupportedLang(code: 'fr', name: 'French', native: 'FranÃ§ais', flag: 'ðŸ‡«ðŸ‡·'),
-  SupportedLang(code: 'ja', name: 'Japanese', native: 'æ—¥æœ¬èªž', flag: 'ðŸ‡¯ðŸ‡µ'),
+  SupportedLang(code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸'),
+  SupportedLang(code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷'),
+  SupportedLang(code: 'ja', name: 'Japanese', native: '日本語', flag: '🇯🇵'),
 ];
 
 class LanguageButton extends StatelessWidget {
@@ -838,7 +924,7 @@ class LanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = language.native.isEmpty
         ? language.name
-        : '${language.name} Â· ${language.native}';
+        : '${language.name} · ${language.native}';
     return SizedBox(
       width: double.infinity,
       height: 64,
@@ -1261,7 +1347,3 @@ BoxDecoration primaryButtonDecoration({required double radius}) {
     ],
   );
 }
-
-
-
-

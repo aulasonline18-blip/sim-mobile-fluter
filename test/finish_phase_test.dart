@@ -119,12 +119,13 @@ void main() {
     expect(find.text('Preparando audio da aula...'), findsOneWidget);
     await tester.pumpAndSettle();
 
-    final optionB = find.textContaining('B.');
+    final optionB = find.text('B');
     await tester.ensureVisible(optionB);
     await tester.tap(optionB);
     await tester.pumpAndSettle();
-    expect(find.text('Como ficou este ponto para voce?'), findsOneWidget);
-    expect(find.textContaining('2. Acho que sim'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
   });

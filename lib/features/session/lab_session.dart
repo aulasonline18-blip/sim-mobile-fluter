@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class LabSession extends ChangeNotifier {
   LabSession({
     StudentStateStore? canonicalStore,
@@ -528,8 +529,8 @@ class LabSession extends ChangeNotifier {
 
   LessonContent _devLessonContent() => const LessonContent(
     explanation:
-        'Vamos estudar fraÃ§Ãµes equivalentes com uma explicaÃ§Ã£o curta antes do desafio.',
-    question: 'Qual alternativa representa uma fraÃ§Ã£o equivalente a 1/2?',
+        'Vamos estudar frações equivalentes com uma explicação curta antes do desafio.',
+    question: 'Qual alternativa representa uma fração equivalente a 1/2?',
     options: {
       AnswerLetter.A: '1/3',
       AnswerLetter.B: '2/4',
@@ -575,7 +576,7 @@ class LabSession extends ChangeNotifier {
       history: const [],
       conteudo: content,
       itemMarker: 'M-1',
-      itemText: 'FraÃ§Ãµes equivalentes',
+      itemText: 'Frações equivalentes',
     );
   }
 
@@ -737,10 +738,10 @@ class LabSession extends ChangeNotifier {
       );
       audioPlaying = started;
       if (!started) {
-        audioError = 'Ãudio ainda nÃ£o estÃ¡ disponÃ­vel.';
+        audioError = 'Áudio ainda não está disponível.';
       }
     } catch (_) {
-      audioError = 'NÃ£o foi possÃ­vel preparar o Ã¡udio agora.';
+      audioError = 'Não foi possível preparar o áudio agora.';
       audioPlaying = false;
     } finally {
       audioLoading = false;
@@ -787,7 +788,3 @@ String _deriveLessonLocalId(String objetivo, String idioma) {
   final unsigned = h & 0xFFFFFFFF;
   return 'cyber-${unsigned.toRadixString(36)}';
 }
-
-
-
-

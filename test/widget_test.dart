@@ -56,13 +56,14 @@ void main() {
     await tester.pumpWidget(SimMobileApp(initialSession: session));
     session.openSupport('/creditos');
     await tester.pumpAndSettle();
-    expect(find.textContaining('Cr'), findsWidgets);
-    await tester.tap(find.textContaining('100').first);
+    expect(find.text('My credits'), findsOneWidget);
+    expect(find.text('CURRENT BALANCE'), findsOneWidget);
+    await tester.tap(find.text('about 33 lessons'));
     await tester.pumpAndSettle();
     expect(find.text('Retorno do pagamento'), findsOneWidget);
     await tester.tap(find.text('Tentar de novo'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('500'), findsWidgets);
+    expect(find.text('about 166 lessons'), findsOneWidget);
 
     session.openSupport('/privacidade');
     await tester.pumpAndSettle();
@@ -101,15 +102,20 @@ void main() {
     await session.openAulaRuntime();
     await tester.pumpWidget(SimMobileApp(initialSession: session));
 
-    await tester.tap(find.byIcon(Icons.help_outline));
+    expect(find.byIcon(Icons.help_outline), findsNothing);
+    await tester.tap(find.text('B'));
     await tester.pumpAndSettle();
-    expect(find.text('Duvida'), findsOneWidget);
-    await tester.tap(find.textContaining('B.'));
+    await tester.tap(find.text('2'));
     await tester.pumpAndSettle();
-    expect(find.text('Como ficou este ponto para voce?'), findsOneWidget);
-    await tester.tap(find.textContaining('2. Acho que sim'));
+    expect(find.text('Dúvida'), findsOneWidget);
+    await tester.tap(find.text('Dúvida'));
     await tester.pumpAndSettle();
-    expect(find.text('Avancar'), findsOneWidget);
+    expect(find.text('Enviar dúvida'), findsWidgets);
+    expect(
+      find.text('Escreva sua dúvida sobre a explicação ou exercício.'),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsWidgets);
 
     await tester.binding.setSurfaceSize(null);
   });

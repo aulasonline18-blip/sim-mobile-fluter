@@ -52,58 +52,187 @@ import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
 
-class CreditsLabScreen extends StatelessWidget {
+class CreditsLabScreen extends StatefulWidget {
   const CreditsLabScreen({required this.session, super.key});
 
   final LabSession session;
 
   @override
+  State<CreditsLabScreen> createState() => _CreditsLabScreenState();
+}
+
+class _CreditsLabScreenState extends State<CreditsLabScreen> {
+  String? loadingPack;
+
+  void _openPack(String packId) {
+    if (loadingPack != null) return;
+    setState(() => loadingPack = packId);
+    Future<void>.delayed(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      widget.session.openCheckoutReturn();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final session = widget.session;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: SimCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Cr\u00e9ditos',
-                  style: TextStyle(
-                    color: simDark,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 576),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: session.goPortal,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: glassDecoration(radius: 14),
+                          child: const Icon(
+                            Icons.arrow_back,
+                            color: simDark,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          t('pay_my_credits'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: simDark,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 44),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Saldo atual: ${session.credits}',
-                  style: const TextStyle(color: simMuted, fontSize: 15),
-                ),
-                const SizedBox(height: 18),
-                CreditPackButton(
-                  title: '100 cr\u00e9ditos',
-                  subtitle: t('pay_pack_lessons_100'),
-                  onTap: session.openCheckoutReturn,
-                ),
-                CreditPackButton(
-                  title: '200 cr\u00e9ditos',
-                  subtitle: t('pay_pack_lessons_200'),
-                  onTap: session.openCheckoutReturn,
-                ),
-                CreditPackButton(
-                  title: '500 cr\u00e9ditos',
-                  subtitle: t('pay_pack_lessons_500'),
-                  onTap: session.openCheckoutReturn,
-                ),
-                const SizedBox(height: 16),
-                PrimaryWideButton(
-                  label: 'Voltar para aula',
-                  onTap: () => session.openSupport('/cyber/aula'),
-                ),
-                const SizedBox(height: 10),
-                SecondaryWideButton(label: 'Portal', onTap: session.goPortal),
-              ],
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: glassDecoration(radius: 18),
+                    child: Column(
+                      children: [
+                        Text(
+                          t('pay_current_balance').toUpperCase(),
+                          style: const TextStyle(
+                            color: simMuted,
+                            fontSize: 12,
+                            fontFamily: kMono,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${session.credits}',
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 60,
+                                height: 0.95,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 7),
+                              child: Text(
+                                session.credits == 1
+                                    ? t('pay_credit_one')
+                                    : t('pay_credits'),
+                                style: const TextStyle(
+                                  color: simMuted,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: glassDecoration(radius: 18),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          color: simDark,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                t('pay_recharge').toUpperCase(),
+                                style: const TextStyle(
+                                  color: simDark,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                t('pay_pricing_explainer'),
+                                style: const TextStyle(
+                                  color: simMuted,
+                                  fontSize: 13,
+                                  fontFamily: kMono,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  CreditPackButton(
+                    credits: 100,
+                    subtitle: t('pay_pack_lessons_100'),
+                    loading: loadingPack == 'credits_100',
+                    disabled: loadingPack != null,
+                    onTap: () => _openPack('credits_100'),
+                  ),
+                  CreditPackButton(
+                    credits: 200,
+                    subtitle: t('pay_pack_lessons_200'),
+                    loading: loadingPack == 'credits_200',
+                    disabled: loadingPack != null,
+                    onTap: () => _openPack('credits_200'),
+                  ),
+                  CreditPackButton(
+                    credits: 500,
+                    subtitle: t('pay_pack_lessons_500'),
+                    loading: loadingPack == 'credits_500',
+                    disabled: loadingPack != null,
+                    onTap: () => _openPack('credits_500'),
+                  ),
+                  const SizedBox(height: 18),
+                  SecondaryWideButton(
+                    label: 'Voltar para aula',
+                    onTap: () => session.openSupport('/cyber/aula'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -114,53 +243,85 @@ class CreditsLabScreen extends StatelessWidget {
 
 class CreditPackButton extends StatelessWidget {
   const CreditPackButton({
-    required this.title,
+    required this.credits,
     required this.subtitle,
+    required this.loading,
+    required this.disabled,
     required this.onTap,
     super.key,
   });
 
-  final String title;
+  final int credits;
   final String subtitle;
+  final bool loading;
+  final bool disabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: simDark,
-          side: const BorderSide(color: simBorder),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          padding: const EdgeInsets.all(14),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.credit_card, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: Opacity(
+          opacity: disabled && !loading ? 0.6 : 1,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: glassDecoration(radius: 18),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(color: simDark),
+                          children: [
+                            TextSpan(
+                              text: '$credits ',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            TextSpan(
+                              text: t('pay_credits'),
+                              style: const TextStyle(
+                                color: simMuted,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: simMuted,
+                          fontSize: 13,
+                          fontFamily: kMono,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (loading)
+                  const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: simDark,
                     ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: simMuted, fontSize: 13),
-                  ),
-                ],
-              ),
+                  )
+                else
+                  const Icon(Icons.bolt, color: simDark, size: 22),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

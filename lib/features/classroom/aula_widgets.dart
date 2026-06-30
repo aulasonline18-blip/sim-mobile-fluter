@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class AulaTopBar extends StatelessWidget {
   const AulaTopBar({
     required this.session,
@@ -170,12 +171,6 @@ class AulaTopBar extends StatelessWidget {
                         : Icons.volume_off_outlined,
                     color: session.audioEnabled ? simDark : simMuted,
                     onTap: session.toggleAudio,
-                  ),
-                  const SizedBox(width: 6),
-                  _HeaderIconCard(
-                    icon: Icons.help_outline,
-                    color: simDark,
-                    onTap: session.toggleDoubt,
                   ),
                   if (showReviewButton) ...[
                     const SizedBox(width: 6),
@@ -442,7 +437,3 @@ class StatusLine extends StatelessWidget {
     return GestureDetector(onTap: onTap, child: row);
   }
 }
-
-
-
-

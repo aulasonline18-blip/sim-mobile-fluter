@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class PhaseBoundaryScreen extends StatefulWidget {
   const PhaseBoundaryScreen({required this.session, super.key});
 
@@ -91,7 +92,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
     final error = widget.session.entryError;
     final isError = status == 'erro';
     final isCredits =
-        error?.toLowerCase().contains('crÃ©dito') == true ||
+        error?.toLowerCase().contains('crédito') == true ||
         error?.toLowerCase().contains('credit') == true;
     final simStage = _toSimStage(status);
     final isReady = status == 'primeira_aula_pronta';
@@ -111,7 +112,7 @@ class _PhaseBoundaryScreenState extends State<PhaseBoundaryScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          'NÃ£o consegui preparar agora.',
+                          'Não consegui preparar agora.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
@@ -375,7 +376,7 @@ class _PlacementQuestion extends StatelessWidget {
         const SizedBox(height: 8),
         SecondaryWideButton(label: 'B. Sei uma parte', onTap: onDone),
         const SizedBox(height: 8),
-        SecondaryWideButton(label: 'C. Preciso comeÃ§ar guiado', onTap: onDone),
+        SecondaryWideButton(label: 'C. Preciso começar guiado', onTap: onDone),
       ],
     );
   }
@@ -417,7 +418,7 @@ class _PlacementResult extends StatelessWidget {
 (String, String) loadingCopy(String status) => switch (status) {
   'pedido_recebido' => (
     'Recebi seu pedido.',
-    'A sala jÃ¡ abriu. Estou comeÃ§ando a entender seu objetivo.',
+    'A sala já abriu. Estou começando a entender seu objetivo.',
   ),
   't00_running' => (
     'Entendendo seu objetivo...',
@@ -425,52 +426,52 @@ class _PlacementResult extends StatelessWidget {
   ),
   'first_item_ready' => (
     'Primeiro tema encontrado.',
-    'JÃ¡ tenho o ponto inicial. Agora vou preparar a primeira explicaÃ§Ã£o.',
+    'Já tenho o ponto inicial. Agora vou preparar a primeira explicação.',
   ),
   't02_running' || 't02_first_lesson_running' => (
     'Preparando sua primeira aula...',
-    'O professor jÃ¡ recebeu o primeiro tema e estÃ¡ escrevendo a explicaÃ§Ã£o.',
+    'O professor já recebeu o primeiro tema e está escrevendo a explicação.',
   ),
   'primeira_aula_pronta' || 'first_lesson_ready' => (
     'A primeira aula chegou.',
     'Estou abrindo o material.',
   ),
   'failed_t00' => (
-    'NÃ£o consegui entender o objetivo.',
-    'Tente novamente com uma descriÃ§Ã£o um pouco mais direta do que deseja estudar.',
+    'Não consegui entender o objetivo.',
+    'Tente novamente com uma descrição um pouco mais direta do que deseja estudar.',
   ),
   'failed_t02' => (
-    'NÃ£o consegui preparar a aula.',
-    'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponÃ­vel.',
+    'Não consegui preparar a aula.',
+    'Tente novamente. Se persistir, o servidor pode estar temporariamente indisponível.',
   ),
   'blocked_credits' => (
-    'CrÃ©ditos insuficientes.',
-    'Adicione crÃ©ditos para gerar a prÃ³xima aula real.',
+    'Créditos insuficientes.',
+    'Adicione créditos para gerar a próxima aula real.',
   ),
   _ => (
     t('preparing_lesson'),
-    'A sala jÃ¡ abriu. Estou buscando a explicaÃ§Ã£o do primeiro tema.',
+    'A sala já abriu. Estou buscando a explicação do primeiro tema.',
   ),
 };
 
 String feedbackText(String key) => switch (key) {
-  'aula_fb_correct' => 'Exato! VocÃª domina este ponto.',
-  'aula_fb_correct_rev' => 'Certo, mas vamos reforÃ§ar.',
+  'aula_fb_correct' => 'Exato! Você domina este ponto.',
+  'aula_fb_correct_rev' => 'Certo, mas vamos reforçar.',
   'aula_fb_dont_know' => 'Acertou no chute. Vamos revisar com cuidado.',
-  'aula_fb_redo' => 'NÃ£o foi dessa vez. Vamos tentar de novo.',
-  'aula_fb_review_none' => 'Ã“timo! RevisÃ£o concluÃ­da.',
-  'aula_fb_review_light' => 'Quase lÃ¡. Mais um reforÃ§o.',
-  'aula_fb_review_heavy' => 'Precisa de mais prÃ¡tica neste ponto.',
+  'aula_fb_redo' => 'Não foi dessa vez. Vamos tentar de novo.',
+  'aula_fb_review_none' => 'Ótimo! Revisão concluída.',
+  'aula_fb_review_light' => 'Quase lá. Mais um reforço.',
+  'aula_fb_review_heavy' => 'Precisa de mais prática neste ponto.',
   _ => key,
 };
 
 String nextBtnText(String key) => switch (key) {
-  'aula_next' => 'PrÃ³ximo',
-  'aula_next_item' => 'PrÃ³ximo tÃ³pico',
+  'aula_next' => 'Próximo',
+  'aula_next_item' => 'Próximo tópico',
   'aula_consolidate' => 'Consolidar',
-  'aula_layer_label_2' => 'PrÃ³xima camada',
+  'aula_layer_label_2' => 'Próxima camada',
   'aula_layer_label_3' => 'Camada final',
-  _ => 'AvanÃ§ar',
+  _ => 'Avançar',
 };
 
 String headerLabelText(String key) {
@@ -485,12 +486,8 @@ String headerLabelText(String key) {
       'aula_layer_3' => 'Camada 3',
       _ => layerKey,
     };
-    return 'Item $fraction Â· $layer';
+    return 'Item $fraction · $layer';
   }
-  if (key.startsWith('aula_review_review:')) return 'RevisÃ£o';
+  if (key.startsWith('aula_review_review:')) return 'Revisão';
   return key;
 }
-
-
-
-

@@ -26,7 +26,8 @@ const Map<String, String> _simStrings = {
   // Objeto
   'objeto_h1': 'Tell us about who is going to study',
   'objeto_card1_title': 'Resumo livre',
-  'objeto_helper': 'Escreva com suas palavras. SIM vai montar o currículo ideal.',
+  'objeto_helper':
+      'Escreva com suas palavras. SIM vai montar o currículo ideal.',
   'objeto_save_continue': 'Save and continue',
   'objeto_too_long': 'Texto muito longo',
   'objeto_preferred_name': 'Como você quer ser chamado?',
@@ -173,9 +174,15 @@ const Map<String, String> _simStrings = {
   'placement_starting_at': 'Você começa em',
 
   // Créditos
-  'pay_pack_lessons_100': '~100 aulas',
-  'pay_pack_lessons_200': '~200 aulas',
-  'pay_pack_lessons_500': '~500 aulas',
+  'pay_my_credits': 'My credits',
+  'pay_current_balance': 'Current balance',
+  'pay_credits': 'credits',
+  'pay_credit_one': 'credit',
+  'pay_recharge': 'Recharge',
+  'pay_pricing_explainer': '1 lesson = 3 credits · secure payment in USD',
+  'pay_pack_lessons_100': 'about 33 lessons',
+  'pay_pack_lessons_200': 'about 66 lessons',
+  'pay_pack_lessons_500': 'about 166 lessons',
   'pay_checkout_timeout': 'Checkout expirou. Tente novamente.',
 };
 

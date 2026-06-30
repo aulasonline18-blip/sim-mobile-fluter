@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class SimFrame extends StatelessWidget {
   const SimFrame({required this.child, super.key});
 
@@ -108,7 +109,7 @@ class PortalScreen extends StatelessWidget {
                     PortalHeroCard(session: session),
                     const SizedBox(height: 16),
                     const Text(
-                      'SIM v1  â€¢  Cyber-Premium',
+                      'SIM v1 • Cyber-Premium',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
@@ -204,7 +205,7 @@ class _PortalDrawerBody extends StatelessWidget {
           },
         ),
         MenuLine(
-          label: 'Solicitar exclusÃ£o da conta',
+          label: 'Solicitar exclusão da conta',
           onTap: () {
             close();
             session.openSupport('/conta/deletar');
@@ -563,7 +564,3 @@ class ContactButton extends StatelessWidget {
     );
   }
 }
-
-
-
-

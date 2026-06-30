@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../sim/config/sim_environment.dart';
+
 const simSupabaseUrl = 'https://qxzwcldfowyqhyikyxcy.supabase.co';
 
-// JetBrains Mono font family name â€” used instead of kMono
+// JetBrains Mono font family name - used instead of kMono
 // so TextStyle objects can remain const.
 const String kMono = 'JetBrains Mono';
 const simSupabaseAnonKey = 'sb_publishable_-b8arZ8aKEbwU6FEpXAhqg_6bXycrgQ';
@@ -18,15 +19,15 @@ const simBorder = Color(0xFFD1D5DB); // border / input
 const simDestructive = Color(0xFF000000); // destructive (preto)
 const simDestructiveFg = Color(0xFFFFFFFF); // destructive_fg
 const simSuccess = Color(0xFF374151); // success = #374151 (cinza-escuro)
-const simWarn = Color(0xFF6B7280); // warn = #6B7280 (cinza-mÃ©dio)
+const simWarn = Color(0xFF6B7280); // warn = #6B7280 (cinza-medio)
 
-// gradient_primary: LinearGradient 135Â° #FFFFFF â†’ #F3F4F6 ("papel premium")
+// gradient_primary: LinearGradient 135deg #FFFFFF -> #F3F4F6 ("papel premium")
 const simGradientPrimary = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [Color(0xFFFFFFFF), Color(0xFFF3F4F6)],
 );
-// gradient_bg: LinearGradient 180Â° #FFFFFF â†’ #F3F4F6
+// gradient_bg: LinearGradient 180deg #FFFFFF -> #F3F4F6
 const simGradientBg = LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
@@ -57,13 +58,10 @@ const maxAttachments = 3;
 const maxAttachmentBytes = 10 * 1024 * 1024;
 const minExtractedChars = 20;
 const audioNotSupportedMessage =
-    'Ãudio ainda nÃ£o estÃ¡ disponÃ­vel. Envie texto, foto ou arquivo.';
+    'Áudio ainda não está disponível. Envie texto, foto ou arquivo.';
 const videoNotSupportedMessage =
-    'VÃ­deo ainda nÃ£o estÃ¡ disponÃ­vel. Envie texto, foto ou arquivo.';
+    'Vídeo ainda não está disponível. Envie texto, foto ou arquivo.';
 const objectiveRequiredMessage =
-    'Campo obrigatÃ³rio. Escreva o que vocÃª quer estudar.';
+    'Campo obrigatório. Escreva o que você quer estudar.';
 const objectiveRequiredWithAttachmentMessage =
     'Você anexou um arquivo. Agora escreva o que deseja estudar com ele.';
-
-
-

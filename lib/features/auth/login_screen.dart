@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({required this.session, super.key});
 
@@ -324,7 +325,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: widget.session.goPortal,
                     child: const Text(
-                      'â† Back to portal',
+                      '← Back to portal',
                       style: TextStyle(
                         color: simMuted,
                         fontSize: 12,
@@ -404,7 +405,3 @@ class GoogleMark extends StatelessWidget {
     );
   }
 }
-
-
-
-

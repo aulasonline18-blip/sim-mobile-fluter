@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class AulaLabScreen extends StatefulWidget {
   const AulaLabScreen({required this.session, super.key});
 
@@ -96,24 +97,17 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
   void _showDoubtSheet() {
     if (!mounted) return;
-    final conteudo = widget.session.aulaSnapshot?.conteudo;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DoubtInputSheet(
         controller: _doubtController,
-        conteudo: conteudo,
         onSubmit: (text) {
           widget.session.toggleDoubt();
           _doubtController.clear();
         },
         onClose: () {
-          widget.session.toggleDoubt();
-          _doubtController.clear();
-        },
-        onSignal: (sinal) {
-          widget.session.submitAulaSignal(sinal);
           widget.session.toggleDoubt();
           _doubtController.clear();
         },
@@ -373,7 +367,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  'Â· ${headerLabelText(viewModel.headerLabel)}',
+                                  '· ${headerLabelText(viewModel.headerLabel)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -416,7 +410,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           const SizedBox(height: 12),
                           DoubtProgressBar(
                             progress: session.doubt.progress.toDouble(),
-                            label: 'Analisando sua dÃºvida...',
+                            label: 'Analisando sua dúvida...',
                           ),
                         ],
                         // Doubt: explaining / error â†’ explanation card
@@ -442,7 +436,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'ExplicaÃ§Ã£o da sua dÃºvida',
+                                  'Explicação da sua dúvida',
                                   style: TextStyle(
                                     color: simDark,
                                     fontSize: 15,
@@ -569,21 +563,21 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ),
                         const SizedBox(height: 10),
                         AnswerButton(
-                          label: 'A.',
+                          label: 'A',
                           text: content.options[AnswerLetter.A] ?? '',
                           active: effectiveSelected == AnswerLetter.A,
                           enabled: !locked,
                           onTap: () => session.chooseAulaAnswer('A'),
                         ),
                         AnswerButton(
-                          label: 'B.',
+                          label: 'B',
                           text: content.options[AnswerLetter.B] ?? '',
                           active: effectiveSelected == AnswerLetter.B,
                           enabled: !locked,
                           onTap: () => session.chooseAulaAnswer('B'),
                         ),
                         AnswerButton(
-                          label: 'C.',
+                          label: 'C',
                           text: content.options[AnswerLetter.C] ?? '',
                           active: effectiveSelected == AnswerLetter.C,
                           enabled: !locked,
@@ -608,10 +602,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                   ),
                 ], // end challenge block
-                // FeedbackBox + DÃºvida button + PrÃ³ximo
+                // FeedbackBox + Duvida button + Proximo
                 if (isCompleted && feedbackKey != null) ...[
                   const SizedBox(height: 10),
-                  // "DÃºvida" button (spec: concluido state, before FeedbackBox)
+                  // "Duvida" button (spec: concluido state, before FeedbackBox)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: GestureDetector(
@@ -638,8 +632,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         ),
                         child: Text(
                           session.doubt.status == DoubtStatus.processing
-                              ? 'DÃºvida...'
-                              : 'DÃºvida',
+                              ? 'Dúvida...'
+                              : 'Dúvida',
                           style: TextStyle(
                             color:
                                 session.doubt.status == DoubtStatus.processing
@@ -987,16 +981,9 @@ class _FeedbackBoxState extends State<_FeedbackBox>
 }
 
 // AUL-8: Row of 3 equal signal buttons, mono-18 number, label-11 uppercase
-class _SinalRow extends StatefulWidget {
+class _SinalRow extends StatelessWidget {
   const _SinalRow({required this.onSignal});
   final void Function(int) onSignal;
-
-  @override
-  State<_SinalRow> createState() => _SinalRowState();
-}
-
-class _SinalRowState extends State<_SinalRow> {
-  int? _selected;
 
   @override
   Widget build(BuildContext context) {
@@ -1005,89 +992,63 @@ class _SinalRowState extends State<_SinalRow> {
       (2, t('aula_sig_revisar')),
       (3, t('aula_sig_nao_sei')),
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Como ficou este ponto para voce?',
-          style: TextStyle(
-            color: simDark,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          margin: const EdgeInsets.only(left: 12),
-          padding: const EdgeInsets.only(left: 16),
-          decoration: const BoxDecoration(
-            border: Border(left: BorderSide(color: simDark, width: 1)),
-          ),
-          child: Row(
-            children: [
-              for (int i = 0; i < labels.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selected = labels[i].$1),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 8,
+    return Container(
+      margin: const EdgeInsets.only(left: 12),
+      padding: const EdgeInsets.only(left: 16),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: simDark, width: 1)),
+      ),
+      child: Row(
+        children: [
+          for (int i = 0; i < labels.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onSignal(labels[i].$1),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0x14111827),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: simDark),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${labels[i].$1}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: kMono,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: simDark,
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: const Color(0x14111827),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: simDark),
-                      ),
-                      child: Text(
-                        '${labels[i].$1}. ${labels[i].$2}',
+                      const SizedBox(height: 2),
+                      Text(
+                        labels[i].$2.toUpperCase(),
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontFamily: kMono,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: simDark,
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        if (_selected != null) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: GestureDetector(
-              onTap: () => widget.onSignal(_selected!),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: simGradientPrimary,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: simDark),
-                  boxShadow: simShadowGlow,
-                ),
-                child: const Text(
-                  'Avancar',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: simDark,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -1227,32 +1188,23 @@ class _DoubtInputSheet extends StatefulWidget {
     required this.controller,
     required this.onSubmit,
     required this.onClose,
-    required this.onSignal,
-    this.conteudo,
   });
 
   final TextEditingController controller;
   final void Function(String text) onSubmit;
   final VoidCallback onClose;
-  final void Function(int sinal) onSignal;
-  final LessonContent? conteudo;
 
   @override
   State<_DoubtInputSheet> createState() => _DoubtInputSheetState();
 }
 
 class _DoubtInputSheetState extends State<_DoubtInputSheet> {
-  bool _showSignal = false;
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final opts = widget.conteudo?.options;
-    final optLabels = [
-      ('A', opts?[AnswerLetter.A] ?? ''),
-      ('B', opts?[AnswerLetter.B] ?? ''),
-      ('C', opts?[AnswerLetter.C] ?? ''),
-    ];
+    final textLength = widget.controller.text.length;
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1281,47 +1233,96 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Duvida',
+                  'Enviar dúvida',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 12),
-                if (!_showSignal) ...[
-                  // Phase 1: show answer options A. / B. / C.
-                  for (final (letter, text) in optLabels)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _showSignal = true),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: simBorder),
-                          ),
-                          child: Text(
-                            '$letter. $text',
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 14,
-                              height: 1.35,
-                            ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Escreva sua dúvida sobre a explicação ou exercício.',
+                  style: TextStyle(color: simMuted, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: simBorder),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  child: Stack(
+                    children: [
+                      TextField(
+                        controller: widget.controller,
+                        minLines: 5,
+                        maxLines: 5,
+                        maxLength: 1200,
+                        decoration: const InputDecoration(
+                          hintText: 'Escreva sua dúvida aqui...',
+                          border: InputBorder.none,
+                          counterText: '',
+                          contentPadding: EdgeInsets.only(bottom: 28),
+                        ),
+                        style: const TextStyle(
+                          color: simDark,
+                          fontSize: 16,
+                          height: 1.35,
+                        ),
+                        onChanged: (_) => setState(() => _error = null),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Text(
+                          '$textLength/1200',
+                          style: const TextStyle(
+                            color: simMuted,
+                            fontSize: 12,
+                            fontFamily: kMono,
                           ),
                         ),
                       ),
-                    ),
-                ] else ...[
-                  // Phase 2: signal qualifier
-                  _SinalRow(onSignal: widget.onSignal),
+                    ],
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: simDestructive, fontSize: 13),
+                  ),
                 ],
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      final clean = widget.controller.text.trim();
+                      if (clean.isEmpty) {
+                        setState(
+                          () => _error = 'Escreva sua dúvida antes de enviar.',
+                        );
+                        return;
+                      }
+                      widget.onSubmit(clean);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: simDark,
+                      side: const BorderSide(color: simBorder),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Enviar dúvida',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1330,7 +1331,3 @@ class _DoubtInputSheetState extends State<_DoubtInputSheet> {
     );
   }
 }
-
-
-
-
