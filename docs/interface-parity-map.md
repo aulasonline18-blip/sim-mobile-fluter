@@ -54,7 +54,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 | Duvida | `DoubtInputSheet.tsx` | `_DoubtInputSheet` | Parcialmente corrigido: duvida aparece apos resposta concluida e abre sheet de texto com contador/envio. Ainda falta suporte visual/funcional de foto/camera/galeria como Web. | Alta | Conectar imagem da duvida ou documentar decisao humana para remover/adiar. | PARCIAL |
 | Revisao | `AuxRoomScreens.tsx` | `ReviewRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
 | Recuperacao | `AuxRoomScreens.tsx` | `RecoveryRoomScreen` Flutter | Fluxo existe; visual nao aprovado. | Media | Screenshot/testes. | PARCIAL |
-| Amparo | Aux/Web services | Flutter amparo controller | Tela concreta nao mapeada. | Media | Mapear gatilho/tela e testar. | NAO INICIADO |
+| Amparo | `lesson-pipeline-runtime.ts`, `T02Service.ts`, `routes/pai.tsx` | `AmparoController`, `LessonAnswerProgressController`, `FatherPanel` | Mapeado: no Web nao ha sala visual separada de amparo no fluxo principal; amparo e modo T02/estado e aparece no Painel do Pai. Flutter tem controlador e status equivalente. | Baixa | Capturar Painel do Pai quando SimWeb rodar. | IGUAL FUNCIONALMENTE |
 | Drawer/historico | `AulaDrawer.tsx` | `showAulaMenu` | Parcialmente corrigido: busca/historico/footer existem e export/import/status agora tem acao real via store/clipboard/dialog. Ainda falta paridade completa com cloud/local, renomear/apagar e screenshots. | Alta | Completar lista cloud/local e acoes de renomear/apagar iguais ao Web. | PARCIAL |
 | Creditos | `routes/creditos.tsx` | `CreditsLabScreen` | Corrigido para estrutura Web: header, balance card, recharge card, packs 100/200/500 com loading e checkout. Ainda falta erro hosted/modal embedded visual. | Alta | Capturar screenshot e cobrir erro hosted/modal se aplicavel ao Flutter. | IGUAL FUNCIONALMENTE |
 | Conclusao | `LessonDoneScreen` Web | `LessonDoneScreen` Flutter | Usa robo; precisa validar CTA/destino. | Baixa | Screenshot/teste. | PARCIAL |
@@ -68,7 +68,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 1. Duvida Flutter ainda nao tem foto/camera/galeria como `DoubtInputSheet.tsx` do Web.
 2. Drawer Flutter ainda nao prova paridade total com cloud/local, renomear, apagar e lista paginada do Web.
 3. Ainda faltam screenshots reais Web/Flutter para aprovar visualmente portal, login, idioma, objetivo, preparacao, aula, drawer e creditos.
-4. Amparo ainda esta inconclusivo nesta matriz.
+4. Amparo foi mapeado como comportamento/estado, nao como tela propria; falta apenas screenshot do Painel do Pai.
 5. Comentarios com mojibake ainda podem existir, mas textos visiveis auditados nesta rodada foram corrigidos nos pontos alterados.
 
 ## Plano De Captura Visual
@@ -95,4 +95,4 @@ Nao estamos em B. Progresso desta rodada:
 - `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`: passou, APK gerado.
 - Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida textual, creditos com estrutura Web, drawer export/import/status com acao real e mojibake visivel em pontos alterados.
 
-Ainda falta para B: captura visual real do SimWeb/Flutter, duvida com imagem, drawer completo cloud/local/renomear/apagar, amparo mapeado e aprovacao visual tela por tela.
+Ainda falta para B: captura visual real do SimWeb/Flutter, duvida com imagem, drawer completo cloud/local/renomear/apagar e aprovacao visual tela por tela.
