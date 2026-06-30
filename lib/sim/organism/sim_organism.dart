@@ -139,10 +139,40 @@ class SimOrganism {
       service: stateService,
       orchestrator: orchestrator,
     );
+    final audioPreference = AudioPreference();
+    final audioCore = AudioCore(
+      preference: audioPreference,
+      playback: playback ?? PlatformAudioAdapter(),
+      generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
+      stableLangProvider: () =>
+          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
+    );
+    final mediaService = StudentLessonMediaService(
+      audioCore: audioCore,
+      readState: (id) => stateService.ensure(lessonLocalId: id),
+      writeState: stateService.write,
+    );
+    orchestrator.setAudioTextPreparer((params, lesson) {
+      mediaService.prepareLessonAudioText(
+        LessonMediaPosition(
+          lessonLocalId: params.lessonLocalId,
+          itemMarker: params.marker,
+          layer: params.layer,
+        ),
+        [
+          lesson.conteudo.explanation,
+          lesson.conteudo.question,
+          lesson.conteudo.options[AnswerLetter.A],
+          lesson.conteudo.options[AnswerLetter.B],
+          lesson.conteudo.options[AnswerLetter.C],
+        ],
+      );
+    });
     final materialService = StudentLessonMaterialService(
       stateService: stateService,
       orchestrator: orchestrator,
       readyWindowEngine: readyWindowEngine,
+      mediaService: mediaService,
     );
     final readyWindowWorker = ReadyWindowWorker(
       service: stateService,
@@ -175,15 +205,6 @@ class SimOrganism {
       store: placementStore,
       t02Caller: PlacementT02Caller(t02Client: t02Client, enabled: false),
       enabled: false,
-    );
-
-    final audioPreference = AudioPreference();
-    final audioCore = AudioCore(
-      preference: audioPreference,
-      playback: playback ?? PlatformAudioAdapter(),
-      generatedAudioClient: SimServerGeneratedAudioClient(config: aiConfig),
-      stableLangProvider: () =>
-          stateService.read(lessonLocalId)?.profile.stableLang ?? '',
     );
 
     final lessonMaterialController = LessonMaterialController(
@@ -224,11 +245,6 @@ class SimOrganism {
     final cloudBootstrap = LessonCloudBootstrap(sync: sync);
     final curriculumSync = LessonCurriculumSyncEngine(
       stateService: stateService,
-    );
-    final mediaService = StudentLessonMediaService(
-      audioCore: audioCore,
-      readState: (id) => stateService.ensure(lessonLocalId: id),
-      writeState: stateService.write,
     );
     final lessonAudioController = LessonAudioController(
       lessonLocalId: lessonLocalId,

@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class LessonDoneScreen extends StatelessWidget {
   const LessonDoneScreen({required this.session, super.key});
 
@@ -125,6 +126,7 @@ class _AuxQuestionScreen extends StatelessWidget {
     this.resultCorrect,
     this.resultMsg,
     this.onBack,
+    this.onAudio,
   });
 
   final String mode;
@@ -136,6 +138,7 @@ class _AuxQuestionScreen extends StatelessWidget {
   final bool? resultCorrect;
   final String? resultMsg;
   final VoidCallback? onBack;
+  final VoidCallback? onAudio;
   final void Function(AnswerLetter) onSelect;
   final void Function(DecisionSignal) onSignal;
   final VoidCallback onNext;
@@ -216,6 +219,26 @@ class _AuxQuestionScreen extends StatelessWidget {
                       letterSpacing: 0.18 * 11,
                     ),
                   ),
+                  if (onAudio != null) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: onAudio,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: simBorder),
+                        ),
+                        child: const Icon(
+                          Icons.volume_up,
+                          color: simDark,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -720,6 +743,12 @@ class ReviewRoomScreen extends StatelessWidget {
       resultCorrect: review.resultCorrect,
       resultMsg: review.resultMsg,
       onBack: session.closeReviewRoom,
+      onAudio: () => unawaited(
+        session.speakAuxRoomContent(
+          review.conteudo!,
+          source: 'review:${review.idx}',
+        ),
+      ),
       onSelect: (letter) =>
           session.setReviewRoom(review.copyWith(letra: letter)),
       onSignal: (signal) {
@@ -884,6 +913,12 @@ class RecoveryRoomScreen extends StatelessWidget {
       headerLabel: t('aux_recovery_preparing_title'),
       resultCorrect: recovery.resultCorrect,
       resultMsg: recovery.resultMsg,
+      onAudio: () => unawaited(
+        session.speakAuxRoomContent(
+          recovery.conteudo!,
+          source: 'recovery:${recovery.idx}',
+        ),
+      ),
       onSelect: (letter) =>
           session.setRecoveryRoom(recovery.copyWith(letra: letter)),
       onSignal: (signal) {
@@ -920,6 +955,3 @@ class RecoveryRoomScreen extends StatelessWidget {
 // AUL-1: Fixed header â€” menu btn + 3px progress bar + header label chip +
 // audio toggle + RevisÃ£o button (mono, uppercase, BookOpenCheck icon).
 // Matches LessonMainScreen.tsx header exactly.
-
-
-

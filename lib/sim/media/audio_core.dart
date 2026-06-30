@@ -33,6 +33,8 @@ abstract interface class AudioPlaybackAdapter {
   void stop();
 }
 
+typedef AudioErrorListener = void Function(Object error);
+
 class NoopAudioPlaybackAdapter implements AudioPlaybackAdapter {
   String? lastSpokenText;
   String? lastDataUrl;
@@ -63,6 +65,7 @@ class AudioCore {
     required this.playback,
     this.generatedAudioClient,
     this.stableLangProvider,
+    this.onGeneratedAudioError,
     this.maxAudioCache = 12,
   }) {
     preference.subscribe((enabled) {
@@ -74,6 +77,7 @@ class AudioCore {
   final AudioPlaybackAdapter playback;
   final GeneratedAudioClient? generatedAudioClient;
   final String Function()? stableLangProvider;
+  final AudioErrorListener? onGeneratedAudioError;
   final int maxAudioCache;
   final Map<String, String> _generatedAudioCache = {};
 
@@ -87,7 +91,10 @@ class AudioCore {
     playback.stop();
   }
 
-  Future<bool> speak(String text, [SpeakOptions opts = const SpeakOptions()]) async {
+  Future<bool> speak(
+    String text, [
+    SpeakOptions opts = const SpeakOptions(),
+  ]) async {
     if (!preference.getAudioEnabled()) {
       opts.onEnd?.call();
       return false;
@@ -102,12 +109,17 @@ class AudioCore {
     if (cached != null && playback.playDataUrl(cached, opts)) return true;
     final client = generatedAudioClient;
     if (client != null) {
-      final generated = await client.generateAudio(
-        text: clean,
-        lang: opts.lang ?? stableLangToBCP47(stableLangProvider?.call()),
-        voice: opts.voice,
-        lessonKey: opts.lessonKey ?? key,
-      );
+      String? generated;
+      try {
+        generated = await client.generateAudio(
+          text: clean,
+          lang: opts.lang ?? stableLangToBCP47(stableLangProvider?.call()),
+          voice: opts.voice,
+          lessonKey: opts.lessonKey ?? key,
+        );
+      } catch (error) {
+        onGeneratedAudioError?.call(error);
+      }
       if (generated != null && generated.isNotEmpty) {
         rememberAudio(key, generated);
         if (playback.playDataUrl(generated, opts)) return true;

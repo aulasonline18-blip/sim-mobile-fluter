@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:sim_mobile/sim/lesson/lesson_models.dart';
+import 'package:sim_mobile/sim/lesson/lesson_event_bus.dart';
+import 'package:sim_mobile/sim/lesson/lesson_material_cache.dart';
+import 'package:sim_mobile/sim/lesson/lesson_orchestrator.dart';
 import 'package:sim_mobile/sim/media/audio_core.dart';
 import 'package:sim_mobile/sim/media/audio_preference.dart';
 import 'package:sim_mobile/sim/media/blueprint_prompt.dart';
@@ -16,10 +19,30 @@ import 'package:sim_mobile/sim/media/lesson_visual_models.dart';
 import 'package:sim_mobile/sim/media/lesson_visual_pipeline.dart';
 import 'package:sim_mobile/sim/media/paid_image_service.dart' as paid;
 import 'package:sim_mobile/sim/media/student_lesson_media_service.dart';
+import 'package:sim_mobile/sim/modules/pedagogical_module_contracts.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
 import 'package:sim_mobile/sim/state/student_learning_state_service.dart';
 
 class FakeGeneratedAudioClient implements GeneratedAudioClient {
+  int calls = 0;
+  String? lastLang;
+  String? lastVoice;
+
+  @override
+  Future<String?> generateAudio({
+    required String text,
+    required String lang,
+    required String voice,
+    required String lessonKey,
+  }) async {
+    calls += 1;
+    lastLang = lang;
+    lastVoice = voice;
+    return 'data:audio/wav;base64,AAAA';
+  }
+}
+
+class ThrowingGeneratedAudioClient implements GeneratedAudioClient {
   int calls = 0;
 
   @override
@@ -30,8 +53,72 @@ class FakeGeneratedAudioClient implements GeneratedAudioClient {
     required String lessonKey,
   }) async {
     calls += 1;
-    return 'data:audio/wav;base64,AAAA';
+    throw StateError('remote down');
   }
+}
+
+class CountingPlaybackAdapter implements AudioPlaybackAdapter {
+  int dataUrlPlays = 0;
+  int platformTtsCalls = 0;
+  int stops = 0;
+  String? lastTtsText;
+
+  @override
+  bool playDataUrl(String dataUrl, SpeakOptions opts) {
+    dataUrlPlays += 1;
+    opts.onStart?.call();
+    opts.onEnd?.call();
+    return true;
+  }
+
+  @override
+  bool speakWithPlatformTts(String text, SpeakOptions opts) {
+    platformTtsCalls += 1;
+    lastTtsText = text;
+    opts.onStart?.call();
+    opts.onEnd?.call();
+    return true;
+  }
+
+  @override
+  void stop() {
+    stops += 1;
+  }
+}
+
+class FakeAudioT02Client implements T02LessonClient {
+  int calls = 0;
+
+  @override
+  Future<T02LessonMaterial> completeLesson(T02LessonRequest request) async {
+    calls += 1;
+    return T02LessonMaterial(
+      explanation: 'Explicacao ${request.item}',
+      question: 'Pergunta?',
+      options: const {
+        AnswerLetter.A: 'A1',
+        AnswerLetter.B: 'B1',
+        AnswerLetter.C: 'C1',
+      },
+      correctAnswer: AnswerLetter.A,
+      whyCorrect: 'A.',
+      whyWrong: null,
+      generatedAt: DateTime.fromMillisecondsSinceEpoch(1),
+      source: 'fake-audio',
+    );
+  }
+
+  @override
+  Future<T02LessonMaterial> auxiliaryRoom(T02LessonRequest request) =>
+      completeLesson(request);
+
+  @override
+  Future<T02LessonMaterial> doubt(T02LessonRequest request) =>
+      completeLesson(request);
+
+  @override
+  Future<T02LessonMaterial> placement(T02LessonRequest request) =>
+      completeLesson(request);
 }
 
 class FakeImageClient implements LessonImageClient {
@@ -108,7 +195,52 @@ void main() {
     expect(await core.speak('Oi', const SpeakOptions(lessonKey: 'k')), true);
     expect(await core.speak('Oi', const SpeakOptions(lessonKey: 'k')), true);
     expect(client.calls, 1);
+    expect(client.lastLang, 'pt-BR');
+    expect(client.lastVoice, 'Charon');
   });
+
+  test('audio disabled skips generated client and local playback', () async {
+    final preference = AudioPreference()..setAudioEnabled(false);
+    final playback = CountingPlaybackAdapter();
+    final client = FakeGeneratedAudioClient();
+    final core = AudioCore(
+      preference: preference,
+      playback: playback,
+      generatedAudioClient: client,
+    );
+
+    expect(
+      await core.speak('Nao tocar', const SpeakOptions(lessonKey: 'k')),
+      false,
+    );
+    expect(client.calls, 0);
+    expect(playback.platformTtsCalls, 0);
+  });
+
+  test(
+    'remote audio failure falls back to local TTS without blocking lesson',
+    () async {
+      final preference = AudioPreference();
+      final playback = CountingPlaybackAdapter();
+      final client = ThrowingGeneratedAudioClient();
+      Object? reportedError;
+      final core = AudioCore(
+        preference: preference,
+        playback: playback,
+        generatedAudioClient: client,
+        onGeneratedAudioError: (error) => reportedError = error,
+      );
+
+      expect(
+        await core.speak('Fallback local', const SpeakOptions(lessonKey: 'k')),
+        true,
+      );
+      expect(client.calls, 1);
+      expect(reportedError, isA<StateError>());
+      expect(playback.platformTtsCalls, 1);
+      expect(playback.lastTtsText, 'Fallback local');
+    },
+  );
 
   test('lesson audio controller preserves lesson reading sequence', () async {
     final states = {'l1': seedState()};
@@ -149,6 +281,55 @@ void main() {
     expect(states['l1']!.audio.status, 'ready');
   });
 
+  test('ready material prepares audioText without starting playback', () async {
+    final service = StudentLearningStateService(seed: {'l1': seedState()});
+    final playback = CountingPlaybackAdapter();
+    final media = StudentLessonMediaService(
+      audioCore: AudioCore(preference: AudioPreference(), playback: playback),
+      readState: (id) => service.ensure(lessonLocalId: id),
+      writeState: service.write,
+    );
+    final orchestrator = LessonOrchestrator(
+      t02Client: FakeAudioT02Client(),
+      cache: LessonMaterialCache(),
+      bus: LessonEventBus(),
+    );
+    orchestrator.setAudioTextPreparer((params, lesson) {
+      media.prepareLessonAudioText(
+        LessonMediaPosition(
+          lessonLocalId: params.lessonLocalId,
+          itemMarker: params.marker,
+          layer: params.layer,
+        ),
+        [
+          lesson.conteudo.explanation,
+          lesson.conteudo.question,
+          lesson.conteudo.options[AnswerLetter.A],
+          lesson.conteudo.options[AnswerLetter.B],
+          lesson.conteudo.options[AnswerLetter.C],
+        ],
+      );
+    });
+
+    await orchestrator.prefetchCompleteLesson(
+      const CompleteLessonParams(
+        lessonLocalId: 'l1',
+        item: 'Item 1',
+        lang: 'pt-BR',
+        academic: 'base',
+        layer: LessonLayer.l1,
+        mode: LessonMode.session,
+        marker: 'M1',
+      ),
+      priority: 'background',
+    );
+
+    final state = service.read('l1')!;
+    expect(state.events.map((event) => event.type), contains('AUDIO_READY'));
+    expect(playback.dataUrlPlays, 0);
+    expect(playback.platformTtsCalls, 0);
+  });
+
   test('doubt audio appends doubt suffix and respects preference', () async {
     final preference = AudioPreference();
     final playback = NoopAudioPlaybackAdapter();
@@ -158,9 +339,28 @@ void main() {
     );
 
     expect(await audio.speakDoubt('Duvida', lessonKey: 'l1:M1'), true);
+    expect(await audio.speakText('Revisao', lessonKey: 'l1:review:0'), true);
     preference.setAudioEnabled(false);
     expect(await audio.speakDoubt('Duvida', lessonKey: 'l1:M1'), false);
+    expect(
+      await audio.speakText('Recuperacao', lessonKey: 'l1:recovery:0'),
+      false,
+    );
   });
+
+  test(
+    'audio stop covers answer selection, signal, advance and dispose paths',
+    () {
+      final playback = CountingPlaybackAdapter();
+      final core = AudioCore(preference: AudioPreference(), playback: playback);
+      core.stop();
+      core.stop();
+      core.stop();
+      core.stop();
+
+      expect(playback.stops, 4);
+    },
+  );
 
   test('visual prompt preserves language directive and image validation', () {
     final prompt = buildNaturalImagePrompt(
@@ -350,6 +550,9 @@ void main() {
     expect(audio.text.length, maxAudioInputChars);
     expect(audio.lessonKey.length, 180);
     expect(voiceByLang('es'), 'Fenrir');
+    expect(voiceByLang('pt-BR'), 'Charon');
+    expect(voiceByLang('en-US'), 'Charon');
+    expect(audio.voice, 'Charon');
     expect(geminiTtsModel, 'gemini-2.5-flash-preview-tts');
   });
 }

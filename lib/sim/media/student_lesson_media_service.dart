@@ -1,5 +1,6 @@
 import '../state/student_learning_state.dart';
 import 'audio_core.dart';
+import 'lesson_audio_api_contract.dart';
 
 class LessonMediaPosition {
   const LessonMediaPosition({
@@ -116,7 +117,7 @@ class StudentLessonMediaService {
         SpeakOptions(
           lessonKey: lessonKey,
           lang: language,
-          voice: voice ?? 'cedar',
+          voice: voice ?? voiceByLang(language ?? ''),
           onStart: onStart,
           onEnd: onEnd,
         ),

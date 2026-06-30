@@ -30,6 +30,7 @@ import '../../session/navigation_state.dart';
 import '../../sim/lesson/lesson_models.dart';
 import '../../sim/media/audio_core.dart';
 import '../../sim/media/audio_preference.dart';
+import '../../sim/media/doubt_audio.dart';
 import '../../sim/media/image_data_url_compression.dart';
 import '../../sim/media/lesson_audio_controller.dart';
 import '../../sim/media/s12_visual_pipeline.dart';
@@ -108,6 +109,7 @@ class LabSession extends ChangeNotifier {
 
   final AudioPreference _audioPreference = AudioPreference();
   LessonAudioController? _lessonAudioController;
+  DoubtAudio? _doubtAudio;
   String? lessonImageOfferId;
   bool lessonImageOfferLoading = false;
 
@@ -193,11 +195,34 @@ class LabSession extends ChangeNotifier {
   void setDoubt(DoubtState s) => lessonUiState.setDoubt(s);
   void resetDoubt() => lessonUiState.resetDoubt();
   void openReviewRoom() => lessonUiState.openReviewRoom();
-  void closeReviewRoom() => lessonUiState.closeReviewRoom();
-  void setReviewRoom(ReviewRoomView v) => lessonUiState.setReviewRoom(v);
+  void closeReviewRoom() {
+    _doubtAudio?.stopDoubtAudio();
+    lessonUiState.closeReviewRoom();
+  }
+
+  void setReviewRoom(ReviewRoomView v) {
+    if (v.status == ReviewRoomStatus.result ||
+        v.status == ReviewRoomStatus.done ||
+        v.letra != null) {
+      _doubtAudio?.stopDoubtAudio();
+    }
+    lessonUiState.setReviewRoom(v);
+  }
+
   void openRecoveryRoom() => lessonUiState.openRecoveryRoom();
-  void closeRecoveryRoom() => lessonUiState.closeRecoveryRoom();
-  void setRecoveryRoom(RecoveryRoomView v) => lessonUiState.setRecoveryRoom(v);
+  void closeRecoveryRoom() {
+    _doubtAudio?.stopDoubtAudio();
+    lessonUiState.closeRecoveryRoom();
+  }
+
+  void setRecoveryRoom(RecoveryRoomView v) {
+    if (v.status == RecoveryRoomStatus.result ||
+        v.status == RecoveryRoomStatus.done ||
+        v.letra != null) {
+      _doubtAudio?.stopDoubtAudio();
+    }
+    lessonUiState.setRecoveryRoom(v);
+  }
 
   void goPortal() => navigationState.goPortal();
 
@@ -638,6 +663,28 @@ class LabSession extends ChangeNotifier {
     return controller;
   }
 
+  DoubtAudio _doubtAudioFor() {
+    final existing = _doubtAudio;
+    if (existing != null) return existing;
+    final audio = DoubtAudio(
+      preference: _audioPreference,
+      audioCore: AudioCore(
+        preference: _audioPreference,
+        playback: NoopAudioPlaybackAdapter(),
+        generatedAudioClient: SimServerGeneratedAudioClient(
+          config: _serverConfig(),
+        ),
+        stableLangProvider: () => stableLang ?? selectedLanguageCode ?? 'pt-BR',
+        onGeneratedAudioError: (_) {
+          audioError = 'Audio remoto indisponivel; usando audio local.';
+          notifyListeners();
+        },
+      ),
+    );
+    _doubtAudio = audio;
+    return audio;
+  }
+
   LessonContent _currentLessonContentForAudio() {
     final content = aulaSnapshot?.conteudo;
     if (content == null) {
@@ -886,6 +933,9 @@ class LabSession extends ChangeNotifier {
 
   Future<void> advanceAula() async {
     final organism = _activeOrganism ?? _organismForActiveLesson();
+    _lessonAudioController?.pararAudio();
+    _doubtAudio?.stopDoubtAudio();
+    audioPlaying = false;
     aulaRuntimeLoading = true;
     aulaRuntimeError = null;
     notifyListeners();
@@ -902,6 +952,31 @@ class LabSession extends ChangeNotifier {
   }
 
   void toggleDoubt() => lessonUiState.toggleDoubt();
+
+  Future<void> speakAuxRoomContent(
+    AuxRoomContent content, {
+    required String source,
+  }) async {
+    final parts = [
+      content.explanation,
+      content.question,
+      content.options[AnswerLetter.A],
+      content.options[AnswerLetter.B],
+      content.options[AnswerLetter.C],
+    ].whereType<String>().where((part) => part.trim().isNotEmpty).join('. ');
+    if (parts.isEmpty) return;
+    final id = lessonLocalId ?? 'lesson';
+    try {
+      await _doubtAudioFor().speakText(
+        parts,
+        lang: stableLang ?? selectedLanguageCode,
+        lessonKey: '$id:$source',
+      );
+    } catch (_) {
+      audioError = 'Nao foi possivel preparar o audio agora.';
+      notifyListeners();
+    }
+  }
 
   Future<void> submitDoubt(DoubtInputDraft input) async {
     final validation = input.validate();
@@ -982,6 +1057,16 @@ class LabSession extends ChangeNotifier {
     );
     setDoubt(controller.state);
     if (controller.state.status == DoubtStatus.explaining) {
+      final response = controller.state.response?.explanation;
+      if (response != null && response.trim().isNotEmpty) {
+        unawaited(
+          _doubtAudioFor().speakDoubt(
+            response,
+            lang: profile?.stableLang ?? stableLang ?? selectedLanguageCode,
+            lessonKey: '$id:${snapshot?.itemMarker ?? 'item'}',
+          ),
+        );
+      }
       _persistActiveLessonToCloud();
     }
   }
@@ -1010,13 +1095,14 @@ class LabSession extends ChangeNotifier {
     await Future<void>.delayed(Duration.zero);
     try {
       final snapshot = aulaSnapshot;
-      final started = await _audioControllerFor(id).playConteudo(
+      final controller = _audioControllerFor(id);
+      final started = await controller.playConteudo(
         _currentLessonContentForAudio(),
         snapshot?.itemMarker ?? 'item-1',
         currentAulaLayer,
         language: stableLang,
       );
-      audioPlaying = started;
+      audioPlaying = started && controller.falando;
       if (!started) {
         audioError = 'Áudio ainda não está disponível.';
       }
@@ -1037,6 +1123,7 @@ class LabSession extends ChangeNotifier {
     lessonUiState.removeListener(_notifyFromChild);
     authSession.dispose();
     _lessonAudioController?.pararAudio();
+    _doubtAudio?.stopDoubtAudio();
     super.dispose();
   }
 }

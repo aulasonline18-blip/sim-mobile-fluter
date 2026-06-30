@@ -4,6 +4,7 @@ import 'dart:async';
 import '../state/live_entry_state.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
+import '../media/student_lesson_media_service.dart';
 import 'dopamine_ready_window_engine.dart';
 import 'lesson_models.dart';
 import 'lesson_orchestrator.dart';
@@ -55,17 +56,20 @@ class StudentLessonMaterialService {
     required this.stateService,
     required this.orchestrator,
     required this.readyWindowEngine,
+    this.mediaService,
   });
 
   final StudentLearningStateService stateService;
   final LessonOrchestrator orchestrator;
   final DopamineReadyWindowEngine readyWindowEngine;
+  final StudentLessonMediaService? mediaService;
 
   ResolveLessonMaterialResult? resolveFastLessonMaterialFromStateOrCache(
     ResolveLessonMaterialInput input,
   ) {
     final fromState = _readReadyFromStudentState(input);
     if (fromState != null) {
+      _prepareLessonAudio(input, fromState);
       _mirrorCurrentLessonContent(input, fromState);
       return ResolveLessonMaterialResult(
         conteudo: fromState,
@@ -76,6 +80,7 @@ class StudentLessonMaterialService {
     }
     final cached = orchestrator.peekCachedLesson(lessonKeyFor(input.params));
     if (cached == null) return null;
+    _prepareLessonAudio(input, cached.conteudo);
     _mirrorCurrentLessonMaterial(input, cached);
     return ResolveLessonMaterialResult(
       conteudo: cached.conteudo,
@@ -162,37 +167,38 @@ class StudentLessonMaterialService {
     unawaited(
       readyWindowEngine
           .runDopamineReadyWindowFromStudentState(
-        lessonLocalId: lessonLocalId,
-        source: source,
-        maxSlots: 3,
-        itemIdx: itemIdx,
-        layer: layer,
-        marker: marker,
-        topic: topic,
-      )
+            lessonLocalId: lessonLocalId,
+            source: source,
+            maxSlots: 3,
+            itemIdx: itemIdx,
+            layer: layer,
+            marker: marker,
+            topic: topic,
+          )
           .then((result) {
-        stateService.appendEvent(
-          lessonLocalId,
-          StudentLearningEvent(
-            type: 'BACKGROUND_READY_WINDOW_READY',
-            ts: DateTime.now().millisecondsSinceEpoch,
-            payload: {
-              'source': source,
-              'ready': result.where((ready) => ready).length,
-              'requested': result.length,
-            },
-          ),
-        );
-      }).catchError((Object error) {
-        stateService.appendEvent(
-          lessonLocalId,
-          StudentLearningEvent(
-            type: 'BACKGROUND_READY_WINDOW_FAILED',
-            ts: DateTime.now().millisecondsSinceEpoch,
-            payload: {'source': source, 'error': error.toString()},
-          ),
-        );
-      }),
+            stateService.appendEvent(
+              lessonLocalId,
+              StudentLearningEvent(
+                type: 'BACKGROUND_READY_WINDOW_READY',
+                ts: DateTime.now().millisecondsSinceEpoch,
+                payload: {
+                  'source': source,
+                  'ready': result.where((ready) => ready).length,
+                  'requested': result.length,
+                },
+              ),
+            );
+          })
+          .catchError((Object error) {
+            stateService.appendEvent(
+              lessonLocalId,
+              StudentLearningEvent(
+                type: 'BACKGROUND_READY_WINDOW_FAILED',
+                ts: DateTime.now().millisecondsSinceEpoch,
+                payload: {'source': source, 'error': error.toString()},
+              ),
+            );
+          }),
     );
   }
 
@@ -301,10 +307,7 @@ class StudentLessonMaterialService {
     stateService.mutate(input.lessonLocalId, (state) {
       return state.copyWith(
         currentLessonMaterial: material,
-        readyLessonMaterials: {
-          ...state.readyLessonMaterials,
-          key: material,
-        },
+        readyLessonMaterials: {...state.readyLessonMaterials, key: material},
       );
     });
   }
@@ -357,5 +360,25 @@ class StudentLessonMaterialService {
   bool isLessonMaterialReadyInStateOrCache(ResolveLessonMaterialInput input) {
     if (_readReadyFromStudentState(input) != null) return true;
     return orchestrator.peekCachedLesson(lessonKeyFor(input.params)) != null;
+  }
+
+  void _prepareLessonAudio(
+    ResolveLessonMaterialInput input,
+    LessonContent content,
+  ) {
+    mediaService?.prepareLessonAudioText(
+      LessonMediaPosition(
+        lessonLocalId: input.lessonLocalId,
+        itemMarker: input.marker,
+        layer: input.layer,
+      ),
+      [
+        content.explanation,
+        content.question,
+        content.options[AnswerLetter.A],
+        content.options[AnswerLetter.B],
+        content.options[AnswerLetter.C],
+      ],
+    );
   }
 }

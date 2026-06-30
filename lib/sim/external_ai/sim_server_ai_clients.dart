@@ -127,6 +127,7 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
       text: text,
       lang: lang,
       lessonKey: lessonKey,
+      voice: voice,
     ).normalized();
     final response = await transport.postJson(
       config.uri(simLessonAudioPath),
@@ -135,6 +136,7 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
         'text': request.text,
         'lang': request.lang,
         'lessonKey': request.lessonKey,
+        'voice': request.voice,
       },
       timeout: timeout,
     );

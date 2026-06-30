@@ -15,11 +15,14 @@ class LessonOrchestrator {
     required this.t02Client,
     required this.cache,
     required this.bus,
+    this.onAudioTextReady,
   });
 
   final T02LessonClient t02Client;
   final LessonMaterialCache cache;
   final LessonEventBus bus;
+  void Function(CompleteLessonParams params, CompleteLesson lesson)?
+  onAudioTextReady;
   final Map<String, Future<CompleteLesson>> _textInflight = {};
   final ImageSequentialQueue _imageQueue = ImageSequentialQueue();
   final BackgroundTextSemaphore _bgText = BackgroundTextSemaphore();
@@ -27,6 +30,12 @@ class LessonOrchestrator {
   bool get isLessonBusy => _textInflight.isNotEmpty;
 
   CompleteLesson? peekCachedLesson(String key) => cache.peek(key);
+
+  void setAudioTextPreparer(
+    void Function(CompleteLessonParams params, CompleteLesson lesson)? preparer,
+  ) {
+    onAudioTextReady = preparer;
+  }
 
   Future<CompleteLesson> prefetchCompleteLesson(
     CompleteLessonParams params, {
@@ -36,6 +45,7 @@ class LessonOrchestrator {
     final key = lessonKeyFor(params);
     final ready = cache.peek(key);
     if (ready != null && !forceRefresh) {
+      onAudioTextReady?.call(params, ready);
       return Future.value(ready);
     }
     final existing = _textInflight[key];
@@ -49,6 +59,7 @@ class LessonOrchestrator {
         .then((lesson) {
           cache.put(key, lesson);
           bus.notify(key, lesson);
+          onAudioTextReady?.call(params, lesson);
           if (_textInflight[key] != null) _textInflight.remove(key);
           // Part III.6: dispatch image sequentially in background
           _imageQueue.run(() => _fetchImage(params, lesson));
@@ -176,6 +187,7 @@ class LessonOrchestrator {
     );
     cache.put(key, lesson);
     bus.notify(key, lesson);
+    onAudioTextReady?.call(params, lesson);
     return lesson;
   }
 }
