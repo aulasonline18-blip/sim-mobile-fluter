@@ -589,7 +589,7 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
     final shownRows = visibleCloud.length + visibleStates.length;
     final hasMoreLessons = shownRows < totalRows;
     final total = state?.curriculum?.totalItems ?? 0;
-    final advances = state?.progress?.itemIdx ?? 0;
+    final advances = state?.progress?.mainAdvances ?? 0;
 
     return Column(
       children: [
@@ -643,7 +643,6 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
           ),
           child: Column(
             children: [
-              // Nova Aula button (gradient-like: dark bg)
               GestureDetector(
                 onTap: _handleNovaAula,
                 child: Container(
@@ -653,27 +652,21 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    color: simDark,
+                    gradient: simGradientPrimary,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x2E111827),
-                        blurRadius: 12,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+                    boxShadow: simShadowGlow,
                   ),
                   child: Row(
                     children: [
                       const Text(
-                        '+',
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                        '＋',
+                        style: TextStyle(color: simDark, fontSize: 18),
                       ),
                       const SizedBox(width: 12),
                       Text(
                         t('nova_aula'),
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: simDark,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -763,42 +756,48 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                     style: const TextStyle(color: muted, fontSize: 12),
                   )
                 else ...[
-                  // Search field
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: border),
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (_) => setState(
-                        () => _visibleLessonCount = aulaDrawerInitialVisible,
-                      ),
-                      style: const TextStyle(color: text, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: t('drawer_search_placeholder'),
-                        hintStyle: const TextStyle(color: muted, fontSize: 14),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: border),
+                          ),
+                          child: TextField(
+                            controller: _searchCtrl,
+                            onChanged: (_) => setState(
+                              () => _visibleLessonCount =
+                                  aulaDrawerInitialVisible,
+                            ),
+                            style: const TextStyle(color: text, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: t('drawer_search_placeholder'),
+                              hintStyle: const TextStyle(
+                                color: muted,
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '$shownRows/$totalRows',
-                      style: TextStyle(
-                        fontFamily: kMono,
-                        fontSize: 10,
-                        color: muted,
-                        letterSpacing: 0.5,
+                      const SizedBox(width: 8),
+                      Text(
+                        '$shownRows/$totalRows',
+                        style: TextStyle(
+                          fontFamily: kMono,
+                          fontSize: 10,
+                          color: muted,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   if (totalRows == 0)
@@ -891,12 +890,36 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
                         ),
                       ),
                       const Spacer(),
-                      Text(
-                        '$advances/$total',
-                        style: TextStyle(
-                          fontFamily: kMono,
-                          fontSize: 11,
-                          color: text,
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontFamily: kMono,
+                            fontSize: 11,
+                            color: text,
+                          ),
+                          children: [
+                            TextSpan(text: '$advances/$total'),
+                            const TextSpan(text: ' · '),
+                            TextSpan(
+                              text:
+                                  '${state?.progress?.concluidos.length ?? 0}',
+                              style: const TextStyle(color: Color(0xFF0A8A5A)),
+                            ),
+                            const TextSpan(text: ' ok'),
+                            if ((state?.progress?.pendentesMarkers.length ??
+                                    0) >
+                                0) ...[
+                              const TextSpan(text: ' · '),
+                              TextSpan(
+                                text:
+                                    '${state?.progress?.pendentesMarkers.length ?? 0}',
+                                style: const TextStyle(
+                                  color: Color(0xFFC47A00),
+                                ),
+                              ),
+                              const TextSpan(text: ' pend.'),
+                            ],
+                          ],
                         ),
                       ),
                     ],
@@ -1203,7 +1226,7 @@ class _DrawerCloudLessonRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '$pct% · $adv/$total · conta',
+                    '$pct% · $adv/$total',
                     style: const TextStyle(
                       fontFamily: kMono,
                       fontSize: 10,
@@ -1231,6 +1254,14 @@ class _DrawerIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final glyph = label == t('renomear')
+        ? '✎'
+        : label == t('apagar')
+        ? '🗑'
+        : label;
+    final color = label == t('apagar')
+        ? const Color(0xFFC47A00)
+        : const Color(0xFF1A1A1A);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1239,9 +1270,9 @@ class _DrawerIconButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(6)),
         child: Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF1A1A1A),
+          glyph,
+          style: TextStyle(
+            color: color,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),

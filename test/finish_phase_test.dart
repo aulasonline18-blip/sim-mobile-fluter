@@ -179,7 +179,18 @@ void main() {
     );
 
     expect(find.text('Imagem opcional da aula'), findsOneWidget);
-    expect(find.text('Sem imagem'), findsOneWidget);
-    expect(find.text('Gerar'), findsOneWidget);
+    expect(find.text('10 crédito(s) · Saldo: 0'), findsOneWidget);
+    expect(find.text('Comprar créditos'), findsOneWidget);
+    expect(find.text('Continuar sem imagem'), findsOneWidget);
+
+    session.credits = 10;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: LessonImagePanel(session: session)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pular'), findsOneWidget);
+    expect(find.text('Ver imagem (10)'), findsOneWidget);
   });
 }

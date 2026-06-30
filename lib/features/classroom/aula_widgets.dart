@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../sim/billing/sim_pricing.dart';
 import '../../sim/billing/sim_server_billing_clients.dart';
 import '../../sim/cloud/sim_server_cloud_functions.dart';
 import '../../sim/cloud/supabase_flutter_session_provider.dart';
@@ -322,6 +323,8 @@ class LessonImagePanel extends StatelessWidget {
     final error = session.imageError;
     final offer = session.hasLessonPaidImageOffer && !loading && !ready;
     final devHarness = session.prefs == null;
+    final imageCost = simPricing.imageCostCredits;
+    final hasImageCredits = session.isUnlimited || session.credits >= imageCost;
     return Container(
       height: offer
           ? 228
@@ -378,14 +381,36 @@ class LessonImagePanel extends StatelessWidget {
           ),
           if (offer) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Gerar imagem custa créditos e só acontece se você aceitar.',
+            Text(
+              '${t('aula_img_cost', {'n': imageCost})}'
+              '${session.isUnlimited ? '' : t('aula_img_balance', {'n': session.credits})}',
               textAlign: TextAlign.center,
-              style: TextStyle(color: simMuted, fontSize: 12, height: 1.25),
+              style: const TextStyle(
+                color: simMuted,
+                fontSize: 12,
+                height: 1.25,
+              ),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
+                if (!hasImageCredits) ...[
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: session.lessonImageOfferLoading
+                          ? null
+                          : session.buyImageCredits,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: simDark,
+                        side: const BorderSide(color: simBorder),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      child: Text(t('aula_buy_credits')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(
                   child: OutlinedButton(
                     onPressed: session.lessonImageOfferLoading
@@ -396,41 +421,39 @@ class LessonImagePanel extends StatelessWidget {
                       side: const BorderSide(color: simBorder),
                       textStyle: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    child: const Text('Sem imagem'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: 'Comprar créditos',
-                  onPressed: session.lessonImageOfferLoading
-                      ? null
-                      : session.buyImageCredits,
-                  icon: const Icon(Icons.add_card_outlined),
-                  color: simDark,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: session.lessonImageOfferLoading
-                        ? null
-                        : session.acceptLessonPaidImage,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: simDark,
-                      foregroundColor: Colors.white,
-                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                    child: Text(
+                      hasImageCredits
+                          ? t('aula_skip')
+                          : t('aula_continue_no_img'),
                     ),
-                    child: session.lessonImageOfferLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Gerar'),
                   ),
                 ),
+                if (hasImageCredits) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: session.lessonImageOfferLoading
+                          ? null
+                          : session.acceptLessonPaidImage,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: simDark,
+                        side: const BorderSide(color: simBorder),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      child: session.lessonImageOfferLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: simDark,
+                              ),
+                            )
+                          : Text(t('aula_view_img', {'n': imageCost})),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
