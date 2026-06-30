@@ -1,17 +1,23 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:sim_mobile/sim/lesson/lesson_models.dart';
 import 'package:sim_mobile/sim/media/audio_core.dart';
 import 'package:sim_mobile/sim/media/audio_preference.dart';
 import 'package:sim_mobile/sim/media/blueprint_prompt.dart';
 import 'package:sim_mobile/sim/media/doubt_audio.dart';
+import 'package:sim_mobile/sim/media/image_data_url_compression.dart';
 import 'package:sim_mobile/sim/media/lesson_audio_api_contract.dart';
 import 'package:sim_mobile/sim/media/lesson_audio_controller.dart';
 import 'package:sim_mobile/sim/media/lesson_image_api_contract.dart';
 import 'package:sim_mobile/sim/media/lesson_paid_image_offer.dart';
 import 'package:sim_mobile/sim/media/lesson_visual_models.dart';
 import 'package:sim_mobile/sim/media/lesson_visual_pipeline.dart';
+import 'package:sim_mobile/sim/media/paid_image_service.dart' as paid;
 import 'package:sim_mobile/sim/media/student_lesson_media_service.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
+import 'package:sim_mobile/sim/state/student_learning_state_service.dart';
 
 class FakeGeneratedAudioClient implements GeneratedAudioClient {
   int calls = 0;
@@ -31,13 +37,17 @@ class FakeGeneratedAudioClient implements GeneratedAudioClient {
 class FakeImageClient implements LessonImageClient {
   String? next = 'data:image/jpeg;base64,AAAA';
   String? lastPrompt;
+  int calls = 0;
 
   @override
   Future<String?> generateLessonImage({
     required String prompt,
     required String lessonKey,
     String aspectRatio = '1:1',
+    String? acceptedOfferId,
+    String? idempotencyKey,
   }) async {
+    calls += 1;
     lastPrompt = prompt;
     return next;
   }
@@ -164,14 +174,90 @@ void main() {
     expect(isUsableImageDataUrl('http://x'), false);
   });
 
+  test('image data URL compression rewrites raster image to jpeg data URL', () {
+    final pngBytes = img.encodePng(img.Image(width: 2, height: 2));
+    final png = 'data:image/png;base64,${base64Encode(pngBytes)}';
+    final compressed = compressImageDataUrl(png);
+    expect(compressed, startsWith('data:image/jpeg;base64,'));
+  });
+
   test('visual pipeline fetches only usable paid image data url', () async {
     final client = FakeImageClient();
     final pipeline = LessonVisualPipeline(imageClient: client);
 
-    expect(await pipeline.fetchPaidLessonImage('prompt', 'lesson'), isNotNull);
+    expect(
+      await pipeline.fetchPaidLessonImage(
+        'prompt',
+        'lesson',
+        acceptedOfferId: 'offer-1',
+      ),
+      isNotNull,
+    );
     client.next = 'bad';
-    expect(await pipeline.fetchPaidLessonImage('prompt', 'lesson'), isNull);
+    expect(
+      await pipeline.fetchPaidLessonImage(
+        'prompt',
+        'lesson',
+        acceptedOfferId: 'offer-2',
+      ),
+      isNull,
+    );
   });
+
+  test(
+    'N2/N3 resolves schematic visual as free SVG without paid image',
+    () async {
+      final client = FakeImageClient();
+      final pipeline = LessonVisualPipeline(imageClient: client);
+
+      final result = await pipeline.resolveVisual(
+        trigger: const LessonVisualTrigger(
+          needsImage: true,
+          pedagogicalNeed: 'important',
+          topic: 'diagrama de etapas de um algoritmo',
+          visualType: 'diagram',
+        ),
+        lessonKey: 'lesson',
+        allowPaidImages: false,
+      );
+
+      expect(result.source, 'n3_software');
+      expect(result.displayUrl, startsWith('data:image/svg+xml;utf8,'));
+      expect(client.calls, 0);
+    },
+  );
+
+  test(
+    'N3 sends realistic ambiguous visual to paid path only when allowed',
+    () async {
+      final client = FakeImageClient();
+      final pipeline = LessonVisualPipeline(imageClient: client);
+      const trigger = LessonVisualTrigger(
+        needsImage: true,
+        pedagogicalNeed: 'important',
+        topic: 'diagrama com foto realista de um processo historico',
+        visualType: 'diagram',
+        imagePrompt: 'foto realista com etapas visuais',
+      );
+
+      final blocked = await pipeline.resolveVisual(
+        trigger: trigger,
+        lessonKey: 'lesson',
+        allowPaidImages: false,
+      );
+      expect(blocked.source, 'skip_no_paid');
+      expect(client.calls, 0);
+
+      final paid = await pipeline.resolveVisual(
+        trigger: trigger,
+        lessonKey: 'lesson',
+        allowPaidImages: true,
+        acceptedOfferId: 'offer-paid',
+      );
+      expect(paid.source, 'ai_blueprint');
+      expect(client.calls, 1);
+    },
+  );
 
   test('paid image offer accepts, declines and routes to credits', () async {
     final orchestrator = FakePaidOrchestrator();
@@ -193,6 +279,57 @@ void main() {
     controller.handleInsufficientCredits(kind: 'lesson');
     expect(controller.navigationTarget, '/creditos?returnTo=/cyber/aula');
   });
+
+  test(
+    'PaidImageService offers before paid fetch and consumes only after accept',
+    () async {
+      final stateService = StudentLearningStateService(
+        seed: {'l1': StudentLearningState.empty(lessonLocalId: 'l1')},
+      );
+      var fetches = 0;
+      final service = paid.PaidImageService(
+        stateService: stateService,
+        fetcher:
+            ({
+              required prompt,
+              required lessonKey,
+              required acceptedOfferId,
+              required idempotencyKey,
+            }) async {
+              fetches += 1;
+              expect(acceptedOfferId, startsWith('img_offer_'));
+              expect(idempotencyKey, acceptedOfferId);
+              return 'data:image/png;base64,AAAA';
+            },
+      );
+
+      final offer = service.offer(
+        lessonKey: 'lesson-key',
+        lessonLocalId: 'l1',
+        visualTrigger: const {
+          'needs_image': true,
+          'pedagogical_need': 'important',
+          'render_strategy': 'ai',
+          'image_prompt': 'foto realista de um coracao humano',
+        },
+      );
+
+      expect(offer.status, paid.PaidImageOfferStatus.pending);
+      expect(fetches, 0);
+      expect(
+        stateService.read('l1')!.events.map((event) => event.type),
+        contains('PAID_IMAGE_OFFERED'),
+      );
+
+      final image = await service.consume(
+        offerId: offer.offerId,
+        lessonLocalId: 'l1',
+      );
+      expect(image, 'data:image/png;base64,AAAA');
+      expect(fetches, 1);
+      expect(offer.status, paid.PaidImageOfferStatus.consumed);
+    },
+  );
 
   test('api contracts preserve limits and constants without secrets', () {
     final image = GenerateLessonImageRequest(

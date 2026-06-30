@@ -72,20 +72,25 @@ class SimServerLessonImageClient implements LessonImageClient {
     required String prompt,
     required String lessonKey,
     String aspectRatio = '1:1',
+    String? acceptedOfferId,
+    String? idempotencyKey,
   }) async {
     final request = GenerateLessonImageRequest(
       prompt: prompt,
       lessonKey: lessonKey,
       aspectRatio: aspectRatio,
     ).normalized();
+    final body = {
+      'prompt': request.prompt,
+      'lessonKey': request.lessonKey,
+      'aspectRatio': request.aspectRatio,
+    };
+    if (acceptedOfferId != null) body['acceptedOfferId'] = acceptedOfferId;
+    if (idempotencyKey != null) body['idempotencyKey'] = idempotencyKey;
     final response = await transport.postJson(
       config.uri(simLessonImagePath),
       headers: await config.jsonHeaders(),
-      body: {
-        'prompt': request.prompt,
-        'lessonKey': request.lessonKey,
-        'aspectRatio': request.aspectRatio,
-      },
+      body: body,
       timeout: timeout,
     );
     if (!response.ok) {
@@ -231,6 +236,8 @@ class SimServerT02Client implements T02LessonClient {
     final options = source['options'];
     final correct = (source['correct_answer'] ?? source['correctAnswer'] ?? 'A')
         .toString();
+    final visualTriggerRaw =
+        source['visual_trigger'] ?? source['visualTrigger'];
     return T02LessonMaterial(
       explanation: (source['explanation'] ?? '').toString(),
       question: (source['question'] ?? '').toString(),
@@ -248,6 +255,9 @@ class SimServerT02Client implements T02LessonClient {
       whyWrong: source['why_wrong'] ?? source['whyWrong'],
       generatedAt: DateTime.now(),
       source: (source['source'] ?? 'sim-server-t02').toString(),
+      visualTrigger: visualTriggerRaw is Map
+          ? JsonMap.from(visualTriggerRaw)
+          : null,
     );
   }
 }

@@ -32,6 +32,8 @@ typedef PaidImageFetcher =
     Future<String> Function({
       required String prompt,
       required String lessonKey,
+      required String acceptedOfferId,
+      required String idempotencyKey,
     });
 
 class PaidImageService {
@@ -60,8 +62,13 @@ class PaidImageService {
     required String lessonLocalId,
     required Map<String, dynamic>? visualTrigger,
   }) {
+    final conteudo = visualTrigger == null
+        ? null
+        : visualTrigger['visual_trigger'] is Map
+        ? visualTrigger
+        : {'visual_trigger': visualTrigger};
     final decision = decideVisualGeneration(
-      visualTrigger,
+      conteudo,
       const VisualDecisionContext(allowPaidImages: true, priority: 'active'),
     );
 
@@ -110,7 +117,12 @@ class PaidImageService {
     _offerController.add(o);
 
     try {
-      final url = await _fetcher(prompt: o.prompt, lessonKey: o.lessonKey);
+      final url = await _fetcher(
+        prompt: o.prompt,
+        lessonKey: o.lessonKey,
+        acceptedOfferId: offerId,
+        idempotencyKey: offerId,
+      );
       o.resultUrl = url;
       o.status = PaidImageOfferStatus.consumed;
       _stateService.appendEvent(

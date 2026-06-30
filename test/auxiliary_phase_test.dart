@@ -14,23 +14,28 @@ import 'package:sim_mobile/sim/modules/pedagogical_module_contracts.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
 
 class FakeT02Client implements T02LessonClient {
+  FakeT02Client({this.visualTrigger});
+
+  final JsonMap? visualTrigger;
   int doubtCalls = 0;
   int auxCalls = 0;
+  T02LessonRequest? lastDoubtRequest;
 
   T02LessonMaterial _material(String source) => T02LessonMaterial(
-        explanation: 'Explicacao $source',
-        question: 'Pergunta $source',
-        options: const {
-          AnswerLetter.A: 'Opcao A',
-          AnswerLetter.B: 'Opcao B',
-          AnswerLetter.C: 'Opcao C',
-        },
-        correctAnswer: AnswerLetter.B,
-        whyCorrect: 'Porque B.',
-        whyWrong: const {},
-        generatedAt: DateTime(2026),
-        source: source,
-      );
+    explanation: 'Explicacao $source',
+    question: 'Pergunta $source',
+    options: const {
+      AnswerLetter.A: 'Opcao A',
+      AnswerLetter.B: 'Opcao B',
+      AnswerLetter.C: 'Opcao C',
+    },
+    correctAnswer: AnswerLetter.B,
+    whyCorrect: 'Porque B.',
+    whyWrong: const {},
+    generatedAt: DateTime(2026),
+    source: source,
+    visualTrigger: visualTrigger,
+  );
 
   @override
   Future<T02LessonMaterial> auxiliaryRoom(T02LessonRequest request) async {
@@ -46,6 +51,7 @@ class FakeT02Client implements T02LessonClient {
   @override
   Future<T02LessonMaterial> doubt(T02LessonRequest request) async {
     doubtCalls += 1;
+    lastDoubtRequest = request;
     return _material('doubt');
   }
 
@@ -135,6 +141,48 @@ void main() {
     expect(controller.state.response?.explanation, 'Explicacao doubt');
   });
 
+  test('doubt with photo preserves optional free visual trigger', () async {
+    final trigger = <String, dynamic>{
+      'needs_image': true,
+      'pedagogical_need': 'helpful',
+      'render_strategy': 'software',
+      'svg_payload':
+          '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>',
+    };
+    final client = FakeT02Client(visualTrigger: trigger);
+    final controller = LessonDoubtController(
+      caller: DoubtT02Caller(client: client),
+    );
+
+    await controller.submitDoubt(
+      lessonLocalId: 'l1',
+      profile: const AuxRoomProfile(stableLang: 'Portuguese'),
+      itemText: 'Item 1',
+      currentContent: 'Conteudo atual',
+      layer: LessonLayer.l1,
+      itemIdx: 0,
+      marker: 'M1',
+      input: const DoubtInputDraft(
+        text: 'Pode explicar pela foto?',
+        image: DoubtImagePayload(
+          name: 'foto.png',
+          type: 'image/png',
+          size: 64,
+          dataUrl: 'data:image/png;base64,AAAA',
+        ),
+      ),
+    );
+
+    expect(client.doubtCalls, 1);
+    expect(client.lastDoubtRequest?.profile['doubt_image'], {
+      'name': 'foto.png',
+      'type': 'image/png',
+      'size': 64,
+      'hasDataUrl': true,
+    });
+    expect(controller.state.response?.visualTrigger, trigger);
+  });
+
   test('aux pending map registers and clears live pending items', () {
     var state = seedState();
     state = registerPendingFromAttempt(
@@ -148,16 +196,10 @@ void main() {
         ts: 1,
       ),
     );
-    expect(
-      pendingMapOf(ensureAuxRooms(state)).single['status'],
-      'pending',
-    );
+    expect(pendingMapOf(ensureAuxRooms(state)).single['status'], 'pending');
 
     state = clearPendingIfSignalOne(state, 'M1', LessonLayer.l1);
-    expect(
-      pendingMapOf(ensureAuxRooms(state)).single['status'],
-      'cleared',
-    );
+    expect(pendingMapOf(ensureAuxRooms(state)).single['status'], 'cleared');
   });
 
   test('review room builds queue, answers, and completes', () async {
@@ -190,46 +232,49 @@ void main() {
     expect(view.resultCorrect, true);
   });
 
-  test('recovery room starts only when pending blocks final completion', () async {
-    final client = FakeT02Client();
-    final states = {'l1': seedState()};
-    states['l1'] = registerPendingFromAttempt(
-      states['l1']!,
-      LessonAttempt(
-        marker: 'M2',
+  test(
+    'recovery room starts only when pending blocks final completion',
+    () async {
+      final client = FakeT02Client();
+      final states = {'l1': seedState()};
+      states['l1'] = registerPendingFromAttempt(
+        states['l1']!,
+        LessonAttempt(
+          marker: 'M2',
+          layer: LessonLayer.l1,
+          letra: AnswerLetter.A,
+          sinal: DecisionSignal.three,
+          correct: false,
+          ts: 1,
+        ),
+      );
+      final service = StudentAuxRoomService(
+        readState: (id) => states[id]!,
+        writeState: (state) => states[state.lessonLocalId] = state,
+        t02Caller: AuxRoomT02Caller(client: client),
+      );
+      final recovery = RecoveryRoomService(service);
+      final context = RecoveryRoomContext(
+        lessonLocalId: 'l1',
+        topic: 'Matematica',
+        items: const [
+          AuxRoomItem(marker: 'M1', text: 'Item 1'),
+          AuxRoomItem(marker: 'M2', text: 'Item 2'),
+        ],
         layer: LessonLayer.l1,
-        letra: AnswerLetter.A,
-        sinal: DecisionSignal.three,
-        correct: false,
-        ts: 1,
-      ),
-    );
-    final service = StudentAuxRoomService(
-      readState: (id) => states[id]!,
-      writeState: (state) => states[state.lessonLocalId] = state,
-      t02Caller: AuxRoomT02Caller(client: client),
-    );
-    final recovery = RecoveryRoomService(service);
-    final context = RecoveryRoomContext(
-      lessonLocalId: 'l1',
-      topic: 'Matematica',
-      items: const [
-        AuxRoomItem(marker: 'M1', text: 'Item 1'),
-        AuxRoomItem(marker: 'M2', text: 'Item 2'),
-      ],
-      layer: LessonLayer.l1,
-      profile: const AuxRoomProfile(stableLang: 'Portuguese'),
-    );
+        profile: const AuxRoomProfile(stableLang: 'Portuguese'),
+      );
 
-    expect(isFinalBlockedByRecovery(recovery, 'l1'), true);
-    var view = await recovery.startRecoveryRoom(context);
-    expect(view.status, RecoveryRoomStatus.intro);
-    view = recovery.continueRecovery(view);
-    view = recovery.selectLetter(view, AnswerLetter.B);
-    view = recovery.answerRecoveryRoom(context, view, DecisionSignal.one);
-    expect(view.status, RecoveryRoomStatus.result);
-    expect(view.resultCorrect, true);
-  });
+      expect(isFinalBlockedByRecovery(recovery, 'l1'), true);
+      var view = await recovery.startRecoveryRoom(context);
+      expect(view.status, RecoveryRoomStatus.intro);
+      view = recovery.continueRecovery(view);
+      view = recovery.selectLetter(view, AnswerLetter.B);
+      view = recovery.answerRecoveryRoom(context, view, DecisionSignal.one);
+      expect(view.status, RecoveryRoomStatus.result);
+      expect(view.resultCorrect, true);
+    },
+  );
 
   test('aux rooms controller preserves review and recovery commands', () async {
     final client = FakeT02Client();

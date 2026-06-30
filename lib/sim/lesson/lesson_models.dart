@@ -21,22 +21,24 @@ class LessonContent {
   final Object? whyWrong;
   final JsonMap? visualTrigger;
 
-  String get audioText =>
-      [explanation, question].where((text) => text.trim().isNotEmpty).join('. ');
+  String get audioText => [
+    explanation,
+    question,
+  ].where((text) => text.trim().isNotEmpty).join('. ');
 
   JsonMap toJson() => {
-        'explanation': explanation,
-        'question': question,
-        'options': {
-          'A': options[AnswerLetter.A] ?? '',
-          'B': options[AnswerLetter.B] ?? '',
-          'C': options[AnswerLetter.C] ?? '',
-        },
-        'correct_answer': correctAnswer.name,
-        if (whyCorrect != null) 'why_correct': whyCorrect,
-        if (whyWrong != null) 'why_wrong': whyWrong,
-        if (visualTrigger != null) 'visual_trigger': visualTrigger,
-      };
+    'explanation': explanation,
+    'question': question,
+    'options': {
+      'A': options[AnswerLetter.A] ?? '',
+      'B': options[AnswerLetter.B] ?? '',
+      'C': options[AnswerLetter.C] ?? '',
+    },
+    'correct_answer': correctAnswer.name,
+    if (whyCorrect != null) 'why_correct': whyCorrect,
+    if (whyWrong != null) 'why_wrong': whyWrong,
+    if (visualTrigger != null) 'visual_trigger': visualTrigger,
+  };
 }
 
 class CompleteLessonParams {
@@ -110,5 +112,6 @@ LessonContent lessonContentFromT02Material(dynamic material) {
     correctAnswer: material.correctAnswer as AnswerLetter,
     whyCorrect: material.whyCorrect as String?,
     whyWrong: material.whyWrong,
+    visualTrigger: material.visualTrigger as JsonMap?,
   );
 }

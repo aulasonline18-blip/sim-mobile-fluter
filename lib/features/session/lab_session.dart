@@ -30,7 +30,9 @@ import '../../session/navigation_state.dart';
 import '../../sim/lesson/lesson_models.dart';
 import '../../sim/media/audio_core.dart';
 import '../../sim/media/audio_preference.dart';
+import '../../sim/media/image_data_url_compression.dart';
 import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/s12_visual_pipeline.dart';
 import '../../sim/media/student_lesson_media_service.dart';
 import '../../sim/state/shared_prefs_state_storage.dart';
 import '../../sim/state/student_learning_state.dart';
@@ -106,6 +108,8 @@ class LabSession extends ChangeNotifier {
 
   final AudioPreference _audioPreference = AudioPreference();
   LessonAudioController? _lessonAudioController;
+  String? lessonImageOfferId;
+  bool lessonImageOfferLoading = false;
 
   void _notifyFromChild() => notifyListeners();
 
@@ -642,6 +646,73 @@ class LabSession extends ChangeNotifier {
     return content;
   }
 
+  JsonMap? get currentVisualTrigger => aulaSnapshot?.conteudo?.visualTrigger;
+
+  String? get lessonPaidImagePrompt {
+    final vt = currentVisualTrigger;
+    if (vt == null || aulaSnapshot?.imagem != null) return null;
+    final decision = decideVisualGeneration({
+      'visual_trigger': vt,
+    }, const VisualDecisionContext(allowPaidImages: true, priority: 'active'));
+    return decision.generate ? decision.prompt : null;
+  }
+
+  bool get hasLessonPaidImageOffer =>
+      lessonPaidImagePrompt != null && imageStatus != 'declined';
+
+  String _lessonImageKey() {
+    final id = lessonLocalId ?? 'lesson';
+    final marker = aulaSnapshot?.itemMarker ?? 'item';
+    final layer = currentAulaLayer.name;
+    return '$id:$marker:$layer';
+  }
+
+  void declineLessonPaidImage() {
+    imageStatus = 'declined';
+    imageError = null;
+    lessonImageOfferId = null;
+    notifyListeners();
+  }
+
+  void buyImageCredits() {
+    navigationState.openRoute('/creditos?returnTo=/cyber/aula');
+    notifyListeners();
+  }
+
+  Future<void> acceptLessonPaidImage() async {
+    final prompt = lessonPaidImagePrompt;
+    if (prompt == null || lessonImageOfferLoading) return;
+    final key = _lessonImageKey();
+    final offerId = lessonImageOfferId ?? 'img_offer_${key.hashCode.abs()}';
+    lessonImageOfferId = offerId;
+    lessonImageOfferLoading = true;
+    imageStatus = 'loading';
+    imageError = null;
+    notifyListeners();
+    try {
+      final dataUrl = await SimServerLessonImageClient(config: _serverConfig())
+          .generateLessonImage(
+            prompt: prompt,
+            lessonKey: key,
+            acceptedOfferId: offerId,
+            idempotencyKey: offerId,
+          );
+      if (dataUrl == null || dataUrl.trim().isEmpty) {
+        throw StateError('Imagem indisponivel.');
+      }
+      aulaSnapshot = aulaSnapshot?.copyWith(
+        imagem: compressImageDataUrl(dataUrl),
+      );
+      imageStatus = 'ready';
+    } catch (_) {
+      imageStatus = 'error';
+      imageError = 'Imagem indisponível. A aula continua sem imagem.';
+    } finally {
+      lessonImageOfferLoading = false;
+      notifyListeners();
+    }
+  }
+
   SimOrganism _organismForActiveLesson() {
     final id = lessonLocalId;
     if (id == null || id.trim().isEmpty) {
@@ -700,6 +771,7 @@ class LabSession extends ChangeNotifier {
       phase: phase,
       history: const [],
       conteudo: content,
+      imagem: null,
       itemMarker: 'M-1',
       itemText: 'Frações equivalentes',
     );
@@ -955,16 +1027,6 @@ class LabSession extends ChangeNotifier {
       audioLoading = false;
       notifyListeners();
     }
-  }
-
-  Future<void> requestLessonImage() async {
-    if (imageStatus == 'loading') return;
-    imageError = null;
-    imageStatus = 'loading';
-    notifyListeners();
-    await Future<void>.delayed(const Duration(milliseconds: 180));
-    imageStatus = 'ready';
-    notifyListeners();
   }
 
   @override

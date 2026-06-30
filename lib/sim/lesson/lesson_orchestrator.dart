@@ -1,6 +1,8 @@
 // MIRROR OF: src/cyber/lesson-orchestrator.ts (Web, source of truth)
 import '../media/math_templates/math_templates.dart';
 import '../media/s12_visual_pipeline.dart';
+import '../media/visual_router_n2.dart';
+import '../media/visual_router_n3.dart';
 import '../modules/pedagogical_module_contracts.dart';
 import '../state/student_learning_state.dart';
 import 'lesson_event_bus.dart';
@@ -84,7 +86,7 @@ class LessonOrchestrator {
 
     // Caminho 2: S12 software route (SVG inline, custo zero)
     final decision = decideVisualGeneration(
-      vt != null ? Map<String, dynamic>.from(vt) : null,
+      vt != null ? {'visual_trigger': Map<String, dynamic>.from(vt)} : null,
       const VisualDecisionContext(allowPaidImages: false),
     );
     if (decision.svg != null) {
@@ -95,6 +97,36 @@ class LessonOrchestrator {
       );
       cache.put(key, updated);
       bus.notify(key, updated);
+      return;
+    }
+    if (vt == null ||
+        vt['needs_image'] != true ||
+        vt['pedagogical_need'] == 'none') {
+      return;
+    }
+
+    final n2 = classifyVisualByKeywords(
+      topic: vt['topic']?.toString(),
+      visualType: vt['visual_type']?.toString(),
+      imagePrompt: vt['image_prompt']?.toString(),
+    );
+    if (n2.verdict == VisualVerdict.svg ||
+        n2.verdict == VisualVerdict.ambiguous) {
+      final n3 = routeVisualCheapN3(
+        n2: n2,
+        topic: vt['topic']?.toString(),
+        visualType: vt['visual_type']?.toString(),
+        imagePrompt: vt['image_prompt']?.toString(),
+      );
+      if (n3.verdict == VisualVerdict.svg && n3.svgDataUrl != null) {
+        final updated = CompleteLesson(
+          conteudo: lesson.conteudo,
+          imagem: n3.svgDataUrl,
+          audioText: lesson.audioText,
+        );
+        cache.put(key, updated);
+        bus.notify(key, updated);
+      }
     }
     // Se decision.generate == true e allowPaidImages==false → PaidImageService
     // emite oferta separada. Orchestrator não cobra crédito aqui.
@@ -123,6 +155,7 @@ class LessonOrchestrator {
       correctAnswer: material.correctAnswer,
       whyCorrect: material.whyCorrect,
       whyWrong: material.whyWrong,
+      visualTrigger: material.visualTrigger,
     );
     return CompleteLesson(
       conteudo: conteudo,

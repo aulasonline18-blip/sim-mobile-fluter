@@ -4,16 +4,27 @@ import 'blueprint_prompt.dart';
 import 'lesson_visual_models.dart';
 import 's12_visual_pipeline.dart';
 import 'visual_router_n2.dart';
+import 'visual_router_n3.dart';
+import 'image_data_url_compression.dart';
 import 'math_templates/math_templates.dart';
 
-export 's12_visual_pipeline.dart' show sanitizeAndEncodeSvg, decideVisualGeneration, VisualDecision, VisualDecisionContext;
-export 'visual_router_n2.dart' show classifyVisualByKeywords, VisualVerdict, VisualN2Result;
+export 's12_visual_pipeline.dart'
+    show
+        sanitizeAndEncodeSvg,
+        decideVisualGeneration,
+        VisualDecision,
+        VisualDecisionContext;
+export 'visual_router_n2.dart'
+    show classifyVisualByKeywords, VisualVerdict, VisualN2Result;
+export 'visual_router_n3.dart' show routeVisualCheapN3, VisualN3Result;
 
 abstract interface class LessonImageClient {
   Future<String?> generateLessonImage({
     required String prompt,
     required String lessonKey,
     String aspectRatio = '1:1',
+    String? acceptedOfferId,
+    String? idempotencyKey,
   });
 }
 
@@ -35,7 +46,8 @@ class LessonVisualTrigger {
   });
 
   final bool needsImage;
-  final String? pedagogicalNeed; // "none" | "helpful" | "important" | "essential"
+  final String?
+  pedagogicalNeed; // "none" | "helpful" | "important" | "essential"
   final String? topic;
   final String? visualType;
   final List<String> keyElements;
@@ -59,12 +71,14 @@ class LessonVisualTrigger {
       colorLegend: colorLegendFromJson(value['color_legend']),
       highlightFocus: value['highlight_focus']?.toString(),
       complexity: value['complexity']?.toString(),
-      imagePrompt: value['image_prompt']?.toString() ??
+      imagePrompt:
+          value['image_prompt']?.toString() ??
           value['teacher_prompt']?.toString() ??
           value['teacherPrompt']?.toString() ??
           value['prompt']?.toString(),
       mathTemplate: value['math_template'],
-      renderStrategy: value['render_strategy']?.toString() ??
+      renderStrategy:
+          value['render_strategy']?.toString() ??
           value['renderStrategy']?.toString(),
       svgPayload: value['svg_payload']?.toString(),
     );
@@ -76,7 +90,10 @@ class LessonVisualTrigger {
     if (topic != null) 'topic': topic,
     if (visualType != null) 'visual_type': visualType,
     if (keyElements.isNotEmpty) 'key_elements': keyElements,
-    if (colorLegend.isNotEmpty) 'color_legend': colorLegend.map((c) => {'id': c.id, 'label': c.label, 'color': c.color}).toList(),
+    if (colorLegend.isNotEmpty)
+      'color_legend': colorLegend
+          .map((c) => {'id': c.id, 'label': c.label, 'color': c.color})
+          .toList(),
     if (highlightFocus != null) 'highlight_focus': highlightFocus,
     if (complexity != null) 'complexity': complexity,
     if (imagePrompt != null) 'image_prompt': imagePrompt,
@@ -114,6 +131,8 @@ class LessonVisualPipeline {
     required String lessonKey,
     String? stableLang,
     bool allowPaidImages = false,
+    String? acceptedOfferId,
+    String? idempotencyKey,
   }) async {
     if (!trigger.needsImage || trigger.pedagogicalNeed == 'none') {
       return const LessonVisualResult(svg: null, dataUrl: null, source: 'skip');
@@ -123,7 +142,11 @@ class LessonVisualPipeline {
     if (trigger.renderStrategy == 'software' && trigger.svgPayload != null) {
       final svgDataUrl = sanitizeAndEncodeSvg(trigger.svgPayload);
       if (svgDataUrl != null) {
-        return LessonVisualResult(svg: svgDataUrl, dataUrl: null, source: 'svg_inline');
+        return LessonVisualResult(
+          svg: svgDataUrl,
+          dataUrl: null,
+          source: 'svg_inline',
+        );
       }
     }
 
@@ -131,7 +154,11 @@ class LessonVisualPipeline {
     if (trigger.mathTemplate != null) {
       final mathSvg = tryRenderMathTemplate(trigger.toVisualTriggerMap());
       if (mathSvg != null) {
-        return LessonVisualResult(svg: mathSvg, dataUrl: null, source: 'math_template');
+        return LessonVisualResult(
+          svg: mathSvg,
+          dataUrl: null,
+          source: 'math_template',
+        );
       }
     }
 
@@ -142,12 +169,37 @@ class LessonVisualPipeline {
       imagePrompt: trigger.imagePrompt,
     );
 
-    // N2 diz "svg" mas não temos math_template → fallback IA
-    // (N3 judge não está implementado no Flutter ainda — usa AI direto)
-    // N2 diz "ambiguous" → também usa AI
+    if (n2.verdict == VisualVerdict.svg ||
+        n2.verdict == VisualVerdict.ambiguous) {
+      final n3 = routeVisualCheapN3(
+        n2: n2,
+        topic: trigger.topic,
+        visualType: trigger.visualType,
+        imagePrompt: trigger.imagePrompt,
+      );
+      if (n3.verdict == VisualVerdict.svg && n3.svgDataUrl != null) {
+        return LessonVisualResult(
+          svg: n3.svgDataUrl,
+          dataUrl: null,
+          source: 'n3_software',
+          n2Reason: n2.reason,
+        );
+      }
+    }
 
     if (!allowPaidImages) {
-      return const LessonVisualResult(svg: null, dataUrl: null, source: 'skip_no_paid');
+      return const LessonVisualResult(
+        svg: null,
+        dataUrl: null,
+        source: 'skip_no_paid',
+      );
+    }
+    if (acceptedOfferId == null || acceptedOfferId.trim().isEmpty) {
+      return const LessonVisualResult(
+        svg: null,
+        dataUrl: null,
+        source: 'skip_no_offer',
+      );
     }
 
     // 4. AI Blueprint (pago)
@@ -157,25 +209,52 @@ class LessonVisualPipeline {
       lang: stableLang,
     );
     if (prompt.isEmpty) {
-      return const LessonVisualResult(svg: null, dataUrl: null, source: 'skip_no_prompt');
+      return const LessonVisualResult(
+        svg: null,
+        dataUrl: null,
+        source: 'skip_no_prompt',
+      );
     }
 
-    final dataUrl = await fetchPaidLessonImage(prompt, lessonKey);
+    final dataUrl = await fetchPaidLessonImage(
+      prompt,
+      lessonKey,
+      acceptedOfferId: acceptedOfferId,
+      idempotencyKey: idempotencyKey ?? acceptedOfferId,
+    );
     if (dataUrl == null) {
-      return LessonVisualResult(svg: null, dataUrl: null, source: 'ai_failed', n2Reason: n2.reason);
+      return LessonVisualResult(
+        svg: null,
+        dataUrl: null,
+        source: 'ai_failed',
+        n2Reason: n2.reason,
+      );
     }
-    return LessonVisualResult(svg: null, dataUrl: dataUrl, source: 'ai_blueprint', n2Reason: n2.reason);
+    return LessonVisualResult(
+      svg: null,
+      dataUrl: dataUrl,
+      source: 'ai_blueprint',
+      n2Reason: n2.reason,
+    );
   }
 
-  Future<String?> fetchPaidLessonImage(String prompt, String lessonKey) async {
+  Future<String?> fetchPaidLessonImage(
+    String prompt,
+    String lessonKey, {
+    String? acceptedOfferId,
+    String? idempotencyKey,
+  }) async {
     if (prompt.trim().isEmpty) return null;
+    if (acceptedOfferId == null || acceptedOfferId.trim().isEmpty) return null;
     final dataUrl = await imageClient.generateLessonImage(
       prompt: prompt,
       lessonKey: lessonKey,
       aspectRatio: '1:1',
+      acceptedOfferId: acceptedOfferId,
+      idempotencyKey: idempotencyKey ?? acceptedOfferId,
     );
     if (!isUsableImageDataUrl(dataUrl)) return null;
-    return dataUrl;
+    return compressImageDataUrl(dataUrl!);
   }
 
   String buildPromptForTrigger({

@@ -19,6 +19,7 @@ class LessonRuntimeSnapshot {
     required this.phase,
     required this.history,
     required this.conteudo,
+    required this.imagem,
     required this.itemMarker,
     required this.itemText,
   });
@@ -31,8 +32,32 @@ class LessonRuntimeSnapshot {
   final ClassroomPhase phase;
   final List<QuestionHistoryEntry> history;
   final LessonContent? conteudo;
+  final String? imagem;
   final String? itemMarker;
   final String? itemText;
+
+  LessonRuntimeSnapshot copyWith({
+    ClassroomPhase? phase,
+    List<QuestionHistoryEntry>? history,
+    LessonContent? conteudo,
+    String? imagem,
+    String? itemMarker,
+    String? itemText,
+  }) {
+    return LessonRuntimeSnapshot(
+      authReady: authReady,
+      authed: authed,
+      hasCurriculum: hasCurriculum,
+      isDone: isDone,
+      viewModel: viewModel,
+      phase: phase ?? this.phase,
+      history: history ?? this.history,
+      conteudo: conteudo ?? this.conteudo,
+      imagem: imagem ?? this.imagem,
+      itemMarker: itemMarker ?? this.itemMarker,
+      itemText: itemText ?? this.itemText,
+    );
+  }
 }
 
 class LessonRuntimeEngine {
@@ -72,6 +97,7 @@ class LessonRuntimeEngine {
         phase: const ClassroomPhase.loading(),
         history: const [],
         conteudo: null,
+        imagem: null,
         itemMarker: null,
         itemText: null,
       );
@@ -86,6 +112,7 @@ class LessonRuntimeEngine {
         phase: const ClassroomPhase.loading(),
         history: const [],
         conteudo: null,
+        imagem: null,
         itemMarker: null,
         itemText: null,
       );
@@ -165,6 +192,7 @@ class LessonRuntimeEngine {
         phase: ClassroomPhase.loading(),
         history: [],
         conteudo: null,
+        imagem: null,
         itemMarker: null,
         itemText: null,
       );
@@ -189,6 +217,7 @@ class LessonRuntimeEngine {
       phase: position.phase,
       history: position.history,
       conteudo: position.conteudo,
+      imagem: position.imagem,
       itemMarker: position.itemAtivo?.marker,
       itemText: position.itemAtivo?.text,
     );

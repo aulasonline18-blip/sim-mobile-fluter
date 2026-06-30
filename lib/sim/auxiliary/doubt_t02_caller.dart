@@ -23,16 +23,12 @@ class DoubtT02Caller {
     String? studentDoubt,
     DoubtImagePayload? doubtImage,
   }) async {
-    final draft = DoubtInputDraft(
-      text: studentDoubt ?? '',
-      image: doubtImage,
-    );
+    final draft = DoubtInputDraft(text: studentDoubt ?? '', image: doubtImage);
     final validation = draft.validate();
     if (validation != null && validation != emptyDoubtMessage) {
       throw ArgumentError(validation);
     }
-    final text =
-        draft.cleanText.isEmpty ? defaultDoubtText : draft.cleanText;
+    final text = draft.cleanText.isEmpty ? defaultDoubtText : draft.cleanText;
     final material = await client.doubt(
       T02LessonRequest(
         lessonLocalId: lessonLocalId,
@@ -60,7 +56,7 @@ class DoubtT02Caller {
     );
     return DoubtResponse(
       explanation: material.explanation,
-      visualTrigger: null,
+      visualTrigger: material.visualTrigger,
     );
   }
 }

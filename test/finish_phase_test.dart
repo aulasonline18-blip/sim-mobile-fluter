@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:sim_mobile/features/classroom/aula_widgets.dart';
+import 'package:sim_mobile/sim/classroom/classroom_models.dart';
+import 'package:sim_mobile/sim/classroom/lesson_main_view_model.dart';
+import 'package:sim_mobile/sim/classroom/lesson_runtime_engine.dart';
 import 'package:sim_mobile/sim/external_ai/sim_ai_server_config.dart';
 import 'package:sim_mobile/sim/external_ai/sim_http_transport.dart';
 import 'package:sim_mobile/sim/external_ai/sim_server_attachment_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/main.dart';
+import 'package:sim_mobile/sim/lesson/lesson_models.dart';
 import 'package:sim_mobile/sim/support/sim_finish_contract.dart';
+import 'package:sim_mobile/sim/state/student_learning_state.dart';
 
 class FakeAttachmentTransport implements SimHttpTransport {
   int calls = 0;
@@ -107,12 +113,7 @@ void main() {
     await tester.pumpWidget(SimMobileApp(initialSession: session));
     expect(find.text('Imagem da aula'), findsOneWidget);
     expect(find.text('Audio da aula ligado'), findsOneWidget);
-
-    await tester.tap(find.text('Gerar imagem'));
-    await tester.pump();
-    expect(find.text('Gerando imagem da aula...'), findsOneWidget);
-    await tester.pumpAndSettle();
-    expect(find.text('Imagem da aula pronta'), findsOneWidget);
+    expect(find.text('Gerar imagem'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.volume_up_outlined).first);
     await tester.pump();
@@ -128,5 +129,57 @@ void main() {
     expect(find.text('3'), findsOneWidget);
 
     await tester.binding.setSurfaceSize(null);
+  });
+
+  testWidgets('painel mostra oferta paga antes de gerar imagem', (
+    tester,
+  ) async {
+    final session = LabSession()
+      ..aulaSnapshot = const LessonRuntimeSnapshot(
+        authReady: true,
+        authed: true,
+        hasCurriculum: true,
+        isDone: false,
+        viewModel: LessonMainViewModel(
+          progress: 0,
+          headerLabel: 'aula_item_of:1/1:aula_layer_1',
+          options: [],
+          locked: false,
+          nextLabel: '',
+        ),
+        phase: ClassroomPhase.reading(),
+        history: [],
+        conteudo: LessonContent(
+          explanation: 'Explicacao',
+          question: 'Pergunta?',
+          options: {
+            AnswerLetter.A: 'A',
+            AnswerLetter.B: 'B',
+            AnswerLetter.C: 'C',
+          },
+          correctAnswer: AnswerLetter.A,
+          visualTrigger: {
+            'needs_image': true,
+            'pedagogical_need': 'important',
+            'render_strategy': 'ai',
+            'image_prompt': 'foto realista de um coração humano',
+            'topic': 'coração humano',
+            'visual_type': 'anatomy',
+          },
+        ),
+        imagem: null,
+        itemMarker: 'M1',
+        itemText: 'Sistema circulatório',
+      );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: LessonImagePanel(session: session)),
+      ),
+    );
+
+    expect(find.text('Imagem opcional da aula'), findsOneWidget);
+    expect(find.text('Sem imagem'), findsOneWidget);
+    expect(find.text('Gerar'), findsOneWidget);
   });
 }

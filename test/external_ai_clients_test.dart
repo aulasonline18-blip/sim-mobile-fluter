@@ -119,6 +119,8 @@ void main() {
     final dataUrl = await client.generateLessonImage(
       prompt: 'uma figura didática',
       lessonKey: 'lesson-1',
+      acceptedOfferId: 'offer-1',
+      idempotencyKey: 'offer-1',
     );
 
     expect(dataUrl, startsWith('data:image/'));
@@ -128,7 +130,13 @@ void main() {
     );
     expect(
       (transport.lastBody as Map).keys,
-      containsAll(['prompt', 'lessonKey', 'aspectRatio']),
+      containsAll([
+        'prompt',
+        'lessonKey',
+        'aspectRatio',
+        'acceptedOfferId',
+        'idempotencyKey',
+      ]),
     );
     expect(transport.lastHeaders.toString(), isNot(contains('GEMINI_API_KEY')));
     expect(

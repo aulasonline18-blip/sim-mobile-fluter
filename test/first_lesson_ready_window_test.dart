@@ -17,11 +17,16 @@ import 'package:sim_mobile/sim/state/student_learning_state.dart';
 import 'package:sim_mobile/sim/state/student_learning_state_service.dart';
 
 class FakeT02Client implements T02LessonClient {
+  FakeT02Client({this.visualTrigger});
+
+  final JsonMap? visualTrigger;
   int calls = 0;
+  final requests = <T02LessonRequest>[];
 
   @override
   Future<T02LessonMaterial> completeLesson(T02LessonRequest request) async {
     calls += 1;
+    requests.add(request);
     return T02LessonMaterial(
       explanation: 'Explicacao de ${request.item}',
       question: 'Pergunta?',
@@ -35,6 +40,7 @@ class FakeT02Client implements T02LessonClient {
       whyWrong: null,
       generatedAt: DateTime.fromMillisecondsSinceEpoch(1),
       source: 'fake-t02',
+      visualTrigger: visualTrigger,
     );
   }
 
@@ -116,19 +122,19 @@ class AuditT02Client implements T02LessonClient {
       completeLesson(request);
 
   T02LessonMaterial _material(T02LessonRequest request) => T02LessonMaterial(
-        explanation: 'Explicacao ${request.layer.name}',
-        question: 'Pergunta ${request.layer.name}?',
-        options: const {
-          AnswerLetter.A: 'A certa',
-          AnswerLetter.B: 'B errada',
-          AnswerLetter.C: 'C errada',
-        },
-        correctAnswer: AnswerLetter.A,
-        whyCorrect: 'Porque sim.',
-        whyWrong: const {'B': 'nao', 'C': 'nao'},
-        generatedAt: DateTime.fromMillisecondsSinceEpoch(1),
-        source: 'audit-t02',
-      );
+    explanation: 'Explicacao ${request.layer.name}',
+    question: 'Pergunta ${request.layer.name}?',
+    options: const {
+      AnswerLetter.A: 'A certa',
+      AnswerLetter.B: 'B errada',
+      AnswerLetter.C: 'C errada',
+    },
+    correctAnswer: AnswerLetter.A,
+    whyCorrect: 'Porque sim.',
+    whyWrong: const {'B': 'nao', 'C': 'nao'},
+    generatedAt: DateTime.fromMillisecondsSinceEpoch(1),
+    source: 'audit-t02',
+  );
 }
 
 StudentLearningState _stateWithCurriculum() {
@@ -197,6 +203,187 @@ void main() {
     expect(cache.peek('k1'), isNotNull);
     expect(cache.peek('k3'), isNotNull);
   });
+
+  test(
+    'LessonOrchestrator carries T02 visual_trigger into free SVG image',
+    () async {
+      final trigger = <String, dynamic>{
+        'needs_image': true,
+        'pedagogical_need': 'clarify_spatial',
+        'render_strategy': 'software',
+        'svg_payload':
+            '<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
+      };
+      final cache = LessonMaterialCache();
+      final bus = LessonEventBus();
+      final orchestrator = LessonOrchestrator(
+        t02Client: FakeT02Client(visualTrigger: trigger),
+        cache: cache,
+        bus: bus,
+      );
+      const params = CompleteLessonParams(
+        lessonLocalId: 'cyber-visual',
+        item: 'Plano cartesiano',
+        lang: 'pt-BR',
+        academic: 'fundamental',
+        layer: LessonLayer.l1,
+        mode: LessonMode.session,
+        marker: 'M1',
+      );
+      final key = lessonKeyFor(params);
+      final updates = <CompleteLesson>[];
+      final unsubscribe = bus.subscribe(key, updates.add);
+      addTearDown(unsubscribe);
+
+      final textLesson = await orchestrator.prefetchCompleteLesson(
+        params,
+        priority: 'active',
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(textLesson.conteudo.visualTrigger, trigger);
+      expect(updates.first.conteudo.visualTrigger, trigger);
+      final rendered = updates.last.imagem ?? cache.peek(key)?.imagem;
+      expect(rendered, startsWith('data:image/svg+xml;utf8,'));
+      expect(rendered, contains('%3Csvg'));
+    },
+  );
+
+  test(
+    'LessonOrchestrator renders math_template from visual_trigger',
+    () async {
+      final trigger = <String, dynamic>{
+        'needs_image': true,
+        'pedagogical_need': 'important',
+        'render_strategy': 'software',
+        'topic': 'função linear',
+        'math_template': {
+          'name': 'linear_function',
+          'params': {
+            'a': 2,
+            'b': 1,
+            'x_min': -3,
+            'x_max': 3,
+            'labels': {'title': 'y = 2x + 1'},
+          },
+        },
+      };
+      final cache = LessonMaterialCache();
+      final bus = LessonEventBus();
+      final orchestrator = LessonOrchestrator(
+        t02Client: FakeT02Client(visualTrigger: trigger),
+        cache: cache,
+        bus: bus,
+      );
+      const params = CompleteLessonParams(
+        lessonLocalId: 'cyber-math-template',
+        item: 'Função linear',
+        lang: 'pt-BR',
+        academic: 'fundamental',
+        layer: LessonLayer.l1,
+        mode: LessonMode.session,
+        marker: 'M1',
+      );
+      final key = lessonKeyFor(params);
+      final updates = <CompleteLesson>[];
+      final unsubscribe = bus.subscribe(key, updates.add);
+      addTearDown(unsubscribe);
+
+      await orchestrator.prefetchCompleteLesson(params, priority: 'active');
+      await Future<void>.delayed(Duration.zero);
+
+      final rendered = updates.last.imagem ?? cache.peek(key)?.imagem;
+      expect(rendered, startsWith('data:image/svg+xml;utf8,'));
+      expect(Uri.decodeComponent(rendered!), contains('y = 2'));
+    },
+  );
+
+  test('review and recovery requests preserve visual_trigger', () async {
+    final trigger = <String, dynamic>{
+      'needs_image': true,
+      'pedagogical_need': 'important',
+      'render_strategy': 'software',
+      'svg_payload':
+          '<svg viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9"/></svg>',
+    };
+    final t02 = FakeT02Client(visualTrigger: trigger);
+    final orchestrator = LessonOrchestrator(
+      t02Client: t02,
+      cache: LessonMaterialCache(),
+      bus: LessonEventBus(),
+    );
+
+    final review = await orchestrator.prefetchCompleteLesson(
+      const CompleteLessonParams(
+        lessonLocalId: 'cyber-review',
+        item: 'Revisão de função',
+        lang: 'pt-BR',
+        academic: 'fundamental',
+        layer: LessonLayer.l2,
+        mode: LessonMode.reforco,
+        marker: 'M1',
+      ),
+      priority: 'active',
+    );
+    final recovery = await orchestrator.prefetchCompleteLesson(
+      const CompleteLessonParams(
+        lessonLocalId: 'cyber-recovery',
+        item: 'Recuperação de função',
+        lang: 'pt-BR',
+        academic: 'fundamental',
+        layer: LessonLayer.l1,
+        mode: LessonMode.amparo,
+        amparoLvl: 1,
+        marker: 'M1',
+      ),
+      priority: 'active',
+    );
+
+    expect(t02.requests.map((request) => request.mode), [
+      LessonMode.reforco.name,
+      LessonMode.amparo.name,
+    ]);
+    expect(review.conteudo.visualTrigger, trigger);
+    expect(recovery.conteudo.visualTrigger, trigger);
+  });
+
+  test(
+    'background prefetch does not create paid image without student action',
+    () async {
+      final trigger = <String, dynamic>{
+        'needs_image': true,
+        'pedagogical_need': 'important',
+        'render_strategy': 'ai',
+        'topic': 'coração humano realista',
+        'image_prompt': 'foto realista de um coração humano',
+      };
+      final cache = LessonMaterialCache();
+      final orchestrator = LessonOrchestrator(
+        t02Client: FakeT02Client(visualTrigger: trigger),
+        cache: cache,
+        bus: LessonEventBus(),
+      );
+      const params = CompleteLessonParams(
+        lessonLocalId: 'cyber-paid-bg',
+        item: 'Sistema circulatório',
+        lang: 'pt-BR',
+        academic: 'fundamental',
+        layer: LessonLayer.l1,
+        mode: LessonMode.session,
+        marker: 'M1',
+      );
+      final key = lessonKeyFor(params);
+
+      final lesson = await orchestrator.prefetchCompleteLesson(
+        params,
+        priority: 'background',
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(lesson.conteudo.visualTrigger, trigger);
+      expect(cache.peek(key)?.imagem, isNull);
+    },
+  );
 
   test('DopamineReadyWindowEngine prepares A/B/C slots from state', () async {
     final service = StudentLearningStateService(
@@ -334,8 +521,9 @@ void main() {
       expect(firstRequest.academic, 'fundamental');
       expect(firstRequest.profile['stable_lang'], 'pt-BR');
       expect(firstRequest.profile['academic_level'], 'fundamental');
-      expect(
-          firstRequest.profile['student_profile_internal'], {'pace': 'visual'});
+      expect(firstRequest.profile['student_profile_internal'], {
+        'pace': 'visual',
+      });
 
       final openedState = service.read('cyber-audit-1');
       final openedProgressEvents = openedState?.events
@@ -346,7 +534,9 @@ void main() {
       expect(openedState?.currentLessonMaterial?['text_status'], 'ready');
       expect(openedState?.current?.marker, 'M1');
       expect(
-          openedProgressEvents, isNot(contains('t00FinalCurriculumReceived')));
+        openedProgressEvents,
+        isNot(contains('t00FinalCurriculumReceived')),
+      );
       expect(openedProgressEvents, contains('t00FirstItemReceived'));
       expect(
         openedState?.events.map((event) => event.type),
