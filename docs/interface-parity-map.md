@@ -78,6 +78,14 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 - Rodar Flutter widget/integration screenshots equivalentes se o ambiente suportar.
 - Sem prints, esta matriz permanece `PARCIAL` e nao pode ser marcada como B.
 
+Tentativa executada em 2026-06-30:
+
+- `npx bun install`: passou usando o `bun.lock` do SimWeb.
+- `npx bun run dev --host 0.0.0.0 --port 4177`: falhou.
+- Motivo 1: Vite requer Node `20.19+` ou `22.12+`; VM tem Node `18.19.1`.
+- Motivo 2: a config `@lovable.dev/vite-tanstack-config` tentou `require()` de `lovable-tagger/dist/index.js` ESM e abortou com `ERR_REQUIRE_ESM`.
+- Resultado: screenshots reais do SimWeb ainda nao foram capturados nesta VM. A referencia desta rodada ficou baseada no codigo real do SimWeb.
+
 ## Status Atual
 
 Nao estamos em B. Progresso desta rodada:
