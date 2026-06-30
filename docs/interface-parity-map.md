@@ -60,7 +60,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 | Conclusao | `LessonDoneScreen` Web | `LessonDoneScreen` Flutter | Usa robo; precisa validar CTA/destino. | Baixa | Screenshot/teste. | PARCIAL |
 | Loading | `LessonStateScreens.tsx` | Flutter loading states | Estados existem; nao aprovados visualmente. | Media | Testes + screenshot. | PARCIAL |
 | Erro | `LessonStateScreens.tsx` | Flutter error states | Estados existem; textos/botoes nao validados. | Media | Testes + screenshot. | PARCIAL |
-| Estado vazio | `LessonNoCurriculumScreen` | Fallbacks Flutter | Equivalente nao confirmado. | Media | Localizar/implementar se ausente. | NAO INICIADO |
+| Estado vazio | `LessonNoCurriculumScreen` | `LessonNoCurriculumScreen` Flutter | Corrigido: erro de aula sem curriculo renderiza card central com h1/body/CTA para objetivo. Ainda falta screenshot visual. | Media | Capturar screenshot Web/Flutter para aprovar visual. | IGUAL FUNCIONALMENTE |
 | Responsivo tela pequena | CSS Web + Flutter layouts | Varios | Sem screenshot 320/390; risco de overflow por strings longas. | Alta | Rodar testes em 320x640 e 390x844. | NAO INICIADO |
 
 ## Diferencas Criticas Ja Encontradas
@@ -68,7 +68,7 @@ Status permitidos: `NAO INICIADO`, `PARCIAL`, `IGUAL VISUALMENTE`, `IGUAL FUNCIO
 1. Duvida Flutter ainda nao tem foto/camera/galeria como `DoubtInputSheet.tsx` do Web.
 2. Drawer Flutter ainda nao prova paridade total com cloud/local, renomear, apagar e lista paginada do Web.
 3. Ainda faltam screenshots reais Web/Flutter para aprovar visualmente portal, login, idioma, objetivo, preparacao, aula, drawer e creditos.
-4. Amparo e estado vazio ainda estao inconclusivos nesta matriz.
+4. Amparo ainda esta inconclusivo nesta matriz.
 5. Comentarios com mojibake ainda podem existir, mas textos visiveis auditados nesta rodada foram corrigidos nos pontos alterados.
 
 ## Plano De Captura Visual
@@ -95,4 +95,4 @@ Nao estamos em B. Progresso desta rodada:
 - `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`: passou, APK gerado.
 - Corrigidos: header da aula sem duvida extra, A/B/C sem ponto, sinais 1/2/3 com envio imediato, sheet de duvida textual, creditos com estrutura Web, drawer export/import/status com acao real e mojibake visivel em pontos alterados.
 
-Ainda falta para B: captura visual real do SimWeb/Flutter, duvida com imagem, drawer completo cloud/local/renomear/apagar, amparo/estado vazio mapeados e aprovacao visual tela por tela.
+Ainda falta para B: captura visual real do SimWeb/Flutter, duvida com imagem, drawer completo cloud/local/renomear/apagar, amparo mapeado e aprovacao visual tela por tela.

@@ -185,6 +185,11 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
       return LessonDoneScreen(session: session);
     }
 
+    if (session.aulaRuntimeError?.contains('sem curriculo') == true ||
+        session.aulaRuntimeError?.contains('sem currículo') == true) {
+      return LessonNoCurriculumScreen(session: session);
+    }
+
     // Full-screen review/recovery room overlays
     if (session.reviewRoom != null) {
       return ReviewRoomScreen(session: session);
@@ -744,6 +749,60 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class LessonNoCurriculumScreen extends StatelessWidget {
+  const LessonNoCurriculumScreen({required this.session, super.key});
+
+  final LabSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.all(32),
+              decoration: glassDecoration(radius: 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    t('aula_no_curr_h1'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: simDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    t('aula_no_curr_body'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: simMuted,
+                      fontSize: 14,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  PrimaryWideButton(
+                    label: t('aula_back_curr'),
+                    onTap: () => session.openSupport('/cyber/objeto'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -119,4 +119,23 @@ void main() {
 
     await tester.binding.setSurfaceSize(null);
   });
+
+  testWidgets('Aula sem curriculo mostra estado vazio equivalente ao Web', (
+    WidgetTester tester,
+  ) async {
+    final session = LabSession()
+      ..authed = true
+      ..authReady = true
+      ..route = '/cyber/aula'
+      ..aulaRuntimeError = 'Aula sem curriculo no Estado do aluno.';
+
+    await tester.pumpWidget(SimMobileApp(initialSession: session));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Currículo não encontrado'), findsOneWidget);
+    expect(find.text('Volte e monte um novo currículo.'), findsOneWidget);
+    await tester.tap(find.text('Voltar ao currículo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tell us about who is going to study'), findsOneWidget);
+  });
 }
