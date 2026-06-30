@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unused_import, unnecessary_import
+// ignore_for_file: unused_import, unnecessary_import
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -51,6 +51,7 @@ import '../classroom/aux_room_screens.dart';
 import '../classroom/aula_widgets.dart';
 import '../billing/billing_and_simple_pages.dart';
 import '../../shared/widgets/shared_widgets.dart';
+
 class CreditsLabScreen extends StatelessWidget {
   const CreditsLabScreen({required this.session, super.key});
 
@@ -67,7 +68,7 @@ class CreditsLabScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'CrÃ©ditos',
+                  'Cr\u00e9ditos',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 24,
@@ -81,17 +82,17 @@ class CreditsLabScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 CreditPackButton(
-                  title: '100 crÃ©ditos',
+                  title: '100 cr\u00e9ditos',
                   subtitle: t('pay_pack_lessons_100'),
                   onTap: session.openCheckoutReturn,
                 ),
                 CreditPackButton(
-                  title: '200 crÃ©ditos',
+                  title: '200 cr\u00e9ditos',
                   subtitle: t('pay_pack_lessons_200'),
                   onTap: session.openCheckoutReturn,
                 ),
                 CreditPackButton(
-                  title: '500 crÃ©ditos',
+                  title: '500 cr\u00e9ditos',
                   subtitle: t('pay_pack_lessons_500'),
                   onTap: session.openCheckoutReturn,
                 ),
@@ -176,7 +177,7 @@ class CheckoutReturnScreen extends StatelessWidget {
     return SimpleLabPage(
       title: 'Retorno do pagamento',
       body:
-          'O pagamento volta para o SIM, valida a sessÃ£o do checkout e devolve o aluno para a aula ou para tentar novamente.',
+          'O pagamento volta para o SIM, valida a sess\u00e3o do checkout e devolve o aluno para a aula ou para tentar novamente.',
       primary: 'Continuar aula',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,
@@ -215,8 +216,8 @@ class LegalLabScreen extends StatelessWidget {
     return SimpleLabPage(
       title: title,
       body: title == 'Privacidade'
-          ? 'PÃ¡gina de privacidade preservada como ambiente de apoio do SIM.'
-          : 'PÃ¡gina de termos preservada como ambiente de apoio do SIM.',
+          ? 'P\u00e1gina de privacidade preservada como ambiente de apoio do SIM.'
+          : 'P\u00e1gina de termos preservada como ambiente de apoio do SIM.',
       primary: 'Voltar',
       onPrimary: () => session.openSupport('/cyber/aula'),
       session: session,
@@ -240,7 +241,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Solicitar exclusÃ£o da conta',
+                  'Solicitar exclus\u00e3o da conta',
                   style: TextStyle(
                     color: simDark,
                     fontSize: 24,
@@ -249,7 +250,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Digite DELETAR para registrar a solicitaÃ§Ã£o de exclusÃ£o. A execuÃ§Ã£o real acontece no servidor, sem chave secreta dentro do app.',
+                  'Digite DELETAR para registrar a solicita\u00e7\u00e3o de exclus\u00e3o. A execu\u00e7\u00e3o real acontece no servidor, sem chave secreta dentro do app.',
                   style: TextStyle(color: simMuted, fontSize: 15, height: 1.45),
                 ),
                 const SizedBox(height: 16),
@@ -270,7 +271,7 @@ class DeleteAccountLabScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: 18),
                 PrimaryWideButton(
-                  label: 'Solicitar exclusÃ£o da conta',
+                  label: 'Solicitar exclus\u00e3o da conta',
                   onTap: session.requestAccountDeletion,
                 ),
                 const SizedBox(height: 10),
@@ -353,7 +354,3 @@ class SimpleLabPage extends StatelessWidget {
     );
   }
 }
-
-
-
-

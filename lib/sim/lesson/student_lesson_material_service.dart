@@ -1,4 +1,6 @@
 // MIRROR OF: src/sim/lesson/studentLessonMaterialService.ts (Web, source of truth)
+import 'dart:async';
+
 import '../state/live_entry_state.dart';
 import '../state/student_learning_state.dart';
 import '../state/student_learning_state_service.dart';
@@ -64,6 +66,7 @@ class StudentLessonMaterialService {
   ) {
     final fromState = _readReadyFromStudentState(input);
     if (fromState != null) {
+      _mirrorCurrentLessonContent(input, fromState);
       return ResolveLessonMaterialResult(
         conteudo: fromState,
         imagem: null,
@@ -89,29 +92,21 @@ class StudentLessonMaterialService {
     final fast = resolveFastLessonMaterialFromStateOrCache(input);
     if (fast != null) return fast;
 
-    _enqueueLearningJob(input);
-    await readyWindowEngine.runDopamineReadyWindowFromStudentState(
-      lessonLocalId: input.lessonLocalId,
-      source: 'StudentLessonMaterialService',
-      maxSlots: 1,
-      itemIdx: input.itemIdx,
-      layer: input.layer,
-      marker: input.marker,
-      topic: input.topic,
+    final lesson = await orchestrator.prefetchCompleteLesson(
+      input.params,
+      priority: 'active',
     );
-
-    final after = resolveFastLessonMaterialFromStateOrCache(input);
-    if (after == null) return null;
+    _mirrorPreparedAndCurrentLessonMaterial(input, lesson);
     final waitedMs = DateTime.now().millisecondsSinceEpoch - startedAt;
     _appendLessonTextReady(
       input,
-      after.conteudo,
+      lesson.conteudo,
       LessonMaterialSource.studentStateAfterWait,
       waitedMs,
     );
     return ResolveLessonMaterialResult(
-      conteudo: after.conteudo,
-      imagem: after.imagem,
+      conteudo: lesson.conteudo,
+      imagem: lesson.imagem,
       source: LessonMaterialSource.studentStateAfterWait,
       waitedMs: waitedMs,
     );
@@ -139,6 +134,65 @@ class StudentLessonMaterialService {
           'question': content.question,
         },
       ),
+    );
+  }
+
+  void prepareReadyWindowInBackground({
+    required String lessonLocalId,
+    required String? topic,
+    required int itemIdx,
+    required LessonLayer layer,
+    required String? marker,
+    required String source,
+  }) {
+    stateService.appendEvent(
+      lessonLocalId,
+      StudentLearningEvent(
+        type: 'BACKGROUND_READY_WINDOW_STARTED',
+        ts: DateTime.now().millisecondsSinceEpoch,
+        payload: {
+          'source': source,
+          'itemIdx': itemIdx,
+          'marker': marker,
+          'layer': layer.value,
+          'maxSlots': 3,
+        },
+      ),
+    );
+    unawaited(
+      readyWindowEngine
+          .runDopamineReadyWindowFromStudentState(
+        lessonLocalId: lessonLocalId,
+        source: source,
+        maxSlots: 3,
+        itemIdx: itemIdx,
+        layer: layer,
+        marker: marker,
+        topic: topic,
+      )
+          .then((result) {
+        stateService.appendEvent(
+          lessonLocalId,
+          StudentLearningEvent(
+            type: 'BACKGROUND_READY_WINDOW_READY',
+            ts: DateTime.now().millisecondsSinceEpoch,
+            payload: {
+              'source': source,
+              'ready': result.where((ready) => ready).length,
+              'requested': result.length,
+            },
+          ),
+        );
+      }).catchError((Object error) {
+        stateService.appendEvent(
+          lessonLocalId,
+          StudentLearningEvent(
+            type: 'BACKGROUND_READY_WINDOW_FAILED',
+            ts: DateTime.now().millisecondsSinceEpoch,
+            payload: {'source': source, 'error': error.toString()},
+          ),
+        );
+      }),
     );
   }
 
@@ -229,37 +283,46 @@ class StudentLessonMaterialService {
     });
   }
 
-  void _enqueueLearningJob(ResolveLessonMaterialInput input) {
+  void _mirrorPreparedAndCurrentLessonMaterial(
+    ResolveLessonMaterialInput input,
+    CompleteLesson lesson,
+  ) {
+    final key = preparedLessonMaterialKey(
+      input.itemIdx,
+      input.marker,
+      input.layer,
+    );
+    final material = preparedMaterialFromLesson(
+      lesson: lesson,
+      itemIdx: input.itemIdx,
+      marker: input.marker,
+      layer: input.layer,
+    );
     stateService.mutate(input.lessonLocalId, (state) {
       return state.copyWith(
-        queuedActions: [
-          ...state.queuedActions,
-          {
-            'job_id':
-                'lesson_material_${DateTime.now().millisecondsSinceEpoch}',
-            'type': 'PREPARE_READY_WINDOW',
-            'status': 'queued',
-            'idempotency_key':
-                'lesson-material:${input.lessonLocalId}:${input.itemIdx}:L${input.layer.value}:${input.marker ?? "no-marker"}',
-            'priority': 'active',
-            'source': 'StudentLessonMaterialService',
-            'payload': {
-              'maxSlots': 1,
-              'reason': 'lesson_material_missing',
-              'itemIdx': input.itemIdx,
-              'layer': input.layer.value,
-              'marker': input.marker,
-              'topic': input.topic,
-            },
-            'created_at': DateTime.now().millisecondsSinceEpoch,
-            'started_at': null,
-            'finished_at': null,
-            'error': null,
-          },
-        ],
+        currentLessonMaterial: material,
+        readyLessonMaterials: {
+          ...state.readyLessonMaterials,
+          key: material,
+        },
       );
     });
   }
+
+  void _mirrorCurrentLessonContent(
+    ResolveLessonMaterialInput input,
+    LessonContent content,
+  ) {
+    _mirrorCurrentLessonMaterial(
+      input,
+      CompleteLesson(
+        conteudo: content,
+        imagem: null,
+        audioText: content.audioText,
+      ),
+    );
+  }
+
   // D4: Resume Instantâneo — lê da fonte única (StudentLearningState) diretamente.
   // Planta-Mãe §10: student_state > cache > T02.
   CompleteLesson? readReadyLessonMaterialFromStudentState(

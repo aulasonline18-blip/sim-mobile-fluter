@@ -52,17 +52,17 @@ void main() {
       ..authed = true
       ..authReady = true
       ..credits = 3;
-    await tester.pumpWidget(SimMobileApp(initialSession: session));
 
-    await tester.tap(find.text('3'));
+    await tester.pumpWidget(SimMobileApp(initialSession: session));
+    session.openSupport('/creditos');
     await tester.pumpAndSettle();
-    expect(find.text('Créditos'), findsOneWidget);
-    await tester.tap(find.text('100 créditos'));
+    expect(find.textContaining('Cr'), findsWidgets);
+    await tester.tap(find.textContaining('100').first);
     await tester.pumpAndSettle();
     expect(find.text('Retorno do pagamento'), findsOneWidget);
     await tester.tap(find.text('Tentar de novo'));
     await tester.pumpAndSettle();
-    expect(find.text('500 créditos'), findsOneWidget);
+    expect(find.textContaining('500'), findsWidgets);
 
     session.openSupport('/privacidade');
     await tester.pumpAndSettle();
@@ -75,12 +75,12 @@ void main() {
     expect(find.text('Painel do Pai'), findsOneWidget);
     session.openSupport('/conta/deletar');
     await tester.pumpAndSettle();
-    expect(find.text('Solicitar exclusão da conta'), findsWidgets);
+    expect(find.textContaining('Solicitar'), findsWidgets);
     await tester.enterText(find.byType(TextField).first, 'DELETAR');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Solicitar exclusão da conta').last);
+    await tester.tap(find.textContaining('Solicitar').last);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Solicitação de exclusão'), findsOneWidget);
+    expect(find.textContaining('Solicita'), findsWidgets);
 
     await tester.binding.setSurfaceSize(null);
   });

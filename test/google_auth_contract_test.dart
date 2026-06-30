@@ -5,10 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('android app uses real Google auth through Supabase OAuth', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
-    final appSource = [
-      File('lib/main.dart'),
-      ...Directory('lib/app_shell').listSync().whereType<File>(),
-    ].map((file) => file.readAsStringSync()).join('\n');
+    final appSource = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'))
+        .map((file) => file.readAsStringSync())
+        .join('\n');
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
     ).readAsStringSync();

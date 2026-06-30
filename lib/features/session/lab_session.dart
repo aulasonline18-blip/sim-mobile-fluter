@@ -419,9 +419,13 @@ class LabSession extends ChangeNotifier {
       return;
     }
     navigationState.openRoute('/creditos');
+    notifyListeners();
   }
 
-  void openSupport(String path) => navigationState.openRoute(path);
+  void openSupport(String path) {
+    navigationState.openRoute(path);
+    notifyListeners();
+  }
 
   void openExternalDoor(String url) => navigationState.openExternalDoor(url);
 

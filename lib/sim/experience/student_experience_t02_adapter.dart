@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../lesson/dopamine_ready_window_engine.dart';
 import '../lesson/lesson_models.dart';
 import '../lesson/student_lesson_material_service.dart';
 import '../state/live_entry_state.dart';
@@ -76,35 +75,19 @@ class StudentExperienceT02Adapter {
       firstLessonStartedAt: DateTime.now().millisecondsSinceEpoch,
     );
 
-    materialService.maintainLessonReadyWindow(
-      lessonLocalId: args.lessonLocalId,
-      topic: topic,
-      itemIdx: first.itemIndex,
-      layer: LessonLayer.l1,
-      items: first.curriculum.items
-          .map(
-            (item) =>
-                DopamineWindowItem(text: itemText(item), marker: item.marker),
-          )
-          .toList(),
-      source: 'StudentExperienceEngineV2',
-      priority: 'active',
-      reason: 'first_experience_minimum',
+    final material =
+        await materialService.resolveLessonMaterialFromStateOrEngine(
+      ResolveLessonMaterialInput(
+        lessonLocalId: args.lessonLocalId,
+        topic: topic,
+        itemIdx: first.itemIndex,
+        marker: first.marker,
+        layer: LessonLayer.l1,
+        params: params,
+        waitBeforeOrderMs: 0,
+        waitAfterOrderMs: 45000,
+      ),
     );
-
-    final material = await materialService
-        .resolveLessonMaterialFromStateOrEngine(
-          ResolveLessonMaterialInput(
-            lessonLocalId: args.lessonLocalId,
-            topic: topic,
-            itemIdx: first.itemIndex,
-            marker: first.marker,
-            layer: LessonLayer.l1,
-            params: params,
-            waitBeforeOrderMs: 0,
-            waitAfterOrderMs: 45000,
-          ),
-        );
     if (material == null) {
       throw Exception('T02 nao devolveu a aula minima da primeira experiencia');
     }
@@ -130,7 +113,7 @@ class StudentExperienceT02Adapter {
           pctAvanco: first.curriculum.items.isEmpty
               ? 0
               : ((first.itemIndex / first.curriculum.items.length) * 100)
-                    .round(),
+                  .round(),
         ),
       );
     });
@@ -155,6 +138,15 @@ class StudentExperienceT02Adapter {
         'source': material.source.name,
         'waitedMs': material.waitedMs,
       },
+    );
+
+    materialService.prepareReadyWindowInBackground(
+      lessonLocalId: args.lessonLocalId,
+      topic: topic,
+      itemIdx: first.itemIndex,
+      layer: LessonLayer.l1,
+      marker: first.marker,
+      source: 'StudentExperienceEngineV2:first_lesson_open',
     );
   }
 
