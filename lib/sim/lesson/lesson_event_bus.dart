@@ -24,11 +24,19 @@ class LessonPaidImageOffer {
 class LessonEventBus {
   final Map<String, Set<LessonListener>> _subscribers = {};
   final Map<String, Set<LessonPaidImageOfferListener>> _offerSubscribers = {};
+  final Map<String, CompleteLesson> _latestLessons = {};
   final Map<String, LessonPaidImageOffer> _pendingOffers = {};
 
   void Function() subscribe(String key, LessonListener listener) {
     final set = _subscribers.putIfAbsent(key, () => <LessonListener>{});
     set.add(listener);
+    if (_latestLessons.containsKey(key)) {
+      try {
+        listener(_latestLessons[key]!);
+      } catch (_) {
+        // isolate listener failures so other subscribers still receive events
+      }
+    }
     return () {
       set.remove(listener);
       if (set.isEmpty) _subscribers.remove(key);
@@ -36,6 +44,7 @@ class LessonEventBus {
   }
 
   void notify(String key, CompleteLesson lesson) {
+    _latestLessons[key] = lesson;
     final set = _subscribers[key];
     if (set == null) return;
     for (final listener in List<LessonListener>.from(set)) {

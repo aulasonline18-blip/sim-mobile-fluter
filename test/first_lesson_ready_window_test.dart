@@ -369,6 +369,33 @@ void main() {
     },
   );
 
+  test('LessonEventBus replays latest image lesson to late subscriber', () {
+    final bus = LessonEventBus();
+    const lesson = CompleteLesson(
+      conteudo: LessonContent(
+        explanation: 'Explicacao',
+        question: 'Pergunta',
+        options: {
+          AnswerLetter.A: 'A',
+          AnswerLetter.B: 'B',
+          AnswerLetter.C: 'C',
+        },
+        correctAnswer: AnswerLetter.A,
+      ),
+      imagem:
+          'data:image/svg+xml;utf8,%3Csvg%20viewBox%3D%220%200%201%201%22%3E%3C/svg%3E',
+      audioText: 'Explicacao. Pergunta',
+    );
+
+    bus.notify('lesson-key', lesson);
+    final received = <CompleteLesson>[];
+    final unsubscribe = bus.subscribe('lesson-key', received.add);
+    addTearDown(unsubscribe);
+
+    expect(received, [lesson]);
+    expect(received.single.imagem, startsWith('data:image/svg+xml;utf8,'));
+  });
+
   test('review and recovery requests preserve visual_trigger', () async {
     final trigger = <String, dynamic>{
       'needs_image': true,
