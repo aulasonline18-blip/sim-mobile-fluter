@@ -102,77 +102,83 @@ class AulaTopBar extends StatelessWidget {
                     onTap: () =>
                         showAulaMenu(context, session, textScale: textScale),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: Container(
-                        height: 3,
-                        color: const Color(0x0F111827),
-                        alignment: Alignment.centerLeft,
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: fill),
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                          builder: (context, value, child) {
-                            return FractionallySizedBox(
-                              widthFactor: value,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: Container(
+                              height: 3,
+                              color: const Color(0x0F111827),
                               alignment: Alignment.centerLeft,
-                              child: child,
-                            );
-                          },
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              gradient: simGradientPrimary,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x2E111827),
-                                  blurRadius: 10,
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween<double>(begin: 0, end: fill),
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                                builder: (context, value, child) {
+                                  return FractionallySizedBox(
+                                    widthFactor: value,
+                                    alignment: Alignment.centerLeft,
+                                    child: child,
+                                  );
+                                },
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: simGradientPrimary,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x2E111827),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 220),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: simBorder),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x1F000000),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              (headerLabel ?? (session.stableLang ?? 'SIM'))
+                                  .toUpperCase(),
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontFamily: kMono,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: simDark,
+                                letterSpacing: 0.14 * 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Flexible(
-                    flex: 0,
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 82),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: simBorder),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1F000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        (headerLabel ?? (session.stableLang ?? 'SIM'))
-                            .toUpperCase(),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: kMono,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: simDark,
-                          letterSpacing: 0.14 * 10,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
                   _HeaderIconCard(
                     icon: session.audioEnabled
                         ? Icons.volume_up
@@ -347,15 +353,17 @@ class LessonImagePanel extends StatelessWidget {
     final ready = imageData != null && imageData.trim().isNotEmpty;
     final error = session.imageError;
     final offer = session.hasLessonPaidImageOffer && !loading && !ready;
-    final devHarness = session.prefs == null;
     final imageCost = simPricing.imageCostCredits;
     final hasImageCredits = session.isUnlimited || session.credits >= imageCost;
+    if (!loading && !ready && !offer && error == null) {
+      return const SizedBox.shrink();
+    }
     return Container(
       height: offer
           ? 228
-          : devHarness
-          ? 216
-          : 168,
+          : ready
+          ? 168
+          : 96,
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -379,13 +387,7 @@ class LessonImagePanel extends StatelessWidget {
                     )
                   : ready
                   ? _LessonImageView(data: imageData)
-                  : Icon(
-                      error == null
-                          ? Icons.image_outlined
-                          : Icons.broken_image_outlined,
-                      size: 46,
-                      color: error == null ? simMuted : simDark,
-                    ),
+                  : Icon(Icons.broken_image_outlined, size: 34, color: simDark),
             ),
           ),
           const SizedBox(height: 10),
@@ -396,7 +398,7 @@ class LessonImagePanel extends StatelessWidget {
                 ? 'Imagem da aula pronta'
                 : offer
                 ? t('aula_img_desc')
-                : error ?? 'Imagem da aula',
+                : error ?? 'Imagem da aula indisponível',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: simDark,

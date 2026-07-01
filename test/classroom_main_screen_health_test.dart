@@ -102,6 +102,32 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('sinais abrem como gaveta logo abaixo da alternativa ativa', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(390, 760));
+
+    await _pumpAula(tester);
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+
+    final selectedRect = tester.getRect(find.bySemanticsLabel('Alternativa B'));
+    final signalRect = tester.getRect(
+      find.bySemanticsLabel('Sinal 2: Revisar'),
+    );
+    final nextOptionRect = tester.getRect(
+      find.bySemanticsLabel('Alternativa C'),
+    );
+
+    expect(signalRect.top, greaterThanOrEqualTo(selectedRect.bottom - 1));
+    expect(signalRect.bottom, lessThanOrEqualTo(nextOptionRect.top + 1));
+
+    await tester.binding.setSurfaceSize(null);
+    semantics.dispose();
+  });
+
   testWidgets(
     'zoom alto mantém sinais feedback e avançar visíveis em tela pequena',
     (tester) async {

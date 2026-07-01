@@ -479,12 +479,13 @@ String headerLabelText(String key) {
     final fraction = parts.isNotEmpty ? parts[0] : '';
     final layerKey = parts.length > 1 ? parts[1] : '';
     final layer = switch (layerKey) {
-      'aula_layer_1' => 'Camada 1',
-      'aula_layer_2' => 'Camada 2',
-      'aula_layer_3' => 'Camada 3',
+      'aula_layer_1' => 'Camada 1/3',
+      'aula_layer_2' => 'Camada 2/3',
+      'aula_layer_3' => 'Camada 3/3',
       _ => layerKey,
     };
-    return 'Item $fraction · $layer';
+    final normalizedFraction = fraction.replaceFirst('/', ' / ');
+    return 'Item $normalizedFraction · $layer';
   }
   if (key.startsWith('aula_review_review:')) return 'Revisão';
   return key;

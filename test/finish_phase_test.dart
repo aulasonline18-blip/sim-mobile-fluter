@@ -111,19 +111,20 @@ void main() {
     await session.openAulaRuntime();
 
     await tester.pumpWidget(SimMobileApp(initialSession: session));
-    expect(find.text('Imagem da aula'), findsOneWidget);
-    expect(find.text('Audio da aula ligado'), findsOneWidget);
+    expect(find.text('Imagem da aula'), findsNothing);
+    expect(find.text('Audio da aula ligado'), findsNothing);
     expect(find.text('Gerar imagem'), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.volume_up_outlined).first);
+    await tester.tap(find.bySemanticsLabel('Desligar áudio da aula'));
     await tester.pump();
-    expect(find.text('Preparando audio da aula...'), findsOneWidget);
+    expect(find.text('Audio da aula ligado'), findsNothing);
     await tester.pumpAndSettle();
 
     final optionB = find.text('B');
     await tester.ensureVisible(optionB);
     await tester.tap(optionB);
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 260));
     expect(find.text('1'), findsOneWidget);
     expect(find.text('2'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);

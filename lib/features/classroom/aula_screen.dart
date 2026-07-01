@@ -235,6 +235,15 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     }
   }
 
+  bool _hasLessonImagePanel() {
+    final imageData = widget.session.aulaSnapshot?.imagem;
+    final hasImage = imageData != null && imageData.trim().isNotEmpty;
+    return hasImage ||
+        widget.session.imageError != null ||
+        widget.session.hasLessonPaidImageOffer ||
+        (widget.session.aulaRuntimeLoading && imageData == null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
@@ -265,6 +274,29 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
         ? content != null
         : explanationKey != null && _theoryDoneKey == explanationKey;
     final textScale = ClassroomTextScale.scaleFor(_fontScaleLevel);
+    Widget answerWithSignals(AnswerLetter letter, String label) {
+      final isActive = effectiveSelected == letter;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AnswerButton(
+            label: label,
+            text: content?.options[letter] ?? '',
+            active: isActive,
+            enabled: !locked,
+            onTap: () => session.chooseAulaAnswer(label),
+          ),
+          if (effectiveExpanded && isActive) ...[
+            const SizedBox(height: 4),
+            KeyedSubtree(
+              key: _signalKey,
+              child: _SinalRow(onSignal: session.submitAulaSignal),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ],
+      );
+    }
 
     if (isDone) {
       return LessonDoneScreen(session: session);
@@ -462,20 +494,6 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                                   letterSpacing: 1.2,
                                 ),
                               ),
-                              if (viewModel != null) ...[
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    '· ${headerLabelText(viewModel.headerLabel)}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: simMuted,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -566,26 +584,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 14),
-                          LessonImagePanel(session: session),
-                          const SizedBox(height: 8),
-                          if (session.audioLoading) ...[
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando audio da aula...',
-                              loading: true,
-                            ),
-                          ] else if (session.audioError != null) ...[
-                            StatusLine(
-                              icon: Icons.volume_off_outlined,
-                              text: session.audioError!,
-                            ),
-                          ] else if (session.audioEnabled) ...[
-                            StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Audio da aula ligado',
-                              onTap: session.toggleAudio,
-                            ),
+                          if (_hasLessonImagePanel()) ...[
+                            const SizedBox(height: 14),
+                            LessonImagePanel(session: session),
                           ],
                         ],
                       ),
@@ -599,25 +600,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          LessonImagePanel(session: session),
-                          const SizedBox(height: 8),
-                          if (session.audioLoading) ...[
-                            const StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Preparando audio da aula...',
-                              loading: true,
-                            ),
-                          ] else if (session.audioError != null) ...[
-                            StatusLine(
-                              icon: Icons.volume_off_outlined,
-                              text: session.audioError!,
-                            ),
-                          ] else if (session.audioEnabled) ...[
-                            StatusLine(
-                              icon: Icons.volume_up_outlined,
-                              text: 'Audio da aula ligado',
-                              onTap: session.toggleAudio,
-                            ),
+                          if (_hasLessonImagePanel()) ...[
+                            LessonImagePanel(session: session),
                           ],
                         ],
                       ),
@@ -663,38 +647,9 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          AnswerButton(
-                            label: 'A',
-                            text: content.options[AnswerLetter.A] ?? '',
-                            active: effectiveSelected == AnswerLetter.A,
-                            enabled: !locked,
-                            onTap: () => session.chooseAulaAnswer('A'),
-                          ),
-                          AnswerButton(
-                            label: 'B',
-                            text: content.options[AnswerLetter.B] ?? '',
-                            active: effectiveSelected == AnswerLetter.B,
-                            enabled: !locked,
-                            onTap: () => session.chooseAulaAnswer('B'),
-                          ),
-                          AnswerButton(
-                            label: 'C',
-                            text: content.options[AnswerLetter.C] ?? '',
-                            active: effectiveSelected == AnswerLetter.C,
-                            enabled: !locked,
-                            onTap: () => session.chooseAulaAnswer('C'),
-                          ),
-
-                          // Sinal 1/2/3 â€” appears after A/B/C selection
-                          if (effectiveExpanded) ...[
-                            const SizedBox(height: 14),
-                            KeyedSubtree(
-                              key: _signalKey,
-                              child: _SinalRow(
-                                onSignal: session.submitAulaSignal,
-                              ),
-                            ),
-                          ],
+                          answerWithSignals(AnswerLetter.A, 'A'),
+                          answerWithSignals(AnswerLetter.B, 'B'),
+                          answerWithSignals(AnswerLetter.C, 'C'),
 
                           if (isProcessing) ...[
                             const SizedBox(height: 14),
@@ -1280,16 +1235,18 @@ class _SinalRow extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          labels[i].$2.toUpperCase(),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: simDark,
-                            letterSpacing: 0.5,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            labels[i].$2.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: simDark,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ],
