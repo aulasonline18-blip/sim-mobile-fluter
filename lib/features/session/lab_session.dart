@@ -1109,6 +1109,9 @@ class LabSession extends ChangeNotifier {
     final offer = _activePaidImageOffer;
     if (offer != null) {
       _declinedPaidImageOfferKeys.add(offer.offerId);
+      _activeOrganism?.lessonOrchestrator.declinePaidImageOffer(
+        offer.lessonKey,
+      );
       _activeOrganism?.eventBus.clearPaidImageOffer(offer.lessonKey);
     }
     _activePaidImageOffer = null;
@@ -1146,6 +1149,22 @@ class LabSession extends ChangeNotifier {
     _markLessonImageStarted(offerId);
     notifyListeners();
     try {
+      if (offer != null && _activeOrganism != null) {
+        await _activeOrganism!.lessonOrchestrator.acceptPaidImageOffer(key);
+        final cached = _activeOrganism!.lessonOrchestrator.peekCachedLesson(
+          key,
+        );
+        final dataUrl = cached?.imagem;
+        if (dataUrl == null || dataUrl.trim().isEmpty) {
+          throw StateError('Imagem indisponivel.');
+        }
+        aulaSnapshot = aulaSnapshot?.copyWith(imagem: dataUrl);
+        imageStatus = 'ready';
+        imageError = null;
+        _activePaidImageOffer = null;
+        _markLessonImageReady(cacheKey: offerId, imageUrl: dataUrl);
+        return;
+      }
       final response = await SimServerLessonImageClient(config: _serverConfig())
           .generateLessonImageResponse(
             prompt: prompt,

@@ -3,6 +3,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/fake_visual_pipeline.dart';
 import 'package:sim_mobile/sim/classroom/classroom_models.dart';
 import 'package:sim_mobile/sim/classroom/lesson_answer_progress_controller.dart';
 import 'package:sim_mobile/sim/classroom/lesson_material_controller.dart';
@@ -204,7 +205,12 @@ LessonAnswerProgressController _controller(
   final t02 = _FakeT02();
   final cache = LessonMaterialCache();
   final bus = LessonEventBus();
-  final orch = LessonOrchestrator(t02Client: t02, cache: cache, bus: bus);
+  final orch = LessonOrchestrator(
+    t02Client: t02,
+    cache: cache,
+    bus: bus,
+    visualPipeline: fakeVisualPipeline(),
+  );
   final rwe = DopamineReadyWindowEngine(service: svc, orchestrator: orch);
   final mat = StudentLessonMaterialService(
     stateService: svc,
@@ -678,6 +684,7 @@ void main() {
       t02Client: t02,
       cache: cache,
       bus: LessonEventBus(),
+      visualPipeline: fakeVisualPipeline(),
     );
     final rwe = DopamineReadyWindowEngine(service: svc, orchestrator: orch);
     // Acessa via StudentLessonMaterialService
@@ -737,6 +744,7 @@ void main() {
         t02Client: _FakeT02(),
         cache: LessonMaterialCache(),
         bus: LessonEventBus(),
+        visualPipeline: fakeVisualPipeline(),
       ),
       readyWindowEngine: DopamineReadyWindowEngine(
         service: svc,
@@ -744,6 +752,7 @@ void main() {
           t02Client: _FakeT02(),
           cache: LessonMaterialCache(),
           bus: LessonEventBus(),
+          visualPipeline: fakeVisualPipeline(),
         ),
       ),
     );
@@ -782,6 +791,7 @@ void main() {
         t02Client: t02,
         cache: LessonMaterialCache(),
         bus: LessonEventBus(),
+        visualPipeline: fakeVisualPipeline(),
       );
       final rwe = DopamineReadyWindowEngine(service: svc, orchestrator: orch);
 

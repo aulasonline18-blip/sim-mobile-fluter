@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/fake_visual_pipeline.dart';
 import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/features/session/lab_session.dart';
@@ -398,6 +399,7 @@ void main() {
       t02Client: FakeAudioT02Client(),
       cache: LessonMaterialCache(),
       bus: LessonEventBus(),
+      visualPipeline: fakeVisualPipeline(),
     );
     orchestrator.setAudioTextPreparer((params, lesson) {
       media.prepareLessonAudioText(
@@ -550,7 +552,10 @@ void main() {
 
   test('visual pipeline fetches only usable paid image data url', () async {
     final client = FakeImageClient();
-    final pipeline = LessonVisualPipeline(imageClient: client);
+    final pipeline = LessonVisualPipeline(
+      imageClient: client,
+      visualRouterClient: const FakeVisualRouterClient(),
+    );
 
     expect(
       await pipeline.fetchPaidLessonImage(
@@ -575,7 +580,13 @@ void main() {
     'N2/N3 resolves schematic visual as free SVG without paid image',
     () async {
       final client = FakeImageClient();
-      final pipeline = LessonVisualPipeline(imageClient: client);
+      final svg = sanitizeAndEncodeSvg(
+        '<svg width="120" height="80"><text x="10" y="20">Etapas</text></svg>',
+      );
+      final pipeline = LessonVisualPipeline(
+        imageClient: client,
+        visualRouterClient: FakeVisualRouterClient(svgDataUrl: svg),
+      );
 
       final result = await pipeline.resolveVisual(
         trigger: const LessonVisualTrigger(
@@ -595,15 +606,19 @@ void main() {
   );
 
   test(
-    'N3 local generates domain-specific SVG instead of generic sequence',
-    () {
+    'N3 delegates schematic routing to injected visual router client',
+    () async {
       final n2 = classifyVisualByKeywords(
         topic: 'segunda lei de Newton',
         visualType: 'diagram',
         imagePrompt: 'diagrama de forca resultante em um bloco',
       );
+      final svg = sanitizeAndEncodeSvg(
+        '<svg width="120" height="80"><text x="10" y="20">Forca</text></svg>',
+      );
 
-      final n3 = routeVisualCheapN3(
+      final n3 = await routeVisualCheapN3(
+        client: FakeVisualRouterClient(svgDataUrl: svg),
         n2: n2,
         topic: 'segunda lei de Newton',
         visualType: 'diagram',
@@ -612,9 +627,7 @@ void main() {
       final decoded = Uri.decodeFull(n3.svgDataUrl ?? '');
 
       expect(n3.verdict, VisualVerdict.svg);
-      expect(decoded, contains('corpo'));
-      expect(decoded, contains('atrito'));
-      expect(decoded, isNot(contains('>1</text>')));
+      expect(decoded, contains('Forca'));
     },
   );
 
@@ -622,7 +635,10 @@ void main() {
     'N3 sends realistic ambiguous visual to paid path only when allowed',
     () async {
       final client = FakeImageClient();
-      final pipeline = LessonVisualPipeline(imageClient: client);
+      final pipeline = LessonVisualPipeline(
+        imageClient: client,
+        visualRouterClient: const FakeVisualRouterClient(),
+      );
       const trigger = LessonVisualTrigger(
         needsImage: true,
         pedagogicalNeed: 'important',
@@ -827,17 +843,25 @@ void main() {
     expect(cleared.conteudo.question, 'Pergunta?');
   });
 
-  test('SVG sanitizer requires viewBox and keeps security blocks', () {
-    expect(sanitizeAndEncodeSvg('<svg><rect width="10"/></svg>'), isNull);
-    expect(
-      sanitizeAndEncodeSvg('<svg viewBox="0 0 10 10"><rect width="10"/></svg>'),
-      startsWith('data:image/svg+xml;utf8,'),
-    );
-    expect(
-      sanitizeAndEncodeSvg(
-        '<svg viewBox="0 0 10 10"><script>alert(1)</script></svg>',
-      ),
-      isNull,
-    );
-  });
+  test(
+    'SVG sanitizer accepts valid SVG without viewBox and keeps security blocks',
+    () {
+      expect(
+        sanitizeAndEncodeSvg('<svg><rect width="10"/></svg>'),
+        startsWith('data:image/svg+xml;utf8,'),
+      );
+      expect(
+        sanitizeAndEncodeSvg(
+          '<svg viewBox="0 0 10 10"><rect width="10"/></svg>',
+        ),
+        startsWith('data:image/svg+xml;utf8,'),
+      );
+      expect(
+        sanitizeAndEncodeSvg(
+          '<svg viewBox="0 0 10 10"><script>alert(1)</script></svg>',
+        ),
+        isNull,
+      );
+    },
+  );
 }

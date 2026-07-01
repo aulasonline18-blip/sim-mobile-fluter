@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/sim/external_ai/sim_ai_server_config.dart';
 import 'package:sim_mobile/sim/external_ai/sim_http_transport.dart';
 import 'package:sim_mobile/sim/external_ai/sim_server_ai_clients.dart';
+import 'package:sim_mobile/sim/media/lesson_visual_pipeline.dart';
 import 'package:sim_mobile/sim/modules/pedagogical_module_contracts.dart';
 import 'package:sim_mobile/sim/state/student_learning_state.dart';
 
@@ -180,6 +181,37 @@ void main() {
     expect(response?.mimeType, 'image/png');
     expect(response?.provider, 'gemini');
     expect(response?.model, 'gemini-image');
+  });
+
+  test('rota visual usa /api/visual-route e preserva SVG gratuito', () async {
+    final transport = RecordingTransport()
+      ..jsonBody =
+          '{"verdict":"svg","reason":"VISUAL_ROUTE_SVG","svgDataUrl":"data:image/svg+xml;utf8,%3Csvg%3E%3C%2Fsvg%3E","requestId":"rid-vis"}';
+    final client = SimServerVisualRouterClient(
+      config: config(),
+      transport: transport,
+    );
+
+    final result = await client.routeVisual(
+      n2: const VisualN2Result(
+        verdict: VisualVerdict.ambiguous,
+        matched: ['graph'],
+        reason: 'N2_AMBIGUOUS',
+      ),
+      topic: 'funcao linear',
+      visualType: 'graph',
+      imagePrompt: 'grafico de uma reta',
+    );
+
+    expect(
+      transport.lastUri.toString(),
+      'https://gemini-aid-pal.lovable.app/api/visual-route',
+    );
+    expect(transport.lastHeaders?['authorization'], 'Bearer user-token');
+    expect(transport.lastHeaders?['x-request-id'], startsWith('sim-vis-'));
+    expect((transport.lastBody as Map)['hint'], 'ambiguous');
+    expect(result.verdict, VisualVerdict.svg);
+    expect(result.svgDataUrl, startsWith('data:image/svg+xml;utf8,'));
   });
 
   test('audio usa /api/generate-lesson-audio e devolve dataUrl', () async {

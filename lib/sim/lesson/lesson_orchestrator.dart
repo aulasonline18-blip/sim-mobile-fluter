@@ -1,5 +1,6 @@
 // MIRROR OF: src/cyber/lesson-orchestrator.ts (Web, source of truth)
 import '../media/lesson_visual_pipeline.dart';
+import '../media/lesson_paid_image_offer.dart';
 import '../modules/pedagogical_module_contracts.dart';
 import '../state/student_learning_state.dart';
 import 'lesson_event_bus.dart';
@@ -7,16 +8,14 @@ import 'lesson_material_cache.dart';
 import 'lesson_models.dart';
 import 'lesson_pipeline_runtime.dart';
 
-class LessonOrchestrator {
+class LessonOrchestrator implements LessonPaidImageOrchestrator {
   LessonOrchestrator({
     required this.t02Client,
     required this.cache,
     required this.bus,
-    LessonVisualPipeline? visualPipeline,
+    required this._visualPipeline,
     this.onAudioTextReady,
-  }) : _visualPipeline =
-           visualPipeline ??
-           LessonVisualPipeline(imageClient: const _NoopLessonImageClient());
+  });
 
   final T02LessonClient t02Client;
   final LessonMaterialCache cache;
@@ -25,8 +24,12 @@ class LessonOrchestrator {
   void Function(CompleteLessonParams params, CompleteLesson lesson)?
   onAudioTextReady;
   final Map<String, Future<CompleteLesson>> _textInflight = {};
+  final Map<String, _PaidPending> _paidPending = {};
+  final Map<String, Future<String?>> _paidInflight = {};
+  final Set<String> _declinedKeys = {};
   final ImageSequentialQueue _imageQueue = ImageSequentialQueue();
   final BackgroundTextSemaphore _bgText = BackgroundTextSemaphore();
+  Future<void> _lastLessonFullyComplete = Future.value();
 
   bool get isLessonBusy => _textInflight.isNotEmpty;
 
@@ -52,9 +55,14 @@ class LessonOrchestrator {
     final existing = _textInflight[key];
     if (existing != null && !forceRefresh) return existing;
 
-    // Part III.4: route by priority — active runs immediately, background goes through semaphore
     Future<CompleteLesson> fetchFn() => _fetchText(params);
-    final queued = priority == 'active' ? fetchFn() : _bgText.run(fetchFn);
+    final queued = priority == 'active'
+        ? fetchFn()
+        : _bgText.run(() async {
+            final gate = _lastLessonFullyComplete;
+            await gate;
+            return fetchFn();
+          });
 
     final future = queued
         .then((lesson) {
@@ -71,7 +79,12 @@ class LessonOrchestrator {
           throw error;
         });
     _textInflight[key] = future;
+    _lastLessonFullyComplete = future.then((_) {}).catchError((_) {});
     return future;
+  }
+
+  void resetLessonSequentialGate() {
+    _lastLessonFullyComplete = Future.value();
   }
 
   // D2.1: image pipeline — central funnel: software first, paid offer only.
@@ -90,7 +103,8 @@ class LessonOrchestrator {
       trigger: trigger,
       lessonKey: key,
       stableLang: params.lang,
-      allowPaidImages: false,
+      allowPaidImages: true,
+      acceptedOfferId: null,
     );
     if (result.hasImage) {
       _publishImage(key, lesson, result.displayUrl!);
@@ -123,22 +137,81 @@ class LessonOrchestrator {
     required LessonVisualTrigger trigger,
     required String source,
   }) {
+    if (_declinedKeys.contains(key) || _paidPending.containsKey(key)) return;
     final prompt = _visualPipeline.buildPromptForTrigger(
       topic: trigger.topic ?? params.item,
       trigger: trigger,
       lang: params.lang,
     );
     if (prompt.trim().isEmpty) return;
+    final offerId = _stableOfferId(key, prompt);
+    _paidPending[key] = _PaidPending(
+      approvedPrompt: prompt,
+      base:
+          cache.peek(key) ??
+          CompleteLesson(
+            conteudo: LessonContent(
+              explanation: '',
+              question: '',
+              options: const {
+                AnswerLetter.A: '',
+                AnswerLetter.B: '',
+                AnswerLetter.C: '',
+              },
+              correctAnswer: AnswerLetter.A,
+              visualTrigger: trigger.toVisualTriggerMap(),
+            ),
+            imagem: null,
+            audioText: '',
+          ),
+      offerId: offerId,
+    );
     bus.notifyPaidImageOffer(
       key,
       LessonPaidImageOffer(
-        offerId: _stableOfferId(key, prompt),
+        offerId: offerId,
         lessonKey: key,
         prompt: prompt,
         creditCost: 10,
         source: source,
       ),
     );
+  }
+
+  @override
+  Future<void> acceptPaidImageOffer(String offerKey) async {
+    final pending = _paidPending.remove(offerKey);
+    if (pending == null) return;
+    final existing = _paidInflight[offerKey];
+    if (existing != null) {
+      await existing;
+      return;
+    }
+    final future = _imageQueue.run(() async {
+      final image = await _visualPipeline.fetchPaidLessonImage(
+        pending.approvedPrompt,
+        offerKey,
+        acceptedOfferId: pending.offerId,
+        idempotencyKey: pending.offerId,
+      );
+      if (image != null && image.trim().isNotEmpty) {
+        _publishImage(offerKey, pending.base, image);
+      }
+      return image;
+    });
+    _paidInflight[offerKey] = future;
+    try {
+      await future;
+    } finally {
+      _paidInflight.remove(offerKey);
+    }
+  }
+
+  @override
+  void declinePaidImageOffer(String offerKey) {
+    _declinedKeys.add(offerKey);
+    _paidPending.remove(offerKey);
+    bus.clearPaidImageOffer(offerKey);
   }
 
   Future<CompleteLesson> _fetchText(CompleteLessonParams params) async {
@@ -202,19 +275,16 @@ String _stableHash(String input) {
   return (hash & 0xffffffff).toRadixString(36);
 }
 
-class _NoopLessonImageClient implements LessonImageClient {
-  const _NoopLessonImageClient();
+class _PaidPending {
+  const _PaidPending({
+    required this.approvedPrompt,
+    required this.base,
+    required this.offerId,
+  });
 
-  @override
-  Future<String?> generateLessonImage({
-    required String prompt,
-    required String lessonKey,
-    String aspectRatio = '1:1',
-    String? acceptedOfferId,
-    String? idempotencyKey,
-  }) async {
-    return null;
-  }
+  final String approvedPrompt;
+  final CompleteLesson base;
+  final String offerId;
 }
 
 JsonMap preparedMaterialFromLesson({

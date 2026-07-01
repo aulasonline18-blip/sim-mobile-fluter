@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/fake_visual_pipeline.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/sim/experience/student_experience_engine.dart';
 import 'package:sim_mobile/sim/experience/student_experience_t00_adapter.dart';
@@ -222,6 +223,7 @@ void main() {
         t02Client: FakeT02Client(visualTrigger: trigger),
         cache: cache,
         bus: bus,
+        visualPipeline: fakeVisualPipeline(),
       );
       const params = CompleteLessonParams(
         lessonLocalId: 'cyber-visual',
@@ -276,6 +278,7 @@ void main() {
         t02Client: FakeT02Client(visualTrigger: trigger),
         cache: cache,
         bus: bus,
+        visualPipeline: fakeVisualPipeline(),
       );
       const params = CompleteLessonParams(
         lessonLocalId: 'cyber-math-template',
@@ -317,6 +320,7 @@ void main() {
         t02Client: FakeT02Client(visualTrigger: trigger),
         cache: cache,
         bus: bus,
+        visualPipeline: fakeVisualPipeline(),
       );
       const params = CompleteLessonParams(
         lessonLocalId: 'cyber-paid-offer',
@@ -409,6 +413,7 @@ void main() {
       t02Client: t02,
       cache: LessonMaterialCache(),
       bus: LessonEventBus(),
+      visualPipeline: fakeVisualPipeline(),
     );
 
     final review = await orchestrator.prefetchCompleteLesson(
@@ -460,6 +465,7 @@ void main() {
         t02Client: FakeT02Client(visualTrigger: trigger),
         cache: cache,
         bus: LessonEventBus(),
+        visualPipeline: fakeVisualPipeline(),
       );
       const params = CompleteLessonParams(
         lessonLocalId: 'cyber-paid-bg',
@@ -492,6 +498,7 @@ void main() {
       t02Client: t02,
       cache: LessonMaterialCache(),
       bus: LessonEventBus(),
+      visualPipeline: fakeVisualPipeline(),
     );
     final engine = DopamineReadyWindowEngine(
       service: service,
@@ -535,6 +542,7 @@ void main() {
         t02Client: t02,
         cache: LessonMaterialCache(),
         bus: LessonEventBus(),
+        visualPipeline: fakeVisualPipeline(),
       );
       final materialService = StudentLessonMaterialService(
         stateService: service,
@@ -607,6 +615,7 @@ void main() {
       t02Client: t02,
       cache: LessonMaterialCache(),
       bus: LessonEventBus(),
+      visualPipeline: fakeVisualPipeline(),
     );
     final readyWindow = DopamineReadyWindowEngine(
       service: service,
@@ -662,6 +671,7 @@ void main() {
         t02Client: t02,
         cache: LessonMaterialCache(),
         bus: LessonEventBus(),
+        visualPipeline: fakeVisualPipeline(),
       );
       final readyWindow = DopamineReadyWindowEngine(
         service: service,

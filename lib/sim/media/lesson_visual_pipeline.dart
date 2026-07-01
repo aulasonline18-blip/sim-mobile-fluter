@@ -16,7 +16,8 @@ export 's12_visual_pipeline.dart'
         VisualDecisionContext;
 export 'visual_router_n2.dart'
     show classifyVisualByKeywords, VisualVerdict, VisualN2Result;
-export 'visual_router_n3.dart' show routeVisualCheapN3, VisualN3Result;
+export 'visual_router_n3.dart'
+    show routeVisualCheapN3, VisualN3Result, LessonVisualRouterClient;
 
 abstract interface class LessonImageClient {
   Future<String?> generateLessonImage({
@@ -109,9 +110,13 @@ List<String> _parseStringList(Object? v) {
 }
 
 class LessonVisualPipeline {
-  LessonVisualPipeline({required this.imageClient});
+  LessonVisualPipeline({
+    required this.imageClient,
+    required this.visualRouterClient,
+  });
 
   final LessonImageClient imageClient;
+  final LessonVisualRouterClient visualRouterClient;
 
   /// Tenta renderizar usando math template SVG (custo zero).
   /// Retorna data URL do SVG ou null → chamador usa fallback IA.
@@ -171,7 +176,8 @@ class LessonVisualPipeline {
 
     if (n2.verdict == VisualVerdict.svg ||
         n2.verdict == VisualVerdict.ambiguous) {
-      final n3 = routeVisualCheapN3(
+      final n3 = await routeVisualCheapN3(
+        client: visualRouterClient,
         n2: n2,
         topic: trigger.topic,
         visualType: trigger.visualType,

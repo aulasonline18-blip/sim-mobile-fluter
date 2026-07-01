@@ -132,6 +132,7 @@ class SimOrganism {
     final eventBus = LessonEventBus();
     final visualPipeline = LessonVisualPipeline(
       imageClient: SimServerLessonImageClient(config: aiConfig),
+      visualRouterClient: SimServerVisualRouterClient(config: aiConfig),
     );
     final orchestrator = LessonOrchestrator(
       t02Client: t02Client,

@@ -19,9 +19,6 @@ String? sanitizeAndEncodeSvg(Object? raw) {
   final lower = svg.toLowerCase();
   if (!lower.startsWith('<svg')) return null;
   if (!lower.contains('</svg>')) return null;
-  if (!RegExp(r'\bviewBox\s*=', caseSensitive: false).hasMatch(svg)) {
-    return null;
-  }
   // Bloqueios de segurança XSS:
   if (lower.contains('<script')) {
     return null;

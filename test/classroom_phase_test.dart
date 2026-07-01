@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/fake_visual_pipeline.dart';
 import 'package:sim_mobile/sim/classroom/classroom_models.dart';
 import 'package:sim_mobile/sim/classroom/lesson_answer_progress_controller.dart';
 import 'package:sim_mobile/sim/classroom/lesson_hydration_engine.dart';
@@ -104,6 +105,7 @@ LessonRuntimeEngine _runtime(
     t02Client: t02,
     cache: LessonMaterialCache(),
     bus: LessonEventBus(),
+    visualPipeline: fakeVisualPipeline(),
   );
   late DopamineReadyWindowEngine readyWindow;
   late StudentLessonMaterialService materialService;

@@ -14,6 +14,7 @@ import 'sim_http_transport.dart';
 const String simT00BootstrapPath = '/api/bootstrap-t00';
 const String simLessonImagePath = '/api/generate-lesson-image';
 const String simLessonAudioPath = '/api/generate-lesson-audio';
+const String simVisualRoutePath = '/api/visual-route';
 
 class SimServerT00Client implements T00BootstrapClient {
   SimServerT00Client({
@@ -144,6 +145,68 @@ class SimServerLessonImageClient implements LessonImageClient {
       retryable: decoded['retryable'] is bool
           ? decoded['retryable'] as bool
           : null,
+    );
+  }
+}
+
+class SimServerVisualRouterClient implements LessonVisualRouterClient {
+  SimServerVisualRouterClient({
+    required this.config,
+    SimHttpTransport? transport,
+    this.timeout = const Duration(seconds: 45),
+  }) : transport = transport ?? DartIoSimHttpTransport();
+
+  final SimAiServerConfig config;
+  final SimHttpTransport transport;
+  final Duration timeout;
+
+  @override
+  Future<VisualN3Result> routeVisual({
+    required VisualN2Result n2,
+    String? topic,
+    String? visualType,
+    String? imagePrompt,
+  }) async {
+    if (n2.verdict == VisualVerdict.ai) {
+      return VisualN3Result(verdict: VisualVerdict.ai, reason: n2.reason);
+    }
+    final requestId = _mediaRequestId(
+      'vis',
+      '${n2.reason}|${topic ?? ''}|${visualType ?? ''}|${imagePrompt ?? ''}',
+    );
+    final headers = await config.jsonHeaders();
+    headers['x-request-id'] = requestId;
+    final response = await _postJsonWithTimeout(
+      transport,
+      config.uri(simVisualRoutePath),
+      headers: headers,
+      body: {
+        'topic': topic ?? '',
+        'visualType': visualType ?? '',
+        'imagePrompt': imagePrompt ?? '',
+        'hint': n2.verdict.name,
+      },
+      timeout: timeout,
+      requestId: requestId,
+    );
+    if (!response.ok) {
+      throw _mediaHttpException(response, fallbackRequestId: requestId);
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      return const VisualN3Result(
+        verdict: VisualVerdict.ai,
+        reason: 'N3_HTTP_INVALID_RESPONSE',
+      );
+    }
+    final verdict = decoded['verdict']?.toString() == 'svg'
+        ? VisualVerdict.svg
+        : VisualVerdict.ai;
+    final svgDataUrl = decoded['svgDataUrl']?.toString();
+    return VisualN3Result(
+      verdict: verdict,
+      reason: decoded['reason']?.toString() ?? 'N3_HTTP_ROUTE',
+      svgDataUrl: svgDataUrl?.trim().isEmpty == true ? null : svgDataUrl,
     );
   }
 }
