@@ -175,6 +175,41 @@ void main() {
     await tester.binding.setSurfaceSize(null);
   });
 
+  testWidgets('aula keeps signals and feedback visible after answer flow', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(480, 520));
+    final session = LabSession()
+      ..authed = true
+      ..authReady = true
+      ..credits = 3
+      ..selectedLanguageCode = 'pt'
+      ..stableLang = 'Portuguese'
+      ..freeText = 'Fracoes equivalentes com uma aula curta.';
+    expect(session.saveObjectiveEntry(), isTrue);
+    session.route = '/cyber/aula';
+
+    await tester.pumpWidget(SimMobileApp(initialSession: session));
+    await session.openAulaRuntime();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+    final signalRect = tester.getRect(find.text('2'));
+    expect(signalRect.top, greaterThanOrEqualTo(0));
+    expect(signalRect.bottom, lessThanOrEqualTo(520));
+
+    await tester.tap(find.text('2'));
+    await tester.pumpAndSettle();
+    final feedbackRect = tester.getRect(
+      find.text('Exato! Você domina este ponto.'),
+    );
+    expect(feedbackRect.top, greaterThanOrEqualTo(0));
+    expect(feedbackRect.bottom, lessThanOrEqualTo(520));
+
+    await tester.binding.setSurfaceSize(null);
+  });
+
   testWidgets('Aula sem curriculo mostra estado vazio equivalente ao Web', (
     WidgetTester tester,
   ) async {
@@ -449,6 +484,78 @@ void main() {
     expect(imported.lessonLocalId, 'lesson-export');
     expect(store.listLocalStates(), hasLength(1));
     expect(cloud.persistCalls, 1);
+  });
+
+  testWidgets('drawer imports backup from txt file and keeps paste fallback', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(480, 1200));
+    final source = LabSession()
+      ..authed = false
+      ..authReady = true
+      ..credits = 3;
+    source.canonicalStore!.writeState(
+      _drawerState('lesson-file-import', 'Backup por arquivo', 2),
+    );
+    final backup = source.buildDrawerBackupText();
+    var pickerCalls = 0;
+    final session = LabSession(
+      drawerBackupFileTextPicker: () async {
+        pickerCalls += 1;
+        return backup;
+      },
+    )..authReady = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showAulaMenu(context, session),
+            child: const Text('open import drawer'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open import drawer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('⤒ Importar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Selecionar arquivo .txt'), findsOneWidget);
+    expect(find.text('Colar texto manualmente'), findsOneWidget);
+
+    await tester.tap(find.text('Selecionar arquivo .txt'));
+    await tester.pumpAndSettle();
+    expect(pickerCalls, 1);
+    expect(session.lessonLocalId, 'lesson-file-import');
+    expect(
+      session.canonicalStore!.readState('lesson-file-import').profile.objetivo,
+      'Backup por arquivo',
+    );
+
+    final pasteSource = LabSession()
+      ..authed = false
+      ..authReady = true
+      ..credits = 3;
+    pasteSource.canonicalStore!.writeState(
+      _drawerState('lesson-paste-import', 'Backup por texto', 1),
+    );
+    final pasteBackup = pasteSource.buildDrawerBackupText();
+
+    await tester.tap(find.text('⤒ Importar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Colar texto manualmente'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, pasteBackup);
+    await tester.tap(find.text('⤒ Importar').last);
+    await tester.pumpAndSettle();
+    expect(session.lessonLocalId, 'lesson-paste-import');
+    expect(
+      session.canonicalStore!.readState('lesson-paste-import').profile.objetivo,
+      'Backup por texto',
+    );
+
+    await tester.pump(const Duration(milliseconds: 2200));
+    await tester.binding.setSurfaceSize(null);
   });
 }
 

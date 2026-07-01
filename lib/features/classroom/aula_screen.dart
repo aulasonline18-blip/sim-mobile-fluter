@@ -73,7 +73,12 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   String? _theoryDoneKey;
   AnswerLetter? _localAnswerSel;
   final bool _localExpanded = false;
-  final GlobalKey _activeKey = GlobalKey();
+  final GlobalKey _contentKey = GlobalKey();
+  final GlobalKey _questionKey = GlobalKey();
+  final GlobalKey _signalKey = GlobalKey();
+  final GlobalKey _feedbackKey = GlobalKey();
+  final GlobalKey _errorKey = GlobalKey();
+  String? _lastScrollSignature;
 
   @override
   void initState() {
@@ -85,10 +90,21 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final snap = widget.session.aulaSnapshot;
     final history = snap?.history ?? const <QuestionHistoryEntry>[];
     final hasContent = snap?.conteudo != null;
-    if (history.length != _lastHistoryLen || hasContent != _lastHasContent) {
+    final phase = snap?.phase;
+    final scrollSignature = [
+      history.length,
+      hasContent,
+      phase?.type.name,
+      phase?.letter?.name,
+      phase?.message,
+    ].join('|');
+    if (history.length != _lastHistoryLen ||
+        hasContent != _lastHasContent ||
+        scrollSignature != _lastScrollSignature) {
       _lastHistoryLen = history.length;
       _lastHasContent = hasContent;
-      _scrollToNewQuestion(_activeKey);
+      _lastScrollSignature = scrollSignature;
+      _scrollForSnapshot(snap);
     }
     if (mounted) setState(() {});
     final open = widget.session.doubtOpen;
@@ -144,17 +160,50 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     });
   }
 
-  void _scrollToNewQuestion(GlobalKey targetKey) {
+  void _scrollToTarget(
+    GlobalKey targetKey, {
+    double alignment = 0.1,
+    bool fallbackToBottom = true,
+  }) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = targetKey.currentContext;
-      if (ctx == null) return;
+      if (ctx == null) {
+        if (fallbackToBottom && _scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOut,
+          );
+        }
+        return;
+      }
       Scrollable.ensureVisible(
         ctx,
-        alignment: 0.0,
+        alignment: alignment,
         duration: const Duration(milliseconds: 320),
         curve: Curves.easeOut,
       );
     });
+  }
+
+  void _scrollForSnapshot(LessonRuntimeSnapshot? snapshot) {
+    final phase = snapshot?.phase;
+    if (phase?.type == ClassroomPhaseType.concluido) {
+      _scrollToTarget(_feedbackKey, alignment: 0.72);
+      return;
+    }
+    if (phase?.type == ClassroomPhaseType.erroEngine) {
+      _scrollToTarget(_errorKey, alignment: 0.72);
+      return;
+    }
+    if (phase?.type == ClassroomPhaseType.expandida ||
+        phase?.type == ClassroomPhaseType.processando) {
+      _scrollToTarget(_signalKey, alignment: 0.72);
+      return;
+    }
+    if (snapshot?.conteudo != null) {
+      _scrollToTarget(_questionKey, alignment: 0.12);
+    }
   }
 
   @override
@@ -357,7 +406,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                 // Theory card â€” only when content is loaded
                 if (content != null) ...[
                   SimCard(
-                    key: _activeKey,
+                    key: _contentKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -506,6 +555,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
                 if (content == null) ...[
                   SimCard(
+                    key: _questionKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -598,7 +648,12 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         // Sinal 1/2/3 â€” appears after A/B/C selection
                         if (effectiveExpanded) ...[
                           const SizedBox(height: 14),
-                          _SinalRow(onSignal: session.submitAulaSignal),
+                          KeyedSubtree(
+                            key: _signalKey,
+                            child: _SinalRow(
+                              onSignal: session.submitAulaSignal,
+                            ),
+                          ),
                         ],
 
                         if (isProcessing) ...[
@@ -658,18 +713,21 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _FeedbackBox(
-                    isCorrect: wasCorrect ?? false,
-                    message: feedbackText(feedbackKey),
-                    nextLabel: nextBtnText(nextKey),
-                    nextReady:
-                        session.doubt.status != DoubtStatus.processing,
-                    onNext: () => unawaited(session.advanceAula()),
+                  KeyedSubtree(
+                    key: _feedbackKey,
+                    child: _FeedbackBox(
+                      isCorrect: wasCorrect ?? false,
+                      message: feedbackText(feedbackKey),
+                      nextLabel: nextBtnText(nextKey),
+                      nextReady: session.doubt.status != DoubtStatus.processing,
+                      onNext: () => unawaited(session.advanceAula()),
+                    ),
                   ),
                 ],
                 if (isEngineError) ...[
                   const SizedBox(height: 12),
                   Container(
+                    key: _errorKey,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.85),

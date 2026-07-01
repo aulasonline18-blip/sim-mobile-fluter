@@ -479,13 +479,51 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
   }
 
   Future<void> _handleImportBackup() async {
-    final controller = TextEditingController();
-    final raw = await showDialog<String>(
+    final mode = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('importar')),
+        content: const Text('Importe um backup do SIM por arquivo .txt.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(t('fechar')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('paste'),
+            child: const Text('Colar texto manualmente'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('file'),
+            child: const Text('Selecionar arquivo .txt'),
+          ),
+        ],
+      ),
+    );
+    if (mode == null) return;
+    if (mode == 'file') {
+      try {
+        final raw = await widget.session.pickDrawerBackupFileText();
+        if (raw == null) return;
+        await _importBackupRaw(raw);
+      } catch (_) {
+        _flash(t('backup_invalido'));
+      }
+      return;
+    }
+    final raw = await _showPasteBackupDialog();
+    if (raw == null) return;
+    await _importBackupRaw(raw);
+  }
+
+  Future<String?> _showPasteBackupDialog() async {
+    var pastedText = '';
+    return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(t('importar')),
         content: TextField(
-          controller: controller,
+          onChanged: (value) => pastedText = value,
           minLines: 6,
           maxLines: 10,
           decoration: const InputDecoration(
@@ -499,14 +537,15 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
             child: Text(t('fechar')),
           ),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            onPressed: () => Navigator.of(ctx).pop(pastedText),
             child: Text(t('importar')),
           ),
         ],
       ),
     );
-    controller.dispose();
-    if (raw == null) return;
+  }
+
+  Future<void> _importBackupRaw(String raw) async {
     try {
       await widget.session.importDrawerBackup(raw);
       _flash(t('drawer_import_cloud_ok'));
@@ -909,17 +948,17 @@ class _AulaDrawerContentState extends State<_AulaDrawerContent> {
               Row(
                 children: [
                   _DrawerFooterBtn(
-                    label: '⤓ ${t("exportar")}',
+                    label: t('exportar'),
                     onTap: _handleExportBackup,
                   ),
                   const SizedBox(width: 6),
                   _DrawerFooterBtn(
-                    label: '⤒ ${t("importar")}',
+                    label: t('importar'),
                     onTap: _handleImportBackup,
                   ),
                   const SizedBox(width: 6),
                   _DrawerFooterBtn(
-                    label: 'ⓘ ${t("status")}',
+                    label: t('status'),
                     onTap: _handleExportStatus,
                   ),
                 ],

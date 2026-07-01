@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,6 +68,7 @@ class LabSession extends ChangeNotifier {
     this._attachmentClient,
     StudentStateCloudFunctions? drawerCloudFunctions,
     SupabaseSessionProvider? drawerSessionProvider,
+    Future<String?> Function()? drawerBackupFileTextPicker,
     this.experiencePreparerOverride,
     this.prefs,
   }) : canonicalStore =
@@ -74,6 +76,7 @@ class LabSession extends ChangeNotifier {
            StudentStateStore(local: MemoryStudentStateLocalStorage()) {
     _drawerCloudFunctions = drawerCloudFunctions;
     _drawerSessionProvider = drawerSessionProvider;
+    _drawerBackupFileTextPicker = drawerBackupFileTextPicker;
     entryForm.addListener(_notifyFromChild);
     authSession.addListener(_notifyFromChild);
     navigationState.addListener(_notifyFromChild);
@@ -87,6 +90,7 @@ class LabSession extends ChangeNotifier {
   final SimServerAttachmentClient? _attachmentClient;
   StudentStateCloudFunctions? _drawerCloudFunctions;
   SupabaseSessionProvider? _drawerSessionProvider;
+  Future<String?> Function()? _drawerBackupFileTextPicker;
 
   late final EntryFormState entryForm = EntryFormState(
     attachmentClient: _attachmentClient,
@@ -369,6 +373,23 @@ class LabSession extends ChangeNotifier {
     final stamp = DateTime.now().toIso8601String().substring(0, 10);
     final file = File('${Directory.systemTemp.path}/sim-backup-$stamp.txt');
     return file.writeAsString(text);
+  }
+
+  Future<String?> pickDrawerBackupFileText() async {
+    final injected = _drawerBackupFileTextPicker;
+    if (injected != null) return injected();
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['txt', 'json'],
+      withData: true,
+    );
+    final file = result?.files.singleOrNull;
+    if (file == null) return null;
+    final bytes = file.bytes;
+    if (bytes != null) return utf8.decode(bytes);
+    final path = file.path;
+    if (path == null || path.trim().isEmpty) return null;
+    return File(path).readAsString();
   }
 
   String buildDrawerStatusText() {
