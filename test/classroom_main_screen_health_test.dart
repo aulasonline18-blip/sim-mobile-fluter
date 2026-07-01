@@ -83,8 +83,9 @@ void main() {
 
     expect(find.bySemanticsLabel('Abrir menu da aula'), findsOneWidget);
     expect(
-      find.bySemanticsLabel('Desligar áudio da aula').evaluate().length +
-          find.bySemanticsLabel('Ligar áudio da aula').evaluate().length,
+      find.bySemanticsLabel('Tocar áudio da aula').evaluate().length +
+          find.bySemanticsLabel('Preparando áudio da aula').evaluate().length +
+          find.bySemanticsLabel('Parar áudio da aula').evaluate().length,
       1,
     );
     expect(find.bySemanticsLabel('Abrir revisão'), findsOneWidget);

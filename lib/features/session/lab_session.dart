@@ -1386,8 +1386,7 @@ class LabSession extends ChangeNotifier {
     if (audioPlaying) {
       _lessonAudioController?.pararAudio();
       audioPlaying = false;
-      audioEnabled = false;
-      _audioPreference.setAudioEnabled(false);
+      audioLoading = false;
       notifyListeners();
       return;
     }

@@ -178,14 +178,14 @@ class _CountingAudio implements AudioPlaybackAdapter {
   int stopCalls = 0;
 
   @override
-  bool playDataUrl(String dataUrl, SpeakOptions opts) {
+  Future<bool> playDataUrl(String dataUrl, SpeakOptions opts) async {
     playCalls += 1;
     opts.onEnd?.call();
     return true;
   }
 
   @override
-  bool speakWithPlatformTts(String text, SpeakOptions opts) {
+  Future<bool> speakWithPlatformTts(String text, SpeakOptions opts) async {
     playCalls += 1;
     opts.onEnd?.call();
     return true;

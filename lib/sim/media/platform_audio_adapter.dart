@@ -24,20 +24,25 @@ class PlatformAudioAdapter implements AudioPlaybackAdapter {
   }
 
   @override
-  bool playDataUrl(String dataUrl, SpeakOptions opts) {
+  Future<bool> playDataUrl(String dataUrl, SpeakOptions opts) async {
     final bytes = _extractWavBytes(dataUrl);
     if (bytes == null) return false;
     _stop();
     _onEnd = opts.onEnd;
-    opts.onStart?.call();
-    unawaited(_activePlayer.play(BytesSource(bytes)));
-    return true;
+    try {
+      await _activePlayer.play(BytesSource(bytes));
+      opts.onStart?.call();
+      return true;
+    } catch (_) {
+      _onEnd = null;
+      opts.onEnd?.call();
+      return false;
+    }
   }
 
   @override
-  bool speakWithPlatformTts(String text, SpeakOptions opts) {
+  Future<bool> speakWithPlatformTts(String text, SpeakOptions opts) async {
     // Platform TTS not available — onEnd must still fire so the caller doesn't hang.
-    opts.onStart?.call();
     opts.onEnd?.call();
     return false;
   }
@@ -58,6 +63,10 @@ class PlatformAudioAdapter implements AudioPlaybackAdapter {
     try {
       final comma = dataUrl.indexOf(',');
       if (comma < 0) return null;
+      final header = dataUrl.substring(0, comma).toLowerCase();
+      if (!header.startsWith('data:audio/') || !header.contains(';base64')) {
+        return null;
+      }
       final payload = dataUrl.substring(comma + 1);
       return base64Decode(payload);
     } catch (_) {

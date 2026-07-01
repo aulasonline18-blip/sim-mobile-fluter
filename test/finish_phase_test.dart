@@ -115,7 +115,7 @@ void main() {
     expect(find.text('Audio da aula ligado'), findsNothing);
     expect(find.text('Gerar imagem'), findsNothing);
 
-    await tester.tap(find.bySemanticsLabel('Desligar áudio da aula'));
+    await tester.tap(find.bySemanticsLabel('Tocar áudio da aula'));
     await tester.pump();
     expect(find.text('Audio da aula ligado'), findsNothing);
     await tester.pumpAndSettle();

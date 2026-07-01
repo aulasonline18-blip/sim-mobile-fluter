@@ -65,9 +65,15 @@ class CountingPlaybackAdapter implements AudioPlaybackAdapter {
   int platformTtsCalls = 0;
   int stops = 0;
   String? lastTtsText;
+  bool failDataUrl = false;
+  bool failPlatformTts = false;
 
   @override
-  bool playDataUrl(String dataUrl, SpeakOptions opts) {
+  Future<bool> playDataUrl(String dataUrl, SpeakOptions opts) async {
+    if (failDataUrl) {
+      opts.onEnd?.call();
+      return false;
+    }
     dataUrlPlays += 1;
     opts.onStart?.call();
     opts.onEnd?.call();
@@ -75,7 +81,11 @@ class CountingPlaybackAdapter implements AudioPlaybackAdapter {
   }
 
   @override
-  bool speakWithPlatformTts(String text, SpeakOptions opts) {
+  Future<bool> speakWithPlatformTts(String text, SpeakOptions opts) async {
+    if (failPlatformTts) {
+      opts.onEnd?.call();
+      return false;
+    }
     platformTtsCalls += 1;
     lastTtsText = text;
     opts.onStart?.call();
@@ -254,6 +264,35 @@ void main() {
     );
     expect(client.calls, 0);
     expect(playback.platformTtsCalls, 0);
+  });
+
+  test('audio play failure does not call onStart or report playing', () async {
+    final preference = AudioPreference();
+    final playback = CountingPlaybackAdapter()
+      ..failDataUrl = true
+      ..failPlatformTts = true;
+    final client = FakeGeneratedAudioClient();
+    var started = false;
+    var ended = false;
+    final core = AudioCore(
+      preference: preference,
+      playback: playback,
+      generatedAudioClient: client,
+    );
+
+    final ok = await core.speak(
+      'Falha controlada',
+      SpeakOptions(
+        lessonKey: 'k',
+        onStart: () => started = true,
+        onEnd: () => ended = true,
+      ),
+    );
+
+    expect(ok, false);
+    expect(started, false);
+    expect(ended, true);
+    expect(playback.dataUrlPlays, 0);
   });
 
   test('audio cache key separates lesson language voice and text', () {
@@ -438,6 +477,20 @@ void main() {
     expect(session.audioPlaying, false);
     expect(session.audioLoading, false);
   });
+
+  test(
+    'LabSession toggleAudio stop does not disable audio preference',
+    () async {
+      final session = LabSession()
+        ..audioEnabled = true
+        ..audioPlaying = true;
+
+      await session.toggleAudio();
+
+      expect(session.audioPlaying, false);
+      expect(session.audioEnabled, true);
+    },
+  );
 
   test('visual prompt preserves language directive and image validation', () {
     final prompt = buildNaturalImagePrompt(

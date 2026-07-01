@@ -28,8 +28,8 @@ abstract interface class GeneratedAudioClient {
 }
 
 abstract interface class AudioPlaybackAdapter {
-  bool playDataUrl(String dataUrl, SpeakOptions opts);
-  bool speakWithPlatformTts(String text, SpeakOptions opts);
+  Future<bool> playDataUrl(String dataUrl, SpeakOptions opts);
+  Future<bool> speakWithPlatformTts(String text, SpeakOptions opts);
   void stop();
 }
 
@@ -40,7 +40,7 @@ class NoopAudioPlaybackAdapter implements AudioPlaybackAdapter {
   String? lastDataUrl;
 
   @override
-  bool playDataUrl(String dataUrl, SpeakOptions opts) {
+  Future<bool> playDataUrl(String dataUrl, SpeakOptions opts) async {
     lastDataUrl = dataUrl;
     opts.onStart?.call();
     opts.onEnd?.call();
@@ -48,7 +48,7 @@ class NoopAudioPlaybackAdapter implements AudioPlaybackAdapter {
   }
 
   @override
-  bool speakWithPlatformTts(String text, SpeakOptions opts) {
+  Future<bool> speakWithPlatformTts(String text, SpeakOptions opts) async {
     lastSpokenText = text;
     opts.onStart?.call();
     opts.onEnd?.call();
@@ -106,7 +106,7 @@ class AudioCore {
     }
     final key = audioCacheKey(clean, opts);
     final cached = _generatedAudioCache[key];
-    if (cached != null && playback.playDataUrl(cached, opts)) return true;
+    if (cached != null && await playback.playDataUrl(cached, opts)) return true;
     final client = generatedAudioClient;
     if (client != null) {
       String? generated;
@@ -122,10 +122,10 @@ class AudioCore {
       }
       if (generated != null && generated.isNotEmpty) {
         rememberAudio(key, generated);
-        if (playback.playDataUrl(generated, opts)) return true;
+        if (await playback.playDataUrl(generated, opts)) return true;
       }
     }
-    return playback.speakWithPlatformTts(
+    return await playback.speakWithPlatformTts(
       clean,
       SpeakOptions(
         lang: opts.lang ?? stableLangToBCP47(stableLangProvider?.call()),

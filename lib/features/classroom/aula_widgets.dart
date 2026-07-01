@@ -180,13 +180,17 @@ class AulaTopBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   _HeaderIconCard(
-                    icon: session.audioEnabled
-                        ? Icons.volume_up
-                        : Icons.volume_off_outlined,
+                    icon: session.audioLoading
+                        ? Icons.hourglass_empty
+                        : session.audioPlaying
+                        ? Icons.stop
+                        : Icons.volume_up,
                     color: session.audioEnabled ? simDark : simMuted,
-                    semanticLabel: session.audioEnabled
-                        ? 'Desligar áudio da aula'
-                        : 'Ligar áudio da aula',
+                    semanticLabel: session.audioLoading
+                        ? 'Preparando áudio da aula'
+                        : session.audioPlaying
+                        ? 'Parar áudio da aula'
+                        : 'Tocar áudio da aula',
                     onTap: session.toggleAudio,
                   ),
                   if (showReviewButton) ...[
