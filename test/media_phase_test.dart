@@ -47,6 +47,20 @@ class FakeGeneratedAudioClient implements GeneratedAudioClient {
   }
 }
 
+class ThrowingVisualRouterClient implements LessonVisualRouterClient {
+  const ThrowingVisualRouterClient();
+
+  @override
+  Future<VisualN3Result> routeVisual({
+    required VisualN2Result n2,
+    String? topic,
+    String? visualType,
+    String? imagePrompt,
+  }) async {
+    throw StateError('HTTP 401 Unauthorized requestId=vis-test');
+  }
+}
+
 class ThrowingGeneratedAudioClient implements GeneratedAudioClient {
   int calls = 0;
 
@@ -623,6 +637,25 @@ void main() {
     expect(decoded, contains('x²'));
   });
 
+  test('math template aliases render parabola as free quadratic SVG', () {
+    final dataUrl = tryRenderMathTemplate({
+      'math_template': {
+        'name': 'parabola',
+        'params': {
+          'a': 1,
+          'b': 0,
+          'c': 0,
+          'labels': {'title': 'Parabola'},
+        },
+      },
+    });
+
+    expect(dataUrl, startsWith('data:image/svg+xml;utf8,'));
+    final decoded = Uri.decodeFull(dataUrl!);
+    expect(decoded, contains('Parabola'));
+    expect(decoded, contains('x²'));
+  });
+
   test(
     'N3 delegates schematic routing to injected visual router client',
     () async {
@@ -646,6 +679,29 @@ void main() {
 
       expect(n3.verdict, VisualVerdict.svg);
       expect(decoded, contains('Forca'));
+    },
+  );
+
+  test(
+    'N3 failure keeps diagnostic reason before falling back to paid path',
+    () async {
+      final n2 = classifyVisualByKeywords(
+        topic: 'parábola de uma função quadrática',
+        visualType: 'graph',
+        imagePrompt: 'desenhe a parábola',
+      );
+
+      final n3 = await routeVisualCheapN3(
+        client: const ThrowingVisualRouterClient(),
+        n2: n2,
+        topic: 'parábola de uma função quadrática',
+        visualType: 'graph',
+        imagePrompt: 'desenhe a parábola',
+      );
+
+      expect(n3.verdict, VisualVerdict.ai);
+      expect(n3.reason, contains('N3_HTTP_FAILED'));
+      expect(n3.reason, contains('401'));
     },
   );
 

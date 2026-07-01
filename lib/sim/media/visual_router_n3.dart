@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'visual_router_n2.dart';
 
 class VisualN3Result {
@@ -38,10 +40,21 @@ Future<VisualN3Result> routeVisualCheapN3({
       visualType: visualType,
       imagePrompt: imagePrompt,
     );
-  } catch (_) {
-    return const VisualN3Result(
+  } catch (error, stackTrace) {
+    final shortError = _shortVisualN3Error(error);
+    if (kDebugMode) {
+      debugPrint('[VISUAL_N3_FAIL] $shortError');
+      debugPrintStack(stackTrace: stackTrace, label: 'VISUAL_N3_FAIL');
+    }
+    return VisualN3Result(
       verdict: VisualVerdict.ai,
-      reason: 'N3_HTTP_FAILED',
+      reason: 'N3_HTTP_FAILED: $shortError',
     );
   }
+}
+
+String _shortVisualN3Error(Object error) {
+  final text = error.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (text.length <= 200) return text;
+  return text.substring(0, 200);
 }

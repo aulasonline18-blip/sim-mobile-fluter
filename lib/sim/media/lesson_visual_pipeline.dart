@@ -1,5 +1,7 @@
 // LessonVisualPipeline — pipeline completo de imagem do SIM App.
 // Port fiel do src/cyber/LessonVisualPipeline.ts + S12_VisualPipeline.ts do SIM Web.
+import 'package:flutter/foundation.dart';
+
 import 'blueprint_prompt.dart';
 import 'lesson_visual_models.dart';
 import 's12_visual_pipeline.dart';
@@ -140,6 +142,11 @@ class LessonVisualPipeline {
     String? idempotencyKey,
   }) async {
     if (!trigger.needsImage || trigger.pedagogicalNeed == 'none') {
+      _visualLog(
+        lessonKey,
+        'skip',
+        'needsImage=${trigger.needsImage} pedagogicalNeed=${trigger.pedagogicalNeed}',
+      );
       return const LessonVisualResult(svg: null, dataUrl: null, source: 'skip');
     }
 
@@ -147,24 +154,44 @@ class LessonVisualPipeline {
     if (trigger.renderStrategy == 'software' && trigger.svgPayload != null) {
       final svgDataUrl = sanitizeAndEncodeSvg(trigger.svgPayload);
       if (svgDataUrl != null) {
+        _visualLog(
+          lessonKey,
+          'svg_inline',
+          'accepted len=${trigger.svgPayload?.length ?? 0}',
+        );
         return LessonVisualResult(
           svg: svgDataUrl,
           dataUrl: null,
           source: 'svg_inline',
         );
       }
+      _visualLog(
+        lessonKey,
+        'svg_inline',
+        'rejected len=${trigger.svgPayload?.length ?? 0}',
+      );
     }
 
     // 2. Math template SVG (kinematics, linear, quadratic, unit circle)
     if (trigger.mathTemplate != null) {
       final mathSvg = tryRenderMathTemplate(trigger.toVisualTriggerMap());
       if (mathSvg != null) {
+        _visualLog(
+          lessonKey,
+          'math_template',
+          'accepted name=${_mathTemplateName(trigger.mathTemplate)}',
+        );
         return LessonVisualResult(
           svg: mathSvg,
           dataUrl: null,
           source: 'math_template',
         );
       }
+      _visualLog(
+        lessonKey,
+        'math_template',
+        'rejected name=${_mathTemplateName(trigger.mathTemplate)}',
+      );
     }
 
     // 3. N2 router — classifica por palavras-chave (custo zero)
@@ -172,6 +199,11 @@ class LessonVisualPipeline {
       topic: trigger.topic,
       visualType: trigger.visualType,
       imagePrompt: trigger.imagePrompt,
+    );
+    _visualLog(
+      lessonKey,
+      'n2',
+      'verdict=${n2.verdict.name} reason=${n2.reason} matched=${n2.matched.take(8).join('|')}',
     );
 
     if (n2.verdict == VisualVerdict.svg ||
@@ -182,6 +214,11 @@ class LessonVisualPipeline {
         topic: trigger.topic,
         visualType: trigger.visualType,
         imagePrompt: trigger.imagePrompt,
+      );
+      _visualLog(
+        lessonKey,
+        'n3',
+        'verdict=${n3.verdict.name} reason=${_shortVisualText(n3.reason)} hasSvg=${n3.svgDataUrl != null}',
       );
       if (n3.verdict == VisualVerdict.svg && n3.svgDataUrl != null) {
         return LessonVisualResult(
@@ -194,6 +231,11 @@ class LessonVisualPipeline {
     }
 
     if (!allowPaidImages) {
+      _visualLog(
+        lessonKey,
+        'skip_no_paid',
+        'n2=${n2.verdict.name}/${n2.reason} allowPaidImages=false topic=${_shortVisualText(trigger.topic)}',
+      );
       return const LessonVisualResult(
         svg: null,
         dataUrl: null,
@@ -201,6 +243,11 @@ class LessonVisualPipeline {
       );
     }
     if (acceptedOfferId == null || acceptedOfferId.trim().isEmpty) {
+      _visualLog(
+        lessonKey,
+        'skip_no_offer',
+        'n2=${n2.verdict.name}/${n2.reason} acceptedOfferId=missing topic=${_shortVisualText(trigger.topic)}',
+      );
       return const LessonVisualResult(
         svg: null,
         dataUrl: null,
@@ -215,6 +262,7 @@ class LessonVisualPipeline {
       lang: stableLang,
     );
     if (prompt.isEmpty) {
+      _visualLog(lessonKey, 'skip_no_prompt', 'paid prompt empty');
       return const LessonVisualResult(
         svg: null,
         dataUrl: null,
@@ -229,6 +277,11 @@ class LessonVisualPipeline {
       idempotencyKey: idempotencyKey ?? acceptedOfferId,
     );
     if (dataUrl == null) {
+      _visualLog(
+        lessonKey,
+        'ai_failed',
+        'n2=${n2.verdict.name}/${n2.reason} promptLen=${prompt.length}',
+      );
       return LessonVisualResult(
         svg: null,
         dataUrl: null,
@@ -236,6 +289,11 @@ class LessonVisualPipeline {
         n2Reason: n2.reason,
       );
     }
+    _visualLog(
+      lessonKey,
+      'ai_blueprint',
+      'promptLen=${prompt.length} n2=${n2.verdict.name}/${n2.reason}',
+    );
     return LessonVisualResult(
       svg: null,
       dataUrl: dataUrl,
@@ -283,6 +341,25 @@ class LessonVisualPipeline {
       lang: lang,
     );
   }
+}
+
+void _visualLog(String lessonKey, String stage, String detail) {
+  if (kDebugMode) {
+    debugPrint('[VISUAL_PIPELINE] key=$lessonKey stage=$stage $detail');
+  }
+}
+
+String _mathTemplateName(Object? mathTemplate) {
+  if (mathTemplate is Map) {
+    return mathTemplate['name']?.toString() ?? '<missing>';
+  }
+  return mathTemplate == null ? '<null>' : mathTemplate.runtimeType.toString();
+}
+
+String _shortVisualText(Object? value) {
+  final text = (value ?? '').toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (text.length <= 160) return text;
+  return text.substring(0, 160);
 }
 
 class LessonVisualResult {
