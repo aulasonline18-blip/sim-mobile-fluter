@@ -139,7 +139,9 @@ class SimOrganism {
       service: stateService,
       orchestrator: orchestrator,
     );
-    final audioPreference = AudioPreference();
+    final audioPreference = AudioPreference(
+      storage: SharedPrefsAudioPreferenceStorage(prefs),
+    );
     final audioCore = AudioCore(
       preference: audioPreference,
       playback: playback ?? PlatformAudioAdapter(),

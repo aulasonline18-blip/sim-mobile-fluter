@@ -15,7 +15,9 @@ class RecordingTransport implements SimHttpTransport {
   Uri? lastUri;
   Map<String, String>? lastHeaders;
   Object? lastBody;
-  String jsonBody = '{}';
+  String jsonBody = '';
+  int statusCode = 200;
+  Map<String, String> responseHeaders = const {};
 
   @override
   Future<SimHttpResponse> postJson(
@@ -27,7 +29,11 @@ class RecordingTransport implements SimHttpTransport {
     lastUri = uri;
     lastHeaders = headers;
     lastBody = body;
-    return SimHttpResponse(statusCode: 200, body: jsonBody);
+    return SimHttpResponse(
+      statusCode: 200,
+      body: jsonBody,
+      headers: responseHeaders,
+    );
   }
 
   @override
@@ -57,9 +63,11 @@ class RecordingTransport implements SimHttpTransport {
       'bytes': bytes.length,
     };
     return SimHttpResponse(
-      statusCode: 200,
-      body:
-          '{"extractedText":"texto do arquivo","method":"pdf-text","charsExtracted":16}',
+      statusCode: statusCode,
+      body: jsonBody.isEmpty
+          ? '{"extractedText":"texto do arquivo","method":"pdf-text","charsExtracted":16}'
+          : jsonBody,
+      headers: responseHeaders,
     );
   }
 }
@@ -97,6 +105,35 @@ void main() {
       );
     },
   );
+
+  test('anexo preserva erro HTTP estruturado com requestId', () async {
+    final transport = RecordingTransport()
+      ..statusCode = 413
+      ..responseHeaders = {'x-request-id': 'rid-attachment'}
+      ..jsonBody =
+          '{"requestId":"rid-body","error":{"code":"FILE_TOO_LARGE","message":"arquivo grande","retryable":false}}';
+    final client = SimServerAttachmentClient(
+      config: config(),
+      transport: transport,
+    );
+
+    await expectLater(
+      client.processAttachment(
+        const SimAttachmentFile(
+          name: 'foto.png',
+          contentType: 'image/png',
+          bytes: [1, 2, 3],
+        ),
+      ),
+      throwsA(
+        isA<SimExternalAiException>()
+            .having((error) => error.statusCode, 'status', 413)
+            .having((error) => error.requestId, 'requestId', 'rid-body')
+            .having((error) => error.code, 'code', 'FILE_TOO_LARGE')
+            .having((error) => error.retryable, 'retryable', false),
+      ),
+    );
+  });
 
   test('Stripe hosted checkout manda apenas packId e URLs ao servidor', () async {
     final transport = RecordingTransport()
@@ -155,5 +192,17 @@ void main() {
     expect(manifest, contains('android.permission.INTERNET'));
     expect(manifest, contains('android.permission.CAMERA'));
     expect(manifest, contains('android.permission.READ_MEDIA_IMAGES'));
+    expect(manifest, contains('android.permission.READ_EXTERNAL_STORAGE'));
+    expect(manifest, contains('android:usesCleartextTraffic="true"'));
+  });
+
+  test('dependencias reais de midia existem no pubspec', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+
+    expect(pubspec, contains('audioplayers:'));
+    expect(pubspec, contains('image_picker:'));
+    expect(pubspec, contains('file_picker:'));
+    expect(pubspec, contains('flutter_svg:'));
+    expect(pubspec, contains('image:'));
   });
 }

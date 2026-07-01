@@ -15,14 +15,14 @@ class GenerateLessonImageRequest {
   }
 
   GenerateLessonImageRequest normalized() => GenerateLessonImageRequest(
-        prompt: prompt.trim().length > 4000
-            ? prompt.trim().substring(0, 4000)
-            : prompt.trim(),
-        lessonKey: lessonKey.trim().length > 160
-            ? lessonKey.trim().substring(0, 160)
-            : lessonKey.trim(),
-        aspectRatio: normalizedAspectRatio,
-      );
+    prompt: prompt.trim().length > 4000
+        ? prompt.trim().substring(0, 4000)
+        : prompt.trim(),
+    lessonKey: lessonKey.trim().length > 160
+        ? lessonKey.trim().substring(0, 160)
+        : lessonKey.trim(),
+    aspectRatio: normalizedAspectRatio,
+  );
 }
 
 class GenerateLessonImageResponse {
@@ -32,7 +32,7 @@ class GenerateLessonImageResponse {
 }
 
 const String lessonImageModelPath = 'google/nano-banana-pro';
-const int lessonImageRequestTimeoutMs = 60000;
+const int lessonImageRequestTimeoutMs = 125000;
 const int lessonImageRateLimitWindowMs = 60000;
 const int lessonImageRateLimitMaxPerWindow = 10;
 const int lessonImageCircuitFailThreshold = 5;

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sim_mobile/features/session/lab_session.dart';
 import 'package:sim_mobile/sim/lesson/lesson_models.dart';
 import 'package:sim_mobile/sim/lesson/lesson_event_bus.dart';
@@ -182,6 +183,21 @@ void main() {
     expect(notified, true);
   });
 
+  test('audio preference persists with SharedPrefs storage', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final preference = AudioPreference(
+      storage: SharedPrefsAudioPreferenceStorage(prefs),
+    );
+
+    preference.setAudioEnabled(false);
+    final reloaded = AudioPreference(
+      storage: SharedPrefsAudioPreferenceStorage(prefs),
+    );
+
+    expect(reloaded.getAudioEnabled(), false);
+  });
+
   test(
     'production/session audio wiring uses PlatformAudioAdapter, not Noop',
     () {
@@ -238,6 +254,33 @@ void main() {
     );
     expect(client.calls, 0);
     expect(playback.platformTtsCalls, 0);
+  });
+
+  test('audio cache key separates lesson language voice and text', () {
+    final core = AudioCore(
+      preference: AudioPreference(),
+      playback: NoopAudioPlaybackAdapter(),
+    );
+
+    final pt = core.audioCacheKey(
+      'texto',
+      const SpeakOptions(lessonKey: 'lesson-a', lang: 'pt-BR', voice: 'Charon'),
+    );
+    final en = core.audioCacheKey(
+      'texto',
+      const SpeakOptions(lessonKey: 'lesson-a', lang: 'en-US', voice: 'Charon'),
+    );
+    final otherLesson = core.audioCacheKey(
+      'texto',
+      const SpeakOptions(lessonKey: 'lesson-b', lang: 'pt-BR', voice: 'Charon'),
+    );
+    final otherText = core.audioCacheKey(
+      'texto diferente',
+      const SpeakOptions(lessonKey: 'lesson-a', lang: 'pt-BR', voice: 'Charon'),
+    );
+
+    expect({pt, en, otherLesson, otherText}, hasLength(4));
+    expect(pt, isNot(contains('Instance of')));
   });
 
   test(

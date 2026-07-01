@@ -60,10 +60,7 @@ class SimServerAttachmentClient {
       timeout: timeout,
     );
     if (!response.ok) {
-      throw SimExternalAiException(
-        response.body,
-        statusCode: response.statusCode,
-      );
+      throw _attachmentHttpException(response);
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) {
@@ -92,4 +89,43 @@ class SimServerAttachmentClient {
       throw const SimExternalAiException('VIDEO_NOT_SUPPORTED');
     }
   }
+}
+
+SimExternalAiException _attachmentHttpException(SimHttpResponse response) {
+  String message = response.body;
+  String? requestId = response.headers['x-request-id'];
+  String? code;
+  bool? retryable;
+  try {
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map) {
+      final error = decoded['error'];
+      if (error is Map) {
+        message = (error['message'] ?? error['reason'] ?? message).toString();
+        code = (error['code'] ?? error['reason'])?.toString();
+        retryable = error['retryable'] is bool
+            ? error['retryable'] as bool
+            : null;
+      } else if (error != null) {
+        message = error.toString();
+      }
+      requestId = (decoded['requestId'] ?? decoded['request_id'] ?? requestId)
+          ?.toString();
+      code ??= decoded['code']?.toString();
+      retryable ??= decoded['retryable'] is bool
+          ? decoded['retryable'] as bool
+          : null;
+    }
+  } catch (_) {
+    message = response.body.length > 400
+        ? '${response.body.substring(0, 400)}...'
+        : response.body;
+  }
+  return SimExternalAiException(
+    message,
+    statusCode: response.statusCode,
+    requestId: requestId,
+    code: code,
+    retryable: retryable,
+  );
 }

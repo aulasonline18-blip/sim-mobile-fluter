@@ -36,7 +36,7 @@ class GenerateLessonAudioResponse {
 }
 
 const String geminiTtsModel = 'gemini-2.5-flash-preview-tts';
-const int audioRequestTimeoutMs = 45000;
+const int audioRequestTimeoutMs = 95000;
 const int maxAudioInputChars = 4000;
 
 String voiceByLang(String lang) {

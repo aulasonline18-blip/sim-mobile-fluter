@@ -184,6 +184,33 @@ void main() {
     expect(controller.state.response?.visualTrigger, trigger);
   });
 
+  test(
+    'doubt photo accepts jpeg png webp dataUrl and blocks oversized image',
+    () {
+      for (final type in ['image/jpeg', 'image/png', 'image/webp']) {
+        final draft = DoubtInputDraft(
+          image: DoubtImagePayload(
+            name: 'foto.${type.split('/').last}',
+            type: type,
+            size: 32,
+            dataUrl: 'data:$type;base64,AAAA',
+          ),
+        );
+        expect(draft.validate(), isNull);
+      }
+
+      final oversized = DoubtInputDraft(
+        image: DoubtImagePayload(
+          name: 'foto.png',
+          type: 'image/png',
+          size: doubtImageMaxDataUrlLength + 1,
+          dataUrl: 'data:image/png;base64,${'A' * doubtImageMaxDataUrlLength}',
+        ),
+      );
+      expect(oversized.validate(), imageTooLargeMessage);
+    },
+  );
+
   test('aux pending map registers and clears live pending items', () {
     var state = seedState();
     state = registerPendingFromAttempt(

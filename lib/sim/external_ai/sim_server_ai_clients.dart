@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import '../media/audio_core.dart';
@@ -61,7 +62,7 @@ class SimServerLessonImageClient implements LessonImageClient {
   SimServerLessonImageClient({
     required this.config,
     SimHttpTransport? transport,
-    this.timeout = const Duration(seconds: 60),
+    this.timeout = const Duration(seconds: 125),
   }) : transport = transport ?? DartIoSimHttpTransport();
 
   final SimAiServerConfig config;
@@ -88,17 +89,22 @@ class SimServerLessonImageClient implements LessonImageClient {
     };
     if (acceptedOfferId != null) body['acceptedOfferId'] = acceptedOfferId;
     if (idempotencyKey != null) body['idempotencyKey'] = idempotencyKey;
-    final response = await transport.postJson(
+    final requestId = _mediaRequestId(
+      'img',
+      '${request.lessonKey}|${request.prompt}',
+    );
+    final headers = await config.jsonHeaders();
+    headers['x-request-id'] = requestId;
+    final response = await _postJsonWithTimeout(
+      transport,
       config.uri(simLessonImagePath),
-      headers: await config.jsonHeaders(),
+      headers: headers,
       body: body,
       timeout: timeout,
+      requestId: requestId,
     );
     if (!response.ok) {
-      throw SimExternalAiException(
-        response.body,
-        statusCode: response.statusCode,
-      );
+      throw _mediaHttpException(response, fallbackRequestId: requestId);
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) return null;
@@ -110,7 +116,7 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
   SimServerGeneratedAudioClient({
     required this.config,
     SimHttpTransport? transport,
-    this.timeout = const Duration(seconds: 45),
+    this.timeout = const Duration(seconds: 95),
   }) : transport = transport ?? DartIoSimHttpTransport();
 
   final SimAiServerConfig config;
@@ -130,9 +136,16 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
       lessonKey: lessonKey,
       voice: voice,
     ).normalized();
-    final response = await transport.postJson(
+    final requestId = _mediaRequestId(
+      'aud',
+      '${request.lessonKey}|${request.lang}|${request.voice}|${request.text}',
+    );
+    final headers = await config.jsonHeaders();
+    headers['x-request-id'] = requestId;
+    final response = await _postJsonWithTimeout(
+      transport,
       config.uri(simLessonAudioPath),
-      headers: await config.jsonHeaders(),
+      headers: headers,
       body: {
         'text': request.text,
         'lang': request.lang,
@@ -140,12 +153,10 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
         'voice': request.voice,
       },
       timeout: timeout,
+      requestId: requestId,
     );
     if (!response.ok) {
-      throw SimExternalAiException(
-        response.body,
-        statusCode: response.statusCode,
-      );
+      throw _mediaHttpException(response, fallbackRequestId: requestId);
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) return null;
@@ -156,6 +167,87 @@ class SimServerGeneratedAudioClient implements GeneratedAudioClient {
     );
     return parsed.dataUrl;
   }
+}
+
+Future<SimHttpResponse> _postJsonWithTimeout(
+  SimHttpTransport transport,
+  Uri uri, {
+  required Map<String, String> headers,
+  required Object? body,
+  required Duration timeout,
+  required String requestId,
+}) async {
+  try {
+    return await transport.postJson(
+      uri,
+      headers: headers,
+      body: body,
+      timeout: timeout,
+    );
+  } on TimeoutException {
+    throw SimExternalAiException(
+      'Tempo esgotado ao preparar mídia.',
+      statusCode: 408,
+      requestId: requestId,
+      code: 'MEDIA_TIMEOUT',
+      retryable: true,
+    );
+  }
+}
+
+SimExternalAiException _mediaHttpException(
+  SimHttpResponse response, {
+  required String fallbackRequestId,
+}) {
+  String message = response.body;
+  String? requestId = response.headers['x-request-id'] ?? fallbackRequestId;
+  String? code;
+  bool? retryable;
+  try {
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map) {
+      final error = decoded['error'];
+      if (error is Map) {
+        message = (error['message'] ?? error['reason'] ?? message).toString();
+        code = (error['code'] ?? error['reason'])?.toString();
+        retryable = error['retryable'] is bool
+            ? error['retryable'] as bool
+            : null;
+      } else if (error != null) {
+        message = error.toString();
+      }
+      requestId = (decoded['requestId'] ?? decoded['request_id'] ?? requestId)
+          ?.toString();
+      code ??= decoded['code']?.toString();
+      retryable ??= decoded['retryable'] is bool
+          ? decoded['retryable'] as bool
+          : null;
+    }
+  } catch (_) {
+    message = response.body.length > 400
+        ? '${response.body.substring(0, 400)}...'
+        : response.body;
+  }
+  return SimExternalAiException(
+    message,
+    statusCode: response.statusCode,
+    requestId: requestId,
+    code: code,
+    retryable: retryable,
+  );
+}
+
+String _mediaRequestId(String prefix, String basis) {
+  final stamp = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+  return 'sim-$prefix-$stamp-${_stableHash(basis)}';
+}
+
+String _stableHash(String input) {
+  var hash = 5381;
+  for (final unit in input.codeUnits) {
+    hash = ((hash << 5) + hash) ^ unit;
+  }
+  return (hash & 0xffffffff).toRadixString(36);
 }
 
 class SimServerT02Client implements T02LessonClient {

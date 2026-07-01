@@ -116,7 +116,9 @@ class LabSession extends ChangeNotifier {
 
   bool _creditsLoaded = false;
 
-  final AudioPreference _audioPreference = AudioPreference();
+  late final AudioPreference _audioPreference = AudioPreference(
+    storage: prefs == null ? null : SharedPrefsAudioPreferenceStorage(prefs!),
+  );
   LessonAudioController? _lessonAudioController;
   DoubtAudio? _doubtAudio;
   String? lessonImageOfferId;

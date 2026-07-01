@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sim_mobile/sim/external_ai/sim_ai_server_config.dart';
 import 'package:sim_mobile/sim/external_ai/sim_http_transport.dart';
@@ -9,8 +11,11 @@ class RecordingTransport implements SimHttpTransport {
   Uri? lastUri;
   Map<String, String>? lastHeaders;
   Object? lastBody;
+  int statusCode = 200;
+  Map<String, String> responseHeaders = const {};
   String jsonBody = '{"dataUrl":"data:image/png;base64,abc"}';
   List<String> streamLines = const [];
+  bool throwTimeout = false;
 
   @override
   Future<SimHttpResponse> postJson(
@@ -19,10 +24,15 @@ class RecordingTransport implements SimHttpTransport {
     required Object? body,
     Duration timeout = const Duration(seconds: 45),
   }) async {
+    if (throwTimeout) throw TimeoutException('slow');
     lastUri = uri;
     lastHeaders = headers;
     lastBody = body;
-    return SimHttpResponse(statusCode: 200, body: jsonBody);
+    return SimHttpResponse(
+      statusCode: statusCode,
+      body: jsonBody,
+      headers: responseHeaders,
+    );
   }
 
   @override
@@ -143,6 +153,7 @@ void main() {
       transport.lastHeaders.toString(),
       isNot(contains('LOVABLE_API_KEY')),
     );
+    expect(transport.lastHeaders?['x-request-id'], startsWith('sim-img-'));
   });
 
   test('audio usa /api/generate-lesson-audio e devolve dataUrl', () async {
@@ -167,7 +178,93 @@ void main() {
       'https://gemini-aid-pal.lovable.app/api/generate-lesson-audio',
     );
     expect((transport.lastBody as Map)['text'], 'texto da aula');
+    expect(transport.lastHeaders?['x-request-id'], startsWith('sim-aud-'));
   });
+
+  test(
+    'imagem preserva status requestId code e retryable no erro HTTP',
+    () async {
+      final transport = RecordingTransport()
+        ..statusCode = 500
+        ..responseHeaders = {'x-request-id': 'rid-header'}
+        ..jsonBody =
+            '{"requestId":"rid-body","error":{"code":"GEMINI_DOWN","message":"provedor fora","retryable":true}}';
+      final client = SimServerLessonImageClient(
+        config: config(),
+        transport: transport,
+      );
+
+      await expectLater(
+        client.generateLessonImage(prompt: 'p', lessonKey: 'l1'),
+        throwsA(
+          isA<SimExternalAiException>()
+              .having((error) => error.statusCode, 'status', 500)
+              .having((error) => error.requestId, 'requestId', 'rid-body')
+              .having((error) => error.code, 'code', 'GEMINI_DOWN')
+              .having((error) => error.retryable, 'retryable', true)
+              .having((error) => error.message, 'message', 'provedor fora'),
+        ),
+      );
+    },
+  );
+
+  test('audio preserva requestId tecnico em erro controlado', () async {
+    final transport = RecordingTransport()
+      ..statusCode = 403
+      ..jsonBody =
+          '{"requestId":"rid-audio","code":"FORBIDDEN","retryable":false,"error":"sem permissao"}';
+    final client = SimServerGeneratedAudioClient(
+      config: config(),
+      transport: transport,
+    );
+
+    await expectLater(
+      client.generateAudio(
+        text: 'texto',
+        lang: 'pt-BR',
+        voice: 'Charon',
+        lessonKey: 'l1',
+      ),
+      throwsA(
+        isA<SimExternalAiException>()
+            .having((error) => error.statusCode, 'status', 403)
+            .having((error) => error.requestId, 'requestId', 'rid-audio')
+            .having((error) => error.code, 'code', 'FORBIDDEN')
+            .having((error) => error.retryable, 'retryable', false),
+      ),
+    );
+  });
+
+  test(
+    'timeout de audio vira erro retryable com requestId do cliente',
+    () async {
+      final transport = RecordingTransport()..throwTimeout = true;
+      final client = SimServerGeneratedAudioClient(
+        config: config(),
+        transport: transport,
+      );
+
+      await expectLater(
+        client.generateAudio(
+          text: 'texto',
+          lang: 'pt-BR',
+          voice: 'Charon',
+          lessonKey: 'l1',
+        ),
+        throwsA(
+          isA<SimExternalAiException>()
+              .having((error) => error.statusCode, 'status', 408)
+              .having(
+                (error) => error.requestId,
+                'requestId',
+                startsWith('sim-aud-'),
+              )
+              .having((error) => error.code, 'code', 'MEDIA_TIMEOUT')
+              .having((error) => error.retryable, 'retryable', true),
+        ),
+      );
+    },
+  );
 
   test(
     'T02 nao inventa rota quando a ponte HTTP do servidor nao existe',
