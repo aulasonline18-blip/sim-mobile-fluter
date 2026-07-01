@@ -1,0 +1,1319 @@
+PLANTA SIM FLUTTER 10X - APP DE ENSINO MELHOR QUE O SIM WEB
+Data: 2026-07-01
+Repositorio alvo: /root/sim-mobile-fluter
+Documento para: engenharia, produto, pedagogia, design, QA e operacao
+
+======================================================================
+0. VEREDITO EXECUTIVO
+======================================================================
+
+O SIM Flutter nao deve ser apenas uma copia mobile do SIM Web.
+O objetivo correto agora e transformar o app Flutter em um tutor mobile
+local-first, multimodal, adaptativo, acessivel, resiliente e mensuravel.
+
+O SIM Web deve continuar sendo referencia historica e funcional, mas o
+Flutter deve superar o Web em oito eixos:
+
+1. ensino adaptativo real;
+2. vida escolar unica e offline-first;
+3. dominio por evidencia, nao por cliques;
+4. revisao espacada e recuperacao inteligentes;
+5. duvida multimodal com foto, texto, audio e contexto;
+6. acessibilidade e personalizacao profundas;
+7. telemetria pedagogica e qualidade controlada;
+8. app mobile confiavel, rapido e seguro.
+
+Definicao operacional de "10x melhor":
+
+- O aluno aprende mais com menos atrito.
+- O app sabe o que o aluno domina, o que confunde, o que esquece e o que
+  precisa recuperar.
+- O app nao depende de uma tela Web, de navegador, de copiar/colar, de
+  refresh manual ou de engenharia assistindo.
+- O app funciona como um professor particular que lembra a historia inteira
+  do aluno, explica de formas diferentes, cobra na hora certa e nao deixa
+  o aluno se perder.
+
+Este documento nao e uma lista de desejos. Ele e uma planta construtiva.
+Cada secao abaixo vira epico, contrato, orgao, teste e criterio de aceite.
+
+======================================================================
+1. FONTES CONSULTADAS E BASE TECNICA
+======================================================================
+
+Fontes internas lidas no repositorio:
+
+- docs/B-final-200-differences-closure-report.md
+- docs/B-50-organs-250-differences-to-sim-ideal-final-report.md
+- docs/B-sync-state-backup-final-report.md
+- docs/B1-lesson-logic-t00-t02-audit.md
+- docs/B1-image-system-inventory.md
+- docs/B1-audio-system-inventory.md
+- docs/B2-image-system-parity.md
+- docs/B2-audio-system-parity.md
+- docs/B3-drawer-backup-parity-final-report.md
+- docs/B4-classroom-screen-layout-scroll-buttons-final-report.md
+- lib/sim/organism/sim_organism.dart
+- lib/sim/state/student_learning_state.dart
+- lib/sim/state/student_learning_state_service.dart
+- lib/sim/state/mastery_truth_engine.dart
+- lib/sim/lesson/lesson_orchestrator.dart
+- lib/sim/lesson/dopamine_ready_window_engine.dart
+- lib/sim/classroom/lesson_runtime_engine.dart
+- lib/sim/media/*
+- lib/sim/auxiliary/*
+
+Fontes externas usadas como base:
+
+- Retrieval practice e distributed practice:
+  Dunlosky et al., "Improving Students' Learning With Effective Learning
+  Techniques", Psychological Science in the Public Interest, 2013.
+  https://journals.sagepub.com/doi/10.1177/1529100612453266
+
+- Retrieval practice:
+  Karpicke & Roediger, "The Critical Importance of Retrieval for Learning",
+  Science, 2008.
+  https://www.science.org/doi/10.1126/science.1152408
+
+- Mastery learning:
+  Bloom, "Learning for Mastery", 1968; sintese e referencias.
+  https://en.wikipedia.org/wiki/Mastery_learning
+
+- Cognitive load theory:
+  Sweller, cognitive load, worked examples, carga extrinseca.
+  https://en.wikipedia.org/wiki/Cognitive_load
+  https://en.wikipedia.org/wiki/Worked-example_effect
+
+- Multimedia learning:
+  Mayer, principios de aprendizagem multimidia.
+  https://en.wikipedia.org/wiki/Multimedia-Prinzipien
+
+- Universal Design for Learning:
+  CAST UDL Guidelines 3.0.
+  https://udlguidelines.cast.org/
+
+- Acessibilidade:
+  W3C WCAG 2.2.
+  https://www.w3.org/TR/WCAG22/
+  Flutter Accessibility.
+  https://docs.flutter.dev/ui/accessibility
+
+- Flutter performance:
+  Flutter Performance Best Practices.
+  https://docs.flutter.dev/perf/best-practices
+
+- Offline-first:
+  Android Developers - Build an offline-first app.
+  https://developer.android.com/topic/architecture/data-layer/offline-first
+
+- Seguranca mobile:
+  OWASP MASVS.
+  https://mas.owasp.org/MASVS/
+
+======================================================================
+2. PRINCIPIOS NAO NEGOCIAVEIS
+======================================================================
+
+2.1. Nao quebrar a Planta-Mae
+
+O Flutter ja tem uma arquitetura por orgaos:
+
+- StudentLearningState;
+- StudentLearningStateService;
+- StudentStateStore;
+- LessonRuntimeEngine;
+- LessonOrchestrator;
+- LessonMaterialCache;
+- DopamineReadyWindowEngine;
+- ReadyWindowWorker;
+- StudentExperienceEngine;
+- StudentExperienceT00Adapter;
+- StudentExperienceT02Adapter;
+- MasteryTruthEngine;
+- StudentLessonMediaService;
+- AudioCore;
+- LessonVisualPipeline;
+- CloudQueue;
+- StudentLearningSync;
+- Aux room services.
+
+O app 10x deve fortalecer essa arquitetura, nao substitui-la.
+
+Proibido:
+
+- logica pedagogica em widget;
+- estado paralelo fora do StudentLearningState;
+- IA decidindo fluxo do aluno sem motor local;
+- backend inventando estado escolar;
+- fallback falso fingindo aula real;
+- mock em production;
+- copiar doenca do SimWeb;
+- reverter para Lovable;
+- trocar Supabase sem decisao formal;
+- criar segundo motor pedagogico concorrente.
+
+2.2. O aluno tem uma vida escolar unica
+
+Tudo que acontece no app e um evento pedagogico:
+
+- objetivo;
+- idioma;
+- curriculo;
+- item;
+- marker;
+- layer;
+- pergunta;
+- resposta;
+- sinal;
+- feedback;
+- duvida;
+- foto;
+- revisao;
+- recuperacao;
+- imagem;
+- audio;
+- credito;
+- erro;
+- retry;
+- retomada.
+
+Tudo deve ser:
+
+- salvo localmente;
+- serializavel;
+- sincronizavel;
+- exportavel;
+- importavel;
+- auditavel;
+- reexecutavel em teste.
+
+2.3. O app ensina por dominio, nao por passagem de tela
+
+O aluno nao avanca porque clicou.
+O aluno avanca porque ha evidencia suficiente de dominio.
+
+2.4. O app deve funcionar offline para ler e continuar o que ja existe
+
+Regra offline-first:
+
+- leitura do estado atual deve funcionar sem rede;
+- aula ja gerada deve abrir sem rede;
+- tentativa e sinal devem ser salvos localmente sem rede;
+- sync sobe depois;
+- conflito nao pode apagar vida escolar;
+- IA nova pode depender de rede, mas a aula existente nao.
+
+2.5. Toda IA e subordinada a contratos
+
+IA pode gerar conteudo, imagem, audio, duvida e explicacao.
+IA nao pode gerar estado escolar sem validacao.
+IA nao pode inventar dominio do aluno.
+IA nao pode cobrar credito sem aceite.
+IA nao pode criar aula falsa.
+
+======================================================================
+3. NORTE DE PRODUTO: O QUE O SIM FLUTTER DEVE VIRAR
+======================================================================
+
+Nome conceitual: SIM Tutor Vivo.
+
+Promessa:
+
+"Um professor particular no bolso que entende seu objetivo, constroi um
+curriculo vivo, ensina em camadas, percebe quando voce sabe, quando voce
+esta inseguro, quando voce esqueceu, e adapta o caminho sem perder sua
+historia."
+
+O app 10x precisa ter:
+
+1. Primeira aula em menos de 20 segundos quando possivel.
+2. Aula existente abre em menos de 1 segundo localmente.
+3. Explicacao curta, pergunta clara, resposta imediata.
+4. Sempre uma proxima melhor acao: continuar, revisar, recuperar, perguntar.
+5. Revisao espacada automatica.
+6. Recuperacao que reconstrói pre-requisito, nao apenas repete.
+7. Duvida contextual: texto + foto + pergunta atual + historico.
+8. Audio opcional, nunca bloqueante.
+9. Imagem gratuita por software quando util.
+10. Imagem paga apenas com aceite.
+11. Acessibilidade real: TalkBack, fonte, contraste, toque, captions.
+12. Backup e importacao naturais por arquivo.
+13. Sync multi-dispositivo.
+14. Painel do aluno e do responsavel.
+15. Metricas pedagogicas reais.
+
+======================================================================
+4. ARQUITETURA ALVO
+======================================================================
+
+4.1. Camadas
+
+UI
+- Renderiza.
+- Recebe toque.
+- Mostra estados.
+- Nao decide pedagogia.
+
+Controller de tela
+- Traduz gesto em comando.
+- Chama orgao correto.
+- Nao guarda verdade escolar.
+
+Orgaos pedagogicos
+- LearningDecisionEngine;
+- MasteryTruthEngine;
+- StudentLessonExecutor;
+- LessonRuntimeEngine;
+- AuxRoomService;
+- ReviewRoomService;
+- RecoveryRoomService.
+
+Orgaos de conteudo
+- StudentExperienceEngine;
+- T00 adapter;
+- T02 adapter;
+- LessonOrchestrator;
+- LessonMaterialService;
+- LessonMaterialCache.
+
+Orgaos de midia
+- StudentLessonMediaService;
+- LessonVisualPipeline;
+- AudioCore;
+- PaidImageService.
+
+Orgaos de persistencia/sync
+- StudentLearningState;
+- StudentStateStore;
+- CloudQueue;
+- StudentLearningSync;
+- Backup migrator.
+
+API/Synapse
+- Auth;
+- T00;
+- T02;
+- imagem;
+- audio;
+- creditos;
+- sync;
+- backup;
+- observabilidade.
+
+4.2. Regra de ouro
+
+Todo novo recurso deve responder:
+
+- Qual orgao e dono?
+- Qual estado grava?
+- Qual evento registra?
+- Qual teste prova?
+- Qual falha segura existe?
+- Qual impacto em credito?
+- Qual impacto offline?
+- Qual impacto em acessibilidade?
+
+======================================================================
+5. MODELO PEDAGOGICO 10X
+======================================================================
+
+5.1. Grafo de conhecimento
+
+Hoje o SIM trabalha com curriculo, marker e layer.
+Para 10x, adicionar um grafo de habilidades.
+
+Novo conceito:
+
+SkillNode:
+- id;
+- titulo;
+- descricao;
+- pre_requisitos;
+- dependentes;
+- nivel cognitivo;
+- area;
+- evidencias necessarias;
+- misconceptions comuns;
+- exemplos recomendados;
+- templates visuais recomendados;
+- modo de avaliacao.
+
+Cada CurriculumItem deve apontar para um ou mais SkillNode.
+Cada tentativa do aluno atualiza evidencias desses SkillNodes.
+
+5.2. Dominio por evidencia
+
+Criar MasteryEvidence:
+
+- skillId;
+- marker;
+- layer;
+- answerLetter;
+- correct;
+- signal;
+- responseTimeMs;
+- hesitationEvents;
+- hintUsed;
+- doubtAsked;
+- imageViewed;
+- audioPlayed;
+- reviewContext;
+- recoveryContext;
+- timestamp;
+
+MasteryTruthEngine deve calcular:
+
+- nao_visto;
+- iniciando;
+- aprendendo;
+- quase;
+- dominado_fraco;
+- dominado_forte;
+- esquecimento_provavel;
+- falsa_maestria;
+- precisa_revisao;
+- precisa_recuperacao;
+
+5.3. Regra de avanco 10x
+
+O aluno so avanca normalmente se:
+
+- acertou;
+- sinal nao indica inseguranca critica;
+- nao ha prerequisito quebrado;
+- nao ha repeticao de erro recente;
+- nao ha recuperacao obrigatoria pendente.
+
+Se acertou com sinal 1:
+- avanca mais rapido, mas agenda revisao leve.
+
+Se acertou com sinal 2:
+- avanca, mas agenda revisao curta.
+
+Se acertou com sinal 3:
+- nao tratar como dominio forte.
+- abrir reforco ou recuperacao curta.
+
+Se errou com sinal 1:
+- detectar falsa confianca.
+- feedback deve confrontar misconception com cuidado.
+
+Se errou com sinal 2:
+- explicar erro e ir para layer de reforco.
+
+Se errou com sinal 3:
+- reduzir carga cognitiva.
+- usar exemplo resolvido.
+- recuperar prerequisito.
+
+5.4. Revisao espacada
+
+Adicionar SpacedReviewScheduler:
+
+Entrada:
+- dominio;
+- dificuldade;
+- sinal;
+- erro;
+- tempo desde ultimo contato;
+- estabilidade historica;
+- importancia para objetivo.
+
+Saida:
+- revisar em 10 min;
+- revisar hoje;
+- revisar amanha;
+- revisar em 3 dias;
+- revisar em 7 dias;
+- revisar antes do proximo topico.
+
+Nunca deixar revisao como sala separada esquecida.
+Revisao deve aparecer como fila viva:
+
+- "2 pontos para revisar antes de seguir";
+- "1 pergunta rapida para consolidar";
+- "voce acertou, mas marcou inseguro: vamos fixar".
+
+5.5. Recuperacao inteligente
+
+Recuperacao nao e repetir a mesma pergunta.
+Recuperacao e reconstruir o bloco anterior que falta.
+
+Pipeline:
+
+1. detectar falha;
+2. mapear prerequisito provavel;
+3. gerar microaula de recuperacao;
+4. usar exemplo resolvido;
+5. pedir uma resposta curta;
+6. validar;
+7. voltar ao ponto original.
+
+5.6. Worked examples e fading
+
+Para aluno iniciante:
+
+- mostrar exemplo resolvido;
+- destacar passos;
+- explicar por que cada passo existe;
+- depois esconder um passo;
+- depois pedir que o aluno complete;
+- depois problema completo.
+
+Implementar ExampleFadingEngine:
+
+- worked;
+- partially_worked;
+- completion;
+- independent.
+
+5.7. Interleaving
+
+O app deve misturar topicos quando ja houver dominio minimo.
+
+Exemplo:
+
+- 2 perguntas do topico atual;
+- 1 revisao do prerequisito;
+- 1 contraste com topico parecido;
+- 1 pergunta de transferencia.
+
+5.8. Autoexplicacao
+
+Adicionar modo opcional:
+
+- "Explique com suas palavras";
+- "Por que a alternativa B nao serve?";
+- "Qual foi o primeiro passo?";
+
+Nao usar sempre, para nao aumentar atrito.
+Usar quando:
+
+- erro repetido;
+- falsa confianca;
+- quase dominio;
+- preparacao para prova.
+
+5.9. Metacognicao
+
+O sinal 1/2/3 e bom, mas precisa virar inteligencia.
+
+Adicionar:
+
+- calibracao de confianca;
+- historico de confianca;
+- "voce costuma acertar quando marca 2";
+- "voce marcou 1 e errou: vamos revisar esse tipo".
+
+======================================================================
+6. EXPERIENCIA DA AULA 10X
+======================================================================
+
+6.1. Tela principal
+
+Deve ter:
+
+- header fixo discreto;
+- progresso real;
+- aula atual destacada;
+- historico recolhivel;
+- pergunta sempre visivel;
+- alternativas grandes;
+- sinal 1/2/3 claro;
+- feedback imediato;
+- botao proximo sempre alcancavel;
+- duvida sempre disponivel;
+- audio e imagem nao bloqueantes;
+- acessibilidade por Semantics.
+
+6.2. Scroll
+
+O scroll deve ser um orgao de experiencia, nao improviso de widget.
+
+Criar ClassroomScrollCoordinator:
+
+- target: explanation, question, selectedOption, signalRow, feedback, error;
+- trigger: materialReady, answerSelected, signalSubmitted, feedbackShown;
+- policy: alignStart, alignCenter, alignEnd, keepVisible;
+- fallback: scrollToBottom;
+- test: viewport pequeno, fonte grande, TalkBack.
+
+6.3. Feedback
+
+Feedback deve ser:
+
+- imediato;
+- especifico;
+- acionavel;
+- curto;
+- com caminho claro.
+
+Formato:
+
+- resultado: correto/incorreto/quase;
+- causa: por que;
+- microcorrecao: o que ajustar;
+- proxima acao: avancar/revisar/recuperar/perguntar.
+
+Proibido:
+
+- "errado" seco;
+- feedback generico;
+- revelar resposta sem ensinar;
+- bloquear em loading.
+
+6.4. Dúvida 10x
+
+Hoje: texto/foto e resposta.
+Alvo 10x:
+
+- duvida por texto;
+- foto/camera/galeria;
+- audio do aluno;
+- OCR/vision;
+- contexto da aula;
+- marker/layer;
+- resposta anterior;
+- alternativa escolhida;
+- sinal escolhido;
+- historico recente;
+- resposta com explicacao curta;
+- se necessario, mini pergunta de checagem.
+
+DoubtResult deve conter:
+
+- explanation;
+- misconception_detected;
+- suggested_micro_action;
+- optional_visual_trigger;
+- optional_audio_text;
+- does_not_change_main_progress.
+
+6.5. Imagem
+
+Imagem deve existir quando reduz carga cognitiva.
+
+Ordem:
+
+1. sem imagem se desnecessaria;
+2. SVG/software se grafico, diagrama, tabela, geometria;
+3. template matematico;
+4. imagem IA paga apenas se essencial e aceita.
+
+6.6. Audio
+
+Audio deve ser:
+
+- opcional;
+- cancelavel;
+- respeitar idioma;
+- cacheado;
+- nunca bloqueante;
+- usar TTS local como fallback;
+- acessivel com captions/texto.
+
+6.7. Revisao/recuperacao integradas
+
+Nao tratar revisao como tela secundaria escondida.
+
+Modelo:
+
+- inline micro-review quando curta;
+- sala de revisao quando acumulada;
+- recuperacao obrigatoria quando prerequisito quebra conclusao;
+- retorno garantido ao ponto da aula principal.
+
+======================================================================
+7. ONBOARDING E OBJETIVO 10X
+======================================================================
+
+O objetivo do aluno deve virar contrato pedagogico.
+
+Entrada:
+
+- texto livre;
+- idade/serie;
+- idioma;
+- prazo;
+- prova ou objetivo;
+- anexos;
+- nivel percebido;
+- preferencia: rapido, profundo, prova, reforco.
+
+Saida T00:
+
+- perfil;
+- curriculo;
+- skill graph inicial;
+- diagnostico de lacunas;
+- plano de revisao;
+- criterios de sucesso;
+- guidance_for_T02;
+- limites de midia;
+- linguagem adequada.
+
+Experiencia:
+
+- nao parecer formulario burocratico;
+- parecer conversa orientada;
+- permitir "quero estudar para prova de sexta";
+- permitir anexar lista e obter plano.
+
+======================================================================
+8. PAINEL DO ALUNO
+======================================================================
+
+Criar "Mapa da Aprendizagem":
+
+- trilha atual;
+- topicos dominados;
+- topicos inseguros;
+- topicos esquecendo;
+- revisoes pendentes;
+- recuperacoes pendentes;
+- tempo estudado;
+- acuracia;
+- calibracao de confianca;
+- objetivos.
+
+Nao mostrar metricas frias demais.
+Mostrar:
+
+- "voce esta forte em X";
+- "Y precisa de revisao hoje";
+- "Z esta impedindo seu avanco";
+- "faltam 3 blocos para seu objetivo".
+
+======================================================================
+9. PAINEL DO RESPONSAVEL
+======================================================================
+
+Deve responder:
+
+- estudou hoje?
+- em que esta bom?
+- onde travou?
+- esta pedindo ajuda?
+- precisa de intervencao humana?
+- esta progredindo para o objetivo?
+
+Nao expor prompts brutos.
+Nao expor dados sensiveis desnecessarios.
+
+Campos:
+
+- resumo semanal;
+- esforco;
+- progresso;
+- dificuldades;
+- recomendacao ao responsavel;
+- alertas de frustracao;
+- export PDF.
+
+======================================================================
+10. ARQUITETURA DE IA
+======================================================================
+
+10.1. Funcoes da IA
+
+T00:
+- interpretar objetivo;
+- criar curriculo;
+- criar skill graph inicial;
+- criar ficha;
+- criar guidance_for_T02.
+
+T02:
+- gerar aula para item/layer;
+- gerar pergunta A/B/C;
+- gerar feedback-base;
+- gerar visual_trigger;
+- gerar audioText;
+- respeitar contrato.
+
+Duvida:
+- responder contexto;
+- nao alterar progresso principal.
+
+Revisao:
+- gerar pergunta curta de consolidacao.
+
+Recuperacao:
+- reconstruir prerequisito.
+
+Imagem:
+- gerar apenas quando pipeline permitir.
+
+Audio:
+- gerar apenas quando preferencia permitir.
+
+10.2. Contratos
+
+Todo endpoint de IA deve ter:
+
+- schema de entrada;
+- schema de saida;
+- validator;
+- retry por contrato invalido;
+- requestId;
+- logs sem segredo;
+- redacao de imagem/base64;
+- timeout;
+- circuit breaker;
+- erro claro para app;
+- teste de contrato.
+
+10.3. Avaliador local
+
+Criar PedagogicalContractValidator:
+
+- T00 valido?
+- T02 valido?
+- pergunta tem tres alternativas?
+- correct_answer valido?
+- explicacao vazia?
+- feedback acionavel?
+- visual_trigger valido?
+- audioText coerente?
+- layer certa?
+- marker certo?
+
+Nada invalido vira aula.
+
+10.4. AI Quality Harness
+
+Antes de subir prompt/API:
+
+- 100 objetivos reais;
+- 50 anexos;
+- 50 duvidas com foto;
+- 30 casos de erro;
+- 30 revisoes;
+- 30 recuperacoes;
+- comparacao de qualidade;
+- custo medio;
+- latencia p50/p95;
+- taxa de contrato invalido;
+- taxa de retry;
+- taxa de aula falsa = 0.
+
+======================================================================
+11. DADOS, EVENTOS E TELEMETRIA
+======================================================================
+
+11.1. Event log canonico
+
+Adicionar eventos:
+
+- LESSON_OPENED;
+- MATERIAL_READY;
+- QUESTION_VISIBLE;
+- ANSWER_SELECTED;
+- SIGNAL_SUBMITTED;
+- FEEDBACK_VISIBLE;
+- NEXT_ADVANCED;
+- DOUBT_OPENED;
+- DOUBT_SUBMITTED;
+- DOUBT_ANSWERED;
+- REVIEW_SCHEDULED;
+- REVIEW_COMPLETED;
+- RECOVERY_STARTED;
+- RECOVERY_COMPLETED;
+- IMAGE_OFFER_SHOWN;
+- IMAGE_ACCEPTED;
+- AUDIO_STARTED;
+- AUDIO_STOPPED;
+- ERROR_SHOWN;
+- RETRY_TAPPED.
+
+Cada evento:
+
+- lessonLocalId;
+- userId hash;
+- marker;
+- layer;
+- skillId;
+- timestamp;
+- offline flag;
+- requestId quando houver;
+- appVersion;
+- platform.
+
+11.2. Metricas pedagogicas
+
+Medir:
+
+- learning gain proxy;
+- mastery velocity;
+- retention after 24h/7d;
+- false confidence rate;
+- doubt resolution rate;
+- recovery success rate;
+- review completion rate;
+- time to first lesson;
+- time to feedback;
+- abandon point;
+- content invalid rate;
+- retry success rate.
+
+11.3. Privacidade
+
+- minimizar dados sensiveis;
+- nao logar tokens;
+- nao logar imagem base64;
+- nao logar texto sensivel completo em analytics;
+- usar requestId;
+- permitir export/delete.
+
+======================================================================
+12. OFFLINE-FIRST, SYNC E BACKUP
+======================================================================
+
+12.1. Fonte de verdade
+
+O estado local e a fonte de leitura da UI.
+Rede atualiza estado local.
+UI nunca le direto da rede.
+
+12.2. Aulas offline
+
+Disponivel offline:
+
+- aulas prontas;
+- historico;
+- tentativas;
+- revisoes agendadas localmente;
+- audio cacheado;
+- imagem cacheada;
+- backups.
+
+Nao disponivel offline:
+
+- nova IA;
+- geracao paga;
+- sync remoto.
+
+12.3. Sync
+
+Usar:
+
+- high-water mark;
+- timestamps;
+- tombstone;
+- merge por aula;
+- merge por evento quando possivel;
+- fila persistida;
+- retry exponencial.
+
+12.4. Backup
+
+Backup deve ser:
+
+- arquivo .txt/.json;
+- importavel por picker;
+- colagem como fallback;
+- validado;
+- migrado por versao;
+- sem duplicacao;
+- com relatorio de importacao.
+
+======================================================================
+13. ACESSIBILIDADE E INCLUSAO
+======================================================================
+
+Base: UDL + WCAG + Flutter Semantics.
+
+Obrigatorio:
+
+- Semantics em botoes A/B/C;
+- Semantics em sinais 1/2/3;
+- labels em icones;
+- tamanho de toque minimo;
+- contraste AA;
+- texto escalavel;
+- modo baixa animacao;
+- modo alto contraste;
+- suporte TalkBack;
+- captions para audio;
+- alternativa textual para imagem;
+- navegacao por teclado quando desktop/tablet;
+- conteudo sem depender so de cor.
+
+Preferencias do aluno:
+
+- tamanho de fonte;
+- velocidade do typewriter;
+- audio on/off;
+- reduzir animacao;
+- alto contraste;
+- linguagem simples;
+- modo dislexia;
+- modo foco.
+
+======================================================================
+14. PERFORMANCE E CONFIABILIDADE
+======================================================================
+
+Metas:
+
+- primeira tela < 1s;
+- aula local < 1s;
+- frame jank < 1%;
+- crash-free sessions > 99.5%;
+- T00/T02 com progress real;
+- cache evita IA duplicada;
+- app nunca fica em loading infinito.
+
+Regras Flutter:
+
+- evitar build gigante;
+- quebrar widgets por mudanca;
+- usar const;
+- evitar saveLayer/opacity caro sem necessidade;
+- listas longas com itemExtent/prototipos quando possivel;
+- imagens comprimidas;
+- decode em isolate quando pesado;
+- logs controlados.
+
+======================================================================
+15. SEGURANCA
+======================================================================
+
+Base: OWASP MASVS.
+
+Obrigatorio:
+
+- sem segredo no app;
+- bearer token seguro;
+- endpoints autenticados;
+- payload validado;
+- rate limit;
+- requestId;
+- logs sem token/base64;
+- storage sensivel protegido quando aplicavel;
+- delete account real;
+- backup nao deve vazar token;
+- imagem/foto com limites de tamanho;
+- circuit breaker para IA.
+
+======================================================================
+16. DESIGN DO APP 10X
+======================================================================
+
+16.1. Princípios visuais
+
+- mobile-first;
+- calmo;
+- foco no item atual;
+- historico presente mas nao dominante;
+- botoes grandes;
+- feedback visivel;
+- sem poluicao;
+- progresso claro;
+- estados vazios humanos;
+- erro com acao.
+
+16.2. Telas principais
+
+- Portal / entrada;
+- Login;
+- Idioma;
+- Objetivo;
+- Preparacao;
+- Aula;
+- Duvida;
+- Revisao;
+- Recuperacao;
+- Mapa da aprendizagem;
+- Historico/drawer;
+- Creditos;
+- Backup;
+- Painel do responsavel;
+- Configuracoes de acessibilidade.
+
+16.3. Aula ideal
+
+Ordem:
+
+1. contexto curto;
+2. explicacao;
+3. imagem/audio opcional;
+4. pergunta;
+5. alternativas;
+6. sinal;
+7. feedback;
+8. proxima acao.
+
+Nunca:
+
+- esconder pergunta;
+- esconder feedback;
+- deixar botao morto;
+- bloquear texto por imagem/audio;
+- mostrar erro tecnico cru;
+- perder scroll.
+
+======================================================================
+17. ROADMAP DE EXECUCAO
+======================================================================
+
+FASE 0 - Congelamento e limpeza
+
+- Garantir main limpo.
+- Marcar baseline de testes/build.
+- Criar suite de APK real.
+- Definir devices de teste.
+
+FASE 1 - Prova real de APK
+
+- Instalar APK;
+- login;
+- credito;
+- objetivo;
+- T00;
+- T02;
+- aula;
+- A/B/C;
+- sinal;
+- feedback;
+- duvida;
+- backup;
+- sync.
+
+FASE 2 - Estado pedagogico 10x
+
+- SkillNode;
+- MasteryEvidence;
+- MasteryTruthEngine v2;
+- SpacedReviewScheduler;
+- LearningEventLog ampliado.
+
+FASE 3 - Aula 10x
+
+- ClassroomScrollCoordinator;
+- feedback acionavel;
+- exemplo resolvido/fading;
+- historico recolhivel;
+- modo foco;
+- acessibilidade.
+
+FASE 4 - Revisao e recuperacao 10x
+
+- revisao espacada;
+- recuperacao por prerequisito;
+- retorno seguro;
+- bloqueio de conclusao justificado.
+
+FASE 5 - Duvida multimodal 10x
+
+- foto real;
+- audio do aluno;
+- OCR;
+- contexto completo;
+- mini-check;
+- nao alterar progresso principal sem regra.
+
+FASE 6 - Painel do aluno
+
+- mapa de dominio;
+- agenda de revisao;
+- metas;
+- alertas.
+
+FASE 7 - Painel responsavel
+
+- resumo humano;
+- recomendacoes;
+- export PDF;
+- privacidade.
+
+FASE 8 - Offline/sync/backup premium
+
+- queue robusta;
+- conflitos por evento;
+- backup versionado;
+- import report;
+- multi-device real.
+
+FASE 9 - AI quality harness
+
+- dataset de avaliacao;
+- regressao de prompts;
+- custos;
+- latencia;
+- validacao de contrato.
+
+FASE 10 - Otimizacao e loja
+
+- performance;
+- acessibilidade final;
+- crash reporting;
+- observabilidade;
+- hardening OWASP;
+- release pipeline.
+
+======================================================================
+18. BACKLOG CONSTRUTIVO
+======================================================================
+
+EPICO 1 - Grafo de habilidades
+
+- Criar SkillNode model.
+- Mapear CurriculumItem -> SkillNode.
+- Persistir skill graph em StudentLearningState.
+- Import/export/sync.
+- Teste roundtrip.
+
+EPICO 2 - Evidencia de dominio
+
+- Criar MasteryEvidence.
+- Capturar tempo de resposta.
+- Capturar sinal.
+- Capturar duvida.
+- Capturar revisao/recuperacao.
+- Atualizar MasteryTruthEngine.
+
+EPICO 3 - Revisao espacada
+
+- Criar scheduler.
+- Criar fila.
+- UI de agenda.
+- Testes de intervalo.
+
+EPICO 4 - Recuperacao por prerequisito
+
+- Criar prerequisite resolver.
+- Criar recovery prompt contract.
+- Validar retorno.
+- Testar bloqueio/liberacao de conclusao.
+
+EPICO 5 - Duvida multimodal
+
+- Audio do aluno.
+- OCR seguro.
+- Foto com compressao.
+- Context payload.
+- Mini-check opcional.
+
+EPICO 6 - Aula mobile perfeita
+
+- ScrollCoordinator.
+- Semantics.
+- Alto contraste.
+- Fonte ajustavel.
+- Historico recolhivel.
+- Feedback acionavel.
+
+EPICO 7 - Painel do aluno
+
+- Mastery map.
+- Review queue.
+- Progress narrative.
+- Export/resume.
+
+EPICO 8 - Pai/responsavel
+
+- Weekly report.
+- Alerts.
+- Privacy filters.
+- Export PDF.
+
+EPICO 9 - Observabilidade pedagogica
+
+- Learning events.
+- Metrics dashboard.
+- Quality alerts.
+- Prompt regression.
+
+EPICO 10 - Offline-first robusto
+
+- Local source of truth.
+- Sync queue.
+- Conflict resolver.
+- WorkManager/Android background sync equivalent.
+
+======================================================================
+19. CRITERIOS DE ACEITE 10X
+======================================================================
+
+Um engenheiro so pode declarar concluido quando:
+
+- teste unitario passa;
+- teste widget passa;
+- teste de integracao passa quando aplicavel;
+- build release passa;
+- APK real passa fluxo;
+- documentacao atualizada;
+- evento pedagogico registrado;
+- estado persistido;
+- sync nao quebra;
+- backup nao perde;
+- acessibilidade basica validada;
+- sem segredo;
+- sem mock production;
+- sem fallback falso;
+- sem log sensivel.
+
+Critérios de produto:
+
+- aluno entende o que fazer;
+- aluno nao fica preso;
+- feedback ensina;
+- revisao aparece quando precisa;
+- recuperacao resolve prerequisito;
+- duvida ajuda sem baguncar progresso;
+- app retoma no ponto certo;
+- pai/responsavel entende progresso;
+- dados viajam entre dispositivos.
+
+======================================================================
+20. COMO MEDIR SE FICOU 10X MELHOR QUE O WEB
+======================================================================
+
+Comparar SIM Web atual vs SIM Flutter 10x:
+
+1. Time to first lesson.
+2. Time to first answer.
+3. Percentual de aulas concluidas.
+4. Retencao 24h/7d.
+5. Taxa de erro repetido.
+6. Taxa de falsa confianca.
+7. Taxa de duvida resolvida.
+8. Recuperacao concluida com sucesso.
+9. Revisao feita no prazo.
+10. Progresso entre dispositivos.
+11. Uso offline sem perda.
+12. Acessibilidade TalkBack.
+13. Crash-free sessions.
+14. Custo medio por aula.
+15. Latencia T00/T02.
+16. Taxa de contrato IA invalido.
+17. Taxa de aula falsa: deve ser zero.
+18. NPS/avaliacao do aluno.
+19. Clareza para responsavel.
+20. Prova real: aluno aprende mais em teste posterior.
+
+======================================================================
+21. DEFINICAO FINAL DE SUCESSO
+======================================================================
+
+O SIM Flutter 10x esta pronto quando:
+
+- um aluno novo entra, define objetivo, recebe curriculo e aprende sem ajuda;
+- um aluno recorrente retoma exatamente onde parou;
+- o app sabe o que revisar hoje;
+- o app sabe quando recuperar prerequisito;
+- a duvida com foto funciona naturalmente;
+- a aula nao depende de imagem/audio para andar;
+- o backup Web/App funciona;
+- o segundo dispositivo recupera a mesma vida escolar;
+- TalkBack consegue operar a aula;
+- o responsavel entende o progresso;
+- a IA e controlada por contrato;
+- testes e APK real provam;
+- nenhum orgao da Planta-Mae foi violado.
+
+Quando esta planta for executada, o Flutter nao sera "o Web no celular".
+Ele sera o SIM como app de ensino nativo: mais pessoal, mais persistente,
+mais adaptativo, mais acessivel, mais confiavel e pedagogicamente mais forte.
+
