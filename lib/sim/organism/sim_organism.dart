@@ -130,10 +130,14 @@ class SimOrganism {
     final cache = LessonMaterialCache();
     cache.hydrateFromPreferences(prefs);
     final eventBus = LessonEventBus();
+    final visualPipeline = LessonVisualPipeline(
+      imageClient: SimServerLessonImageClient(config: aiConfig),
+    );
     final orchestrator = LessonOrchestrator(
       t02Client: t02Client,
       cache: cache,
       bus: eventBus,
+      visualPipeline: visualPipeline,
     );
     final readyWindowEngine = DopamineReadyWindowEngine(
       service: stateService,
@@ -253,10 +257,6 @@ class SimOrganism {
       mediaService: mediaService,
       preference: audioPreference,
     );
-    final visualPipeline = LessonVisualPipeline(
-      imageClient: SimServerLessonImageClient(config: aiConfig),
-    );
-
     final returnStore = PaymentReturnStore();
     final creditsController = CreditsRouteController(
       creditsFunctions: SimServerCreditsClient(config: aiConfig),

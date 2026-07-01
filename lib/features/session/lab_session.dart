@@ -30,6 +30,7 @@ import '../../session/entry_form_state.dart';
 import '../../session/lesson_ui_state.dart';
 import '../../session/navigation_state.dart';
 import '../../sim/lesson/lesson_models.dart';
+import '../../sim/lesson/lesson_event_bus.dart';
 import '../../sim/media/audio_core.dart';
 import '../../sim/media/audio_preference.dart';
 import '../../sim/media/doubt_audio.dart';
@@ -121,6 +122,11 @@ class LabSession extends ChangeNotifier {
   );
   LessonAudioController? _lessonAudioController;
   DoubtAudio? _doubtAudio;
+  String? _activeLessonMediaKey;
+  void Function()? _lessonImageUnsubscribe;
+  void Function()? _lessonImageOfferUnsubscribe;
+  LessonPaidImageOffer? _activePaidImageOffer;
+  final Set<String> _declinedPaidImageOfferKeys = {};
   String? lessonImageOfferId;
   bool lessonImageOfferLoading = false;
 
@@ -978,6 +984,12 @@ class LabSession extends ChangeNotifier {
   JsonMap? get currentVisualTrigger => aulaSnapshot?.conteudo?.visualTrigger;
 
   String? get lessonPaidImagePrompt {
+    final offer = _activePaidImageOffer;
+    if (offer != null &&
+        !_declinedPaidImageOfferKeys.contains(offer.offerId) &&
+        aulaSnapshot?.imagem == null) {
+      return offer.prompt;
+    }
     final vt = currentVisualTrigger;
     if (vt == null || aulaSnapshot?.imagem != null) return null;
     final decision = decideVisualGeneration({
@@ -990,6 +1002,8 @@ class LabSession extends ChangeNotifier {
       lessonPaidImagePrompt != null && imageStatus != 'declined';
 
   String _lessonImageKey() {
+    final offer = _activePaidImageOffer;
+    if (offer != null) return offer.lessonKey;
     final id = lessonLocalId ?? 'lesson';
     final marker = aulaSnapshot?.itemMarker ?? 'item';
     final layer = currentAulaLayer.name;
@@ -1008,9 +1022,100 @@ class LabSession extends ChangeNotifier {
     return (hash & 0xffffffff).toRadixString(36);
   }
 
+  void _bindActiveLessonMedia(SimOrganism organism) {
+    final key = organism.lessonRuntimeEngine.activeLessonKey();
+    if (key == null || key == _activeLessonMediaKey) return;
+    _lessonImageUnsubscribe?.call();
+    _lessonImageOfferUnsubscribe?.call();
+    _activeLessonMediaKey = key;
+    _activePaidImageOffer = null;
+    _lessonImageUnsubscribe = organism.eventBus.subscribe(key, (lesson) {
+      if (lesson.imagem == null || lesson.imagem!.trim().isEmpty) return;
+      final applied = organism.lessonRuntimeEngine.applyLessonUpdateForKey(
+        key,
+        lesson,
+      );
+      if (!applied) return;
+      aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+      imageStatus = 'ready';
+      imageError = null;
+      _activePaidImageOffer = null;
+      organism.eventBus.clearPaidImageOffer(key);
+      notifyListeners();
+    });
+    _lessonImageOfferUnsubscribe = organism.eventBus.subscribePaidImageOffer(
+      key,
+      (offer) {
+        if (offer == null) {
+          if (_activePaidImageOffer?.lessonKey == key) {
+            _activePaidImageOffer = null;
+          }
+          notifyListeners();
+          return;
+        }
+        if (_declinedPaidImageOfferKeys.contains(offer.offerId)) return;
+        if (aulaSnapshot?.imagem != null) return;
+        _activePaidImageOffer = offer;
+        lessonImageOfferId = offer.offerId;
+        if (imageStatus != 'loading') imageStatus = 'offer';
+        notifyListeners();
+      },
+    );
+  }
+
+  LessonMediaPosition? _activeImageMediaPosition() {
+    final id = lessonLocalId;
+    if (id == null || id.trim().isEmpty) return null;
+    return LessonMediaPosition(
+      lessonLocalId: id,
+      itemMarker: aulaSnapshot?.itemMarker,
+      layer: currentAulaLayer,
+    );
+  }
+
+  void _markLessonImageStarted(String? cacheKey) {
+    final id = lessonLocalId;
+    final position = _activeImageMediaPosition();
+    if (id == null || position == null || canonicalStore == null) return;
+    _audioControllerFor(
+      id,
+    ).mediaService.markLessonImageStarted(position, cacheKey: cacheKey);
+  }
+
+  void _markLessonImageReady({
+    required String? cacheKey,
+    required String imageUrl,
+  }) {
+    final id = lessonLocalId;
+    final position = _activeImageMediaPosition();
+    if (id == null || position == null || canonicalStore == null) return;
+    _audioControllerFor(id).mediaService.markLessonImageReady(
+      position,
+      cacheKey: cacheKey,
+      imageUrl: imageUrl,
+    );
+  }
+
+  void _markLessonImageFailed(String error) {
+    final id = lessonLocalId;
+    final position = _activeImageMediaPosition();
+    if (id == null || position == null || canonicalStore == null) return;
+    _audioControllerFor(
+      id,
+    ).mediaService.markLessonImageFailed(position, error: error);
+  }
+
   void declineLessonPaidImage() {
+    final offer = _activePaidImageOffer;
+    if (offer != null) {
+      _declinedPaidImageOfferKeys.add(offer.offerId);
+      _activeOrganism?.eventBus.clearPaidImageOffer(offer.lessonKey);
+    }
+    _activePaidImageOffer = null;
     imageStatus = 'declined';
     imageError = null;
+    lessonUiState.imageRequestId = null;
+    lessonUiState.imageRetryable = null;
     lessonImageOfferId = null;
     notifyListeners();
   }
@@ -1021,34 +1126,65 @@ class LabSession extends ChangeNotifier {
   }
 
   Future<void> acceptLessonPaidImage() async {
-    final prompt = lessonPaidImagePrompt;
+    final offer = _activePaidImageOffer;
+    final prompt = offer?.prompt ?? lessonPaidImagePrompt;
     if (prompt == null || lessonImageOfferLoading) return;
-    final key = _lessonImageKey();
+    final key = offer?.lessonKey ?? _lessonImageKey();
     final offerId =
-        lessonImageOfferId ?? _stableLessonImageOfferId(key, prompt);
+        offer?.offerId ??
+        lessonImageOfferId ??
+        _stableLessonImageOfferId(key, prompt);
     lessonImageOfferId = offerId;
     lessonImageOfferLoading = true;
     imageStatus = 'loading';
     imageError = null;
+    lessonUiState.imageRequestId = null;
+    lessonUiState.imageCacheKey = null;
+    lessonUiState.imageCharged = null;
+    lessonUiState.imageCacheHit = null;
+    lessonUiState.imageRetryable = null;
+    _markLessonImageStarted(offerId);
     notifyListeners();
     try {
-      final dataUrl = await SimServerLessonImageClient(config: _serverConfig())
-          .generateLessonImage(
+      final response = await SimServerLessonImageClient(config: _serverConfig())
+          .generateLessonImageResponse(
             prompt: prompt,
             lessonKey: key,
             acceptedOfferId: offerId,
             idempotencyKey: offerId,
           );
+      final dataUrl = response?.dataUrl;
       if (dataUrl == null || dataUrl.trim().isEmpty) {
         throw StateError('Imagem indisponivel.');
       }
+      lessonUiState.imageRequestId = response?.requestId;
+      lessonUiState.imageCacheKey = response?.cacheKey;
+      lessonUiState.imageCharged = response?.charged;
+      lessonUiState.imageCacheHit = response?.cacheHit;
+      lessonUiState.imageRetryable = response?.retryable;
       aulaSnapshot = aulaSnapshot?.copyWith(
         imagem: compressImageDataUrl(dataUrl),
       );
       imageStatus = 'ready';
-    } catch (_) {
+      _activePaidImageOffer = null;
+      _activeOrganism?.eventBus.clearPaidImageOffer(key);
+      _markLessonImageReady(cacheKey: response?.cacheKey, imageUrl: dataUrl);
+    } on SimExternalAiException catch (error) {
+      lessonUiState.imageRequestId = error.requestId;
+      lessonUiState.imageRetryable = error.retryable;
       imageStatus = 'error';
       imageError = 'Imagem indisponível. A aula continua sem imagem.';
+      _markLessonImageFailed(
+        [
+          if (error.code != null) error.code,
+          if (error.statusCode != null) 'HTTP ${error.statusCode}',
+          if (error.requestId != null) 'requestId=${error.requestId}',
+        ].whereType<String>().join(' | '),
+      );
+    } catch (error) {
+      imageStatus = 'error';
+      imageError = 'Imagem indisponível. A aula continua sem imagem.';
+      _markLessonImageFailed(error.toString());
     } finally {
       lessonImageOfferLoading = false;
       notifyListeners();
@@ -1135,6 +1271,7 @@ class LabSession extends ChangeNotifier {
         authReady: authReady,
         authed: authed,
       );
+      _bindActiveLessonMedia(organism);
       if (aulaSnapshot?.hasCurriculum != true) {
         aulaRuntimeError = 'Aula sem curriculo no Estado do aluno.';
       }
@@ -1180,6 +1317,7 @@ class LabSession extends ChangeNotifier {
     final organism = _activeOrganism ?? _organismForActiveLesson();
     organism.lessonRuntimeEngine.select(answer);
     aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+    _bindActiveLessonMedia(organism);
     notifyListeners();
   }
 
@@ -1213,6 +1351,7 @@ class LabSession extends ChangeNotifier {
     try {
       await organism.lessonRuntimeEngine.signal(signal);
       aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+      _bindActiveLessonMedia(organism);
       _persistActiveLessonToCloud();
     } catch (error) {
       aulaRuntimeError = error.toString();
@@ -1237,6 +1376,7 @@ class LabSession extends ChangeNotifier {
     try {
       await organism.lessonRuntimeEngine.advance();
       aulaSnapshot = organism.lessonRuntimeEngine.snapshot();
+      _bindActiveLessonMedia(organism);
       _persistActiveLessonToCloud();
     } catch (error) {
       aulaRuntimeError = error.toString();
@@ -1423,6 +1563,8 @@ class LabSession extends ChangeNotifier {
     authSession.removeListener(_notifyFromChild);
     navigationState.removeListener(_notifyFromChild);
     lessonUiState.removeListener(_notifyFromChild);
+    _lessonImageUnsubscribe?.call();
+    _lessonImageOfferUnsubscribe?.call();
     authSession.dispose();
     _lessonAudioController?.pararAudio();
     _doubtAudio?.stopDoubtAudio();

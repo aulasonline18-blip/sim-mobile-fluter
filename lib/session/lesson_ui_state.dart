@@ -62,11 +62,17 @@ class LessonUiState extends ChangeNotifier {
     doubt = DoubtState.idle;
     notifyListeners();
   }
+
   bool audioPlaying = false;
   bool audioLoading = false;
   String? audioError;
   String imageStatus = 'idle';
   String? imageError;
+  String? imageRequestId;
+  String? imageCacheKey;
+  bool? imageCharged;
+  bool? imageCacheHit;
+  bool? imageRetryable;
   String deleteConfirmation = '';
   String? accountDeletionMessage;
 
@@ -94,6 +100,11 @@ class LessonUiState extends ChangeNotifier {
     doubtOpen = false;
     imageStatus = 'idle';
     imageError = null;
+    imageRequestId = null;
+    imageCacheKey = null;
+    imageCharged = null;
+    imageCacheHit = null;
+    imageRetryable = null;
     notifyListeners();
   }
 

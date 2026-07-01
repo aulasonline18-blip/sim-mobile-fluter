@@ -26,9 +26,27 @@ class GenerateLessonImageRequest {
 }
 
 class GenerateLessonImageResponse {
-  const GenerateLessonImageResponse({required this.dataUrl});
+  const GenerateLessonImageResponse({
+    required this.dataUrl,
+    this.cacheKey,
+    this.requestId,
+    this.mimeType,
+    this.provider,
+    this.model,
+    this.charged,
+    this.cacheHit,
+    this.retryable,
+  });
 
   final String dataUrl;
+  final String? cacheKey;
+  final String? requestId;
+  final String? mimeType;
+  final String? provider;
+  final String? model;
+  final bool? charged;
+  final bool? cacheHit;
+  final bool? retryable;
 }
 
 const String lessonImageModelPath = 'google/nano-banana-pro';

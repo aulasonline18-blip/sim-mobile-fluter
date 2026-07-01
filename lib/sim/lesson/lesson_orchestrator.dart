@@ -1,8 +1,5 @@
 // MIRROR OF: src/cyber/lesson-orchestrator.ts (Web, source of truth)
-import '../media/math_templates/math_templates.dart';
-import '../media/s12_visual_pipeline.dart';
-import '../media/visual_router_n2.dart';
-import '../media/visual_router_n3.dart';
+import '../media/lesson_visual_pipeline.dart';
 import '../modules/pedagogical_module_contracts.dart';
 import '../state/student_learning_state.dart';
 import 'lesson_event_bus.dart';
@@ -15,12 +12,16 @@ class LessonOrchestrator {
     required this.t02Client,
     required this.cache,
     required this.bus,
+    LessonVisualPipeline? visualPipeline,
     this.onAudioTextReady,
-  });
+  }) : _visualPipeline =
+           visualPipeline ??
+           LessonVisualPipeline(imageClient: const _NoopLessonImageClient());
 
   final T02LessonClient t02Client;
   final LessonMaterialCache cache;
   final LessonEventBus bus;
+  final LessonVisualPipeline _visualPipeline;
   void Function(CompleteLessonParams params, CompleteLesson lesson)?
   onAudioTextReady;
   final Map<String, Future<CompleteLesson>> _textInflight = {};
@@ -73,74 +74,71 @@ class LessonOrchestrator {
     return future;
   }
 
-  // D2.1: image pipeline — SVG math templates (free) + S12 software route.
-  // Paid AI images handled by PaidImageService after offer accepted.
+  // D2.1: image pipeline — central funnel: software first, paid offer only.
   Future<void> _fetchImage(
     CompleteLessonParams params,
     CompleteLesson lesson,
   ) async {
     final key = lessonKeyFor(params);
     final vt = lesson.conteudo.visualTrigger;
-
-    // Caminho 1: math template (SVG puro, custo zero)
-    final mathSvg = tryRenderMathTemplate(vt);
-    if (mathSvg != null) {
-      final updated = CompleteLesson(
-        conteudo: lesson.conteudo,
-        imagem: mathSvg,
-        audioText: lesson.audioText,
-      );
-      cache.put(key, updated);
-      bus.notify(key, updated);
+    final trigger = LessonVisualTrigger.fromJson(vt);
+    if (!trigger.needsImage || trigger.pedagogicalNeed == 'none') {
       return;
     }
 
-    // Caminho 2: S12 software route (SVG inline, custo zero)
-    final decision = decideVisualGeneration(
-      vt != null ? {'visual_trigger': Map<String, dynamic>.from(vt)} : null,
-      const VisualDecisionContext(allowPaidImages: false),
+    final result = await _visualPipeline.resolveVisual(
+      trigger: trigger,
+      lessonKey: key,
+      stableLang: params.lang,
+      allowPaidImages: false,
     );
-    if (decision.svg != null) {
-      final updated = CompleteLesson(
-        conteudo: lesson.conteudo,
-        imagem: decision.svg,
-        audioText: lesson.audioText,
+    if (result.hasImage) {
+      _publishImage(key, lesson, result.displayUrl!);
+      return;
+    }
+    if (result.source == 'skip_no_paid' || result.source == 'skip_no_offer') {
+      _publishPaidImageOffer(
+        key: key,
+        params: params,
+        trigger: trigger,
+        source: result.source,
       );
-      cache.put(key, updated);
-      bus.notify(key, updated);
-      return;
     }
-    if (vt == null ||
-        vt['needs_image'] != true ||
-        vt['pedagogical_need'] == 'none') {
-      return;
-    }
+  }
 
-    final n2 = classifyVisualByKeywords(
-      topic: vt['topic']?.toString(),
-      visualType: vt['visual_type']?.toString(),
-      imagePrompt: vt['image_prompt']?.toString(),
+  void _publishImage(String key, CompleteLesson lesson, String imageData) {
+    final updated = CompleteLesson(
+      conteudo: lesson.conteudo,
+      imagem: imageData,
+      audioText: lesson.audioText,
     );
-    if (n2.verdict == VisualVerdict.svg ||
-        n2.verdict == VisualVerdict.ambiguous) {
-      final n3 = routeVisualCheapN3(
-        n2: n2,
-        topic: vt['topic']?.toString(),
-        visualType: vt['visual_type']?.toString(),
-        imagePrompt: vt['image_prompt']?.toString(),
-      );
-      if (n3.verdict == VisualVerdict.svg && n3.svgDataUrl != null) {
-        final updated = CompleteLesson(
-          conteudo: lesson.conteudo,
-          imagem: n3.svgDataUrl,
-          audioText: lesson.audioText,
-        );
-        cache.put(key, updated);
-        bus.notify(key, updated);
-      }
-    }
-    // Se decision.generate == true e allowPaidImages==false → PaidImageService
-    // emite oferta separada. Orchestrator não cobra crédito aqui.
+    cache.put(key, updated);
+    bus.clearPaidImageOffer(key);
+    bus.notify(key, updated);
+  }
+
+  void _publishPaidImageOffer({
+    required String key,
+    required CompleteLessonParams params,
+    required LessonVisualTrigger trigger,
+    required String source,
+  }) {
+    final prompt = _visualPipeline.buildPromptForTrigger(
+      topic: trigger.topic ?? params.item,
+      trigger: trigger,
+      lang: params.lang,
+    );
+    if (prompt.trim().isEmpty) return;
+    bus.notifyPaidImageOffer(
+      key,
+      LessonPaidImageOffer(
+        offerId: _stableOfferId(key, prompt),
+        lessonKey: key,
+        prompt: prompt,
+        creditCost: 10,
+        source: source,
+      ),
+    );
   }
 
   Future<CompleteLesson> _fetchText(CompleteLessonParams params) async {
@@ -189,6 +187,33 @@ class LessonOrchestrator {
     bus.notify(key, lesson);
     onAudioTextReady?.call(params, lesson);
     return lesson;
+  }
+}
+
+String _stableOfferId(String lessonKey, String prompt) {
+  return 'img_offer_${_stableHash('$lessonKey|${prompt.trim()}')}';
+}
+
+String _stableHash(String input) {
+  var hash = 5381;
+  for (final unit in input.codeUnits) {
+    hash = ((hash << 5) + hash) ^ unit;
+  }
+  return (hash & 0xffffffff).toRadixString(36);
+}
+
+class _NoopLessonImageClient implements LessonImageClient {
+  const _NoopLessonImageClient();
+
+  @override
+  Future<String?> generateLessonImage({
+    required String prompt,
+    required String lessonKey,
+    String aspectRatio = '1:1',
+    String? acceptedOfferId,
+    String? idempotencyKey,
+  }) async {
+    return null;
   }
 }
 

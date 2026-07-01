@@ -492,6 +492,43 @@ void main() {
     },
   );
 
+  test('lesson image media events preserve cache key item and layer', () {
+    var state = StudentLearningState.empty(lessonLocalId: 'l1');
+    final service = StudentLessonMediaService(
+      audioCore: AudioCore(
+        preference: AudioPreference(),
+        playback: CountingPlaybackAdapter(),
+        generatedAudioClient: FakeGeneratedAudioClient(),
+      ),
+      readState: (_) => state,
+      writeState: (next) => state = next,
+    );
+    const position = LessonMediaPosition(
+      lessonLocalId: 'l1',
+      itemMarker: 'M1',
+      layer: LessonLayer.l2,
+    );
+
+    service.markLessonImageStarted(position, cacheKey: 'image:user:a');
+    service.markLessonImageReady(
+      position,
+      cacheKey: 'image:user:a',
+      imageUrl: 'data:image/png;base64,AAAA',
+    );
+    service.markLessonImageFailed(position, error: 'requestId=rid-1');
+
+    expect(state.events.map((event) => event.type), [
+      'IMAGE_STARTED',
+      'IMAGE_READY',
+      'IMAGE_FAILED',
+    ]);
+    expect(state.events[0].payload['cacheKey'], 'image:user:a');
+    expect(state.events[0].payload['itemMarker'], 'M1');
+    expect(state.events[0].payload['layer'], 2);
+    expect(state.events[1].payload['imageUrlHead'], startsWith('data:image'));
+    expect(state.events[2].payload['errorMessage'], 'requestId=rid-1');
+  });
+
   test('visual prompt preserves language directive and image validation', () {
     final prompt = buildNaturalImagePrompt(
       topic: 'Intestino',
@@ -554,6 +591,30 @@ void main() {
       expect(result.source, 'n3_software');
       expect(result.displayUrl, startsWith('data:image/svg+xml;utf8,'));
       expect(client.calls, 0);
+    },
+  );
+
+  test(
+    'N3 local generates domain-specific SVG instead of generic sequence',
+    () {
+      final n2 = classifyVisualByKeywords(
+        topic: 'segunda lei de Newton',
+        visualType: 'diagram',
+        imagePrompt: 'diagrama de forca resultante em um bloco',
+      );
+
+      final n3 = routeVisualCheapN3(
+        n2: n2,
+        topic: 'segunda lei de Newton',
+        visualType: 'diagram',
+        imagePrompt: 'diagrama de forca resultante em um bloco',
+      );
+      final decoded = Uri.decodeFull(n3.svgDataUrl ?? '');
+
+      expect(n3.verdict, VisualVerdict.svg);
+      expect(decoded, contains('corpo'));
+      expect(decoded, contains('atrito'));
+      expect(decoded, isNot(contains('>1</text>')));
     },
   );
 

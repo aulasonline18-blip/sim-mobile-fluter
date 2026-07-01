@@ -156,6 +156,32 @@ void main() {
     expect(transport.lastHeaders?['x-request-id'], startsWith('sim-img-'));
   });
 
+  test('imagem preserva metadados tecnicos de sucesso', () async {
+    final transport = RecordingTransport()
+      ..jsonBody =
+          '{"dataUrl":"data:image/png;base64,abc","cacheKey":"image:user:key","requestId":"rid-ok","charged":true,"cache_hit":false,"mime_type":"image/png","provider":"gemini","model":"gemini-image"}';
+    final client = SimServerLessonImageClient(
+      config: config(),
+      transport: transport,
+    );
+
+    final response = await client.generateLessonImageResponse(
+      prompt: 'uma figura didática',
+      lessonKey: 'lesson-1',
+      acceptedOfferId: 'offer-1',
+      idempotencyKey: 'offer-1',
+    );
+
+    expect(response?.dataUrl, startsWith('data:image/png;base64,'));
+    expect(response?.cacheKey, 'image:user:key');
+    expect(response?.requestId, 'rid-ok');
+    expect(response?.charged, isTrue);
+    expect(response?.cacheHit, isFalse);
+    expect(response?.mimeType, 'image/png');
+    expect(response?.provider, 'gemini');
+    expect(response?.model, 'gemini-image');
+  });
+
   test('audio usa /api/generate-lesson-audio e devolve dataUrl', () async {
     final transport = RecordingTransport()
       ..jsonBody =

@@ -80,6 +80,46 @@ class LessonRuntimeEngine {
   LessonPositionState? _position;
   LessonSessionSnapshot? _session;
 
+  CompleteLessonParams? activeLessonParams() {
+    final position = _position;
+    final session = _session;
+    final item = position?.itemAtivo;
+    if (position == null || session == null || item == null) return null;
+    final currentState = stateService.read(session.lessonLocalId);
+    return CompleteLessonParams(
+      lessonLocalId: session.lessonLocalId,
+      item: item.text,
+      lang: session.idioma,
+      academic: session.academic,
+      layer: position.layer,
+      mode: LessonMode.session,
+      errCount: position.erros,
+      history: position.historia,
+      marker: item.marker,
+      amparoLvl: currentState?.progress?.amparoLvl,
+      pedagogicalEnvelope: currentState?.profile.toJson() ?? const {},
+    );
+  }
+
+  String? activeLessonKey() {
+    final params = activeLessonParams();
+    return params == null ? null : lessonKeyFor(params);
+  }
+
+  bool applyLessonUpdateForKey(String key, CompleteLesson lesson) {
+    final position = _position;
+    final activeKey = activeLessonKey();
+    if (position == null || activeKey == null || activeKey != key) {
+      return false;
+    }
+    position.conteudo = lesson.conteudo;
+    position.imagem = lesson.imagem;
+    if (lesson.imagem != null && lesson.imagem!.trim().isNotEmpty) {
+      position.teoriaPronta = true;
+    }
+    return true;
+  }
+
   Future<LessonRuntimeSnapshot> open({
     required String lessonLocalId,
     bool authReady = true,

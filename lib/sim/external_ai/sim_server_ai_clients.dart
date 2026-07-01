@@ -77,6 +77,23 @@ class SimServerLessonImageClient implements LessonImageClient {
     String? acceptedOfferId,
     String? idempotencyKey,
   }) async {
+    final response = await generateLessonImageResponse(
+      prompt: prompt,
+      lessonKey: lessonKey,
+      aspectRatio: aspectRatio,
+      acceptedOfferId: acceptedOfferId,
+      idempotencyKey: idempotencyKey,
+    );
+    return response?.dataUrl;
+  }
+
+  Future<GenerateLessonImageResponse?> generateLessonImageResponse({
+    required String prompt,
+    required String lessonKey,
+    String aspectRatio = '1:1',
+    String? acceptedOfferId,
+    String? idempotencyKey,
+  }) async {
     final request = GenerateLessonImageRequest(
       prompt: prompt,
       lessonKey: lessonKey,
@@ -108,7 +125,26 @@ class SimServerLessonImageClient implements LessonImageClient {
     }
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) return null;
-    return decoded['dataUrl']?.toString();
+    final dataUrl = decoded['dataUrl']?.toString() ?? '';
+    if (dataUrl.trim().isEmpty) return null;
+    return GenerateLessonImageResponse(
+      dataUrl: dataUrl,
+      cacheKey: decoded['cacheKey']?.toString(),
+      requestId: decoded['requestId']?.toString() ?? requestId,
+      mimeType:
+          decoded['mime_type']?.toString() ?? decoded['mimeType']?.toString(),
+      provider: decoded['provider']?.toString(),
+      model: decoded['model']?.toString(),
+      charged: decoded['charged'] is bool ? decoded['charged'] as bool : null,
+      cacheHit: decoded['cache_hit'] is bool
+          ? decoded['cache_hit'] as bool
+          : decoded['cacheHit'] is bool
+          ? decoded['cacheHit'] as bool
+          : null,
+      retryable: decoded['retryable'] is bool
+          ? decoded['retryable'] as bool
+          : null,
+    );
   }
 }
 

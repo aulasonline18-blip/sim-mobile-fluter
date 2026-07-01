@@ -300,6 +300,75 @@ void main() {
     },
   );
 
+  test(
+    'LessonOrchestrator publishes paid image offer by key after software funnel',
+    () async {
+      final trigger = <String, dynamic>{
+        'needs_image': true,
+        'pedagogical_need': 'important',
+        'render_strategy': 'ai',
+        'topic': 'foto realista de um coracao humano',
+        'visual_type': 'anatomy',
+        'image_prompt': 'foto realista de um coracao humano',
+      };
+      final cache = LessonMaterialCache();
+      final bus = LessonEventBus();
+      final orchestrator = LessonOrchestrator(
+        t02Client: FakeT02Client(visualTrigger: trigger),
+        cache: cache,
+        bus: bus,
+      );
+      const params = CompleteLessonParams(
+        lessonLocalId: 'cyber-paid-offer',
+        item: 'Coracao humano',
+        lang: 'pt-BR',
+        academic: 'fundamental',
+        layer: LessonLayer.l1,
+        mode: LessonMode.session,
+        marker: 'M1',
+      );
+      final key = lessonKeyFor(params);
+      final offers = <LessonPaidImageOffer?>[];
+      final unsubscribe = bus.subscribePaidImageOffer(key, offers.add);
+      addTearDown(unsubscribe);
+
+      await orchestrator.prefetchCompleteLesson(params, priority: 'active');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cache.peek(key)?.imagem, isNull);
+      expect(offers, isNotEmpty);
+      expect(offers.last?.lessonKey, key);
+      expect(offers.last?.offerId, startsWith('img_offer_'));
+      expect(offers.last?.creditCost, 10);
+      expect(offers.last?.prompt, contains('coracao humano'));
+    },
+  );
+
+  test(
+    'LessonEventBus replays pending paid image offer to late subscriber',
+    () {
+      final bus = LessonEventBus();
+      const offer = LessonPaidImageOffer(
+        offerId: 'img_offer_late',
+        lessonKey: 'lesson-key',
+        prompt: 'prompt',
+        creditCost: 10,
+        source: 'skip_no_paid',
+      );
+      bus.notifyPaidImageOffer('lesson-key', offer);
+      final received = <LessonPaidImageOffer?>[];
+      final unsubscribe = bus.subscribePaidImageOffer(
+        'lesson-key',
+        received.add,
+      );
+      addTearDown(unsubscribe);
+
+      expect(received, [offer]);
+      bus.clearPaidImageOffer('lesson-key');
+      expect(received.last, isNull);
+    },
+  );
+
   test('review and recovery requests preserve visual_trigger', () async {
     final trigger = <String, dynamic>{
       'needs_image': true,
