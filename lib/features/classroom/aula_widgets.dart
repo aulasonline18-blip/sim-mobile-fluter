@@ -342,9 +342,14 @@ class _HamburgerBtn extends StatelessWidget {
 }
 
 class LessonImagePanel extends StatelessWidget {
-  const LessonImagePanel({required this.session, super.key});
+  const LessonImagePanel({
+    required this.session,
+    this.onImageSettled,
+    super.key,
+  });
 
   final LabSession session;
+  final VoidCallback? onImageSettled;
 
   @override
   Widget build(BuildContext context) {
@@ -358,151 +363,204 @@ class LessonImagePanel extends StatelessWidget {
     if (!loading && !ready && !offer && error == null) {
       return const SizedBox.shrink();
     }
-    return Container(
-      height: offer
-          ? 228
-          : ready
-          ? 168
-          : 96,
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: simLight,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: simBorder),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Center(
-              child: loading
-                  ? const SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: simDark,
-                      ),
-                    )
-                  : ready
-                  ? _LessonImageView(data: imageData)
-                  : Icon(Icons.broken_image_outlined, size: 34, color: simDark),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportHeight = MediaQuery.sizeOf(context).height;
+        final readyHeight = (viewportHeight * 0.26).clamp(128.0, 220.0);
+        return Container(
+          width: double.infinity,
+          constraints: BoxConstraints(
+            minHeight: loading ? 88 : 0,
+            maxHeight: ready ? readyHeight + 22 : double.infinity,
           ),
-          const SizedBox(height: 10),
-          Text(
-            loading
-                ? 'Gerando imagem da aula...'
-                : ready
-                ? 'Imagem da aula pronta'
-                : offer
-                ? t('aula_img_desc')
-                : error ?? 'Imagem da aula indisponível',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: simDark,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+          padding: EdgeInsets.all(ready ? 10 : 14),
+          decoration: BoxDecoration(
+            color: simLight,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: simBorder),
           ),
-          if (offer) ...[
-            const SizedBox(height: 8),
-            Text(
-              '${t('aula_img_cost', {'n': imageCost})}'
-              '${session.isUnlimited ? '' : t('aula_img_balance', {'n': session.credits})}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: simMuted,
-                fontSize: 12,
-                height: 1.25,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (!hasImageCredits) ...[
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: session.lessonImageOfferLoading
-                          ? null
-                          : session.buyImageCredits,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: simDark,
-                        side: const BorderSide(color: simBorder),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      child: Text(t('aula_buy_credits')),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: session.lessonImageOfferLoading
-                        ? null
-                        : session.declineLessonPaidImage,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: simDark,
-                      side: const BorderSide(color: simBorder),
-                      textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    child: Text(
-                      hasImageCredits
-                          ? t('aula_skip')
-                          : t('aula_continue_no_img'),
-                    ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (loading) ...[
+                const SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: simDark,
                   ),
                 ),
-                if (hasImageCredits) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: session.lessonImageOfferLoading
-                          ? null
-                          : session.acceptLessonPaidImage,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: simDark,
-                        side: const BorderSide(color: simBorder),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      child: session.lessonImageOfferLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: simDark,
-                              ),
-                            )
-                          : Text(t('aula_view_img', {'n': imageCost})),
+                const SizedBox(height: 10),
+              ],
+              if (ready)
+                Semantics(
+                  label: 'Imagem da aula',
+                  image: true,
+                  child: SizedBox(
+                    height: readyHeight,
+                    width: constraints.maxWidth,
+                    child: LessonMediaImageView(
+                      data: imageData,
+                      onImageSettled: onImageSettled,
                     ),
                   ),
-                ],
+                )
+              else if (!loading && !offer)
+                const LessonImageErrorView(),
+              if (!ready)
+                Text(
+                  loading
+                      ? 'Gerando imagem da aula...'
+                      : offer
+                      ? t('aula_img_desc')
+                      : error ?? 'Imagem indisponível. A aula continua.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: simDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              if (offer) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${t('aula_img_cost', {'n': imageCost})}'
+                  '${session.isUnlimited ? '' : t('aula_img_balance', {'n': session.credits})}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: simMuted,
+                    fontSize: 12,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (!hasImageCredits) ...[
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: session.lessonImageOfferLoading
+                              ? null
+                              : session.buyImageCredits,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: simDark,
+                            side: const BorderSide(color: simBorder),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: Text(t('aula_buy_credits')),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: session.lessonImageOfferLoading
+                            ? null
+                            : session.declineLessonPaidImage,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: simDark,
+                          side: const BorderSide(color: simBorder),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        child: Text(
+                          hasImageCredits
+                              ? t('aula_skip')
+                              : t('aula_continue_no_img'),
+                        ),
+                      ),
+                    ),
+                    if (hasImageCredits) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: session.lessonImageOfferLoading
+                              ? null
+                              : session.acceptLessonPaidImage,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: simDark,
+                            side: const BorderSide(color: simBorder),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: session.lessonImageOfferLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: simDark,
+                                  ),
+                                )
+                              : Text(t('aula_view_img', {'n': imageCost})),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
-            ),
-          ],
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-class _LessonImageView extends StatelessWidget {
-  const _LessonImageView({required this.data});
+class LessonMediaImageView extends StatefulWidget {
+  const LessonMediaImageView({
+    required this.data,
+    this.compact = false,
+    this.onImageSettled,
+    super.key,
+  });
 
   final String data;
+  final bool compact;
+  final VoidCallback? onImageSettled;
+
+  @override
+  State<LessonMediaImageView> createState() => _LessonMediaImageViewState();
+}
+
+class _LessonMediaImageViewState extends State<LessonMediaImageView> {
+  bool _settled = false;
+
+  @override
+  void didUpdateWidget(covariant LessonMediaImageView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data != widget.data) {
+      _settled = false;
+    }
+  }
+
+  void _notifySettled() {
+    if (_settled) return;
+    _settled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onImageSettled?.call();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final trimmed = data.trim();
+    final trimmed = widget.data.trim();
     if (trimmed.startsWith('data:image/svg+xml')) {
       final svg = _decodeSvgDataUrl(trimmed);
       if (svg != null) {
+        _notifySettled();
         return SvgPicture.string(svg, fit: BoxFit.contain);
       }
+      _notifySettled();
+      return LessonImageErrorView(compact: widget.compact);
     }
     if (trimmed.startsWith('data:image/')) {
       final comma = trimmed.indexOf(',');
@@ -512,19 +570,37 @@ class _LessonImageView extends StatelessWidget {
             base64Decode(trimmed.substring(comma + 1)),
             fit: BoxFit.contain,
             gaplessPlayback: true,
+            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+              if (wasSynchronouslyLoaded || frame != null) _notifySettled();
+              return child;
+            },
+            errorBuilder: (context, error, stackTrace) {
+              _notifySettled();
+              return LessonImageErrorView(compact: widget.compact);
+            },
           );
-        } catch (_) {}
+        } catch (_) {
+          _notifySettled();
+          return LessonImageErrorView(compact: widget.compact);
+        }
       }
     }
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return Image.network(
         trimmed,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.broken_image_outlined, size: 46, color: simDark),
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) _notifySettled();
+          return child;
+        },
+        errorBuilder: (context, error, stackTrace) {
+          _notifySettled();
+          return LessonImageErrorView(compact: widget.compact);
+        },
       );
     }
-    return const Icon(Icons.broken_image_outlined, size: 46, color: simDark);
+    _notifySettled();
+    return LessonImageErrorView(compact: widget.compact);
   }
 
   String? _decodeSvgDataUrl(String raw) {
@@ -540,6 +616,41 @@ class _LessonImageView extends StatelessWidget {
     } catch (_) {
       return null;
     }
+  }
+}
+
+class LessonImageErrorView extends StatelessWidget {
+  const LessonImageErrorView({this.compact = false, super.key});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Imagem indisponível',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.broken_image_outlined,
+            size: compact ? 26 : 34,
+            color: simMuted,
+          ),
+          if (!compact) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Imagem indisponível',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: simMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

@@ -235,6 +235,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     }
   }
 
+  void _onLessonImageSettled() {
+    _scrollForSnapshot(widget.session.aulaSnapshot);
+  }
+
   bool _hasLessonImagePanel() {
     final imageData = widget.session.aulaSnapshot?.imagem;
     final hasImage = imageData != null && imageData.trim().isNotEmpty;
@@ -586,7 +590,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                           ],
                           if (_hasLessonImagePanel()) ...[
                             const SizedBox(height: 14),
-                            LessonImagePanel(session: session),
+                            LessonImagePanel(
+                              session: session,
+                              onImageSettled: _onLessonImageSettled,
+                            ),
                           ],
                         ],
                       ),
@@ -601,7 +608,10 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (_hasLessonImagePanel()) ...[
-                            LessonImagePanel(session: session),
+                            LessonImagePanel(
+                              session: session,
+                              onImageSettled: _onLessonImageSettled,
+                            ),
                           ],
                         ],
                       ),
@@ -963,11 +973,7 @@ class _QuestionHistoryBlock extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 120, maxHeight: 80),
               color: Colors.white,
               padding: const EdgeInsets.all(4),
-              child: Image.network(
-                entry.imageUrl!,
-                fit: BoxFit.contain,
-                cacheWidth: 240,
-              ),
+              child: LessonMediaImageView(data: entry.imageUrl!, compact: true),
             ),
           ),
           const SizedBox(height: 12),

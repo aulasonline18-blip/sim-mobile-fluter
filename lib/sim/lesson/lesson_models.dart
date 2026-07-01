@@ -80,11 +80,17 @@ class CompleteLesson {
   final String? imagem;
   final String audioText;
 
-  CompleteLesson copyWith({LessonContent? conteudo, String? imagem}) {
+  static const Object _unchanged = Object();
+
+  CompleteLesson copyWith({
+    LessonContent? conteudo,
+    Object? imagem = _unchanged,
+  }) {
+    final nextConteudo = conteudo ?? this.conteudo;
     return CompleteLesson(
-      conteudo: conteudo ?? this.conteudo,
-      imagem: imagem ?? this.imagem,
-      audioText: (conteudo ?? this.conteudo).audioText,
+      conteudo: nextConteudo,
+      imagem: identical(imagem, _unchanged) ? this.imagem : imagem as String?,
+      audioText: nextConteudo.audioText,
     );
   }
 }

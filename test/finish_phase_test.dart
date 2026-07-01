@@ -202,4 +202,108 @@ void main() {
     expect(find.text('Pular'), findsOneWidget);
     expect(find.text('Ver imagem (10 créditos)'), findsOneWidget);
   });
+
+  testWidgets('painel de imagem pronta fica compacto e notifica scroll', (
+    tester,
+  ) async {
+    var settled = 0;
+    final svg = Uri.encodeComponent(
+      '<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
+    );
+    final session = LabSession()
+      ..aulaSnapshot = LessonRuntimeSnapshot(
+        authReady: true,
+        authed: true,
+        hasCurriculum: true,
+        isDone: false,
+        viewModel: const LessonMainViewModel(
+          progress: 0,
+          headerLabel: 'aula_item_of:1/1:aula_layer_1',
+          options: [],
+          locked: false,
+          nextLabel: '',
+        ),
+        phase: ClassroomPhase.reading(),
+        history: const [],
+        conteudo: const LessonContent(
+          explanation: 'Explicacao',
+          question: 'Pergunta?',
+          options: {
+            AnswerLetter.A: 'A',
+            AnswerLetter.B: 'B',
+            AnswerLetter.C: 'C',
+          },
+          correctAnswer: AnswerLetter.A,
+        ),
+        imagem: 'data:image/svg+xml;utf8,$svg',
+        itemMarker: 'M1',
+        itemText: 'Sistema circulatório',
+      );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 390,
+            height: 260,
+            child: LessonImagePanel(
+              session: session,
+              onImageSettled: () => settled++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Imagem da aula pronta'), findsNothing);
+    expect(find.bySemanticsLabel('Imagem da aula'), findsOneWidget);
+    expect(settled, 1);
+  });
+
+  testWidgets('imagem inválida mostra erro compacto sem quebrar a aula', (
+    tester,
+  ) async {
+    var settled = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LessonMediaImageView(
+            data: 'data:image/png;bad',
+            onImageSettled: () => settled++,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Imagem indisponível'), findsOneWidget);
+    expect(settled, 1);
+  });
+
+  testWidgets('renderizador de imagem aceita dataUrl bitmap no histórico', (
+    tester,
+  ) async {
+    const png =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+    var settled = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 120,
+            height: 80,
+            child: LessonMediaImageView(
+              data: 'data:image/png;base64,$png',
+              compact: true,
+              onImageSettled: () => settled++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Image), findsOneWidget);
+  });
 }

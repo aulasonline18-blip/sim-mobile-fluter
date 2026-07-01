@@ -555,4 +555,40 @@ void main() {
     expect(audio.voice, 'Charon');
     expect(geminiTtsModel, 'gemini-2.5-flash-preview-tts');
   });
+
+  test('CompleteLesson.copyWith can clear stale image explicitly', () {
+    const lesson = CompleteLesson(
+      conteudo: LessonContent(
+        explanation: 'Explicacao',
+        question: 'Pergunta?',
+        options: {
+          AnswerLetter.A: 'A',
+          AnswerLetter.B: 'B',
+          AnswerLetter.C: 'C',
+        },
+        correctAnswer: AnswerLetter.A,
+      ),
+      imagem: 'data:image/png;base64,AAAA',
+      audioText: 'Explicacao. Pergunta?',
+    );
+
+    final cleared = lesson.copyWith(imagem: null);
+
+    expect(cleared.imagem, isNull);
+    expect(cleared.conteudo.question, 'Pergunta?');
+  });
+
+  test('SVG sanitizer requires viewBox and keeps security blocks', () {
+    expect(sanitizeAndEncodeSvg('<svg><rect width="10"/></svg>'), isNull);
+    expect(
+      sanitizeAndEncodeSvg('<svg viewBox="0 0 10 10"><rect width="10"/></svg>'),
+      startsWith('data:image/svg+xml;utf8,'),
+    );
+    expect(
+      sanitizeAndEncodeSvg(
+        '<svg viewBox="0 0 10 10"><script>alert(1)</script></svg>',
+      ),
+      isNull,
+    );
+  });
 }
