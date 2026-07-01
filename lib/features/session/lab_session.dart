@@ -1165,6 +1165,7 @@ class LabSession extends ChangeNotifier {
   }
 
   void chooseAulaAnswer(String letter) {
+    stopActiveAudio();
     final answer = AnswerLetter.values.firstWhere(
       (value) => value.name == letter,
       orElse: () => AnswerLetter.A,
@@ -1181,6 +1182,7 @@ class LabSession extends ChangeNotifier {
   }
 
   void submitAulaSignal(int value) {
+    stopActiveAudio();
     final signal = switch (value) {
       1 => DecisionSignal.one,
       2 => DecisionSignal.two,
@@ -1226,9 +1228,7 @@ class LabSession extends ChangeNotifier {
 
   Future<void> advanceAula() async {
     final organism = _activeOrganism ?? _organismForActiveLesson();
-    _lessonAudioController?.pararAudio();
-    _doubtAudio?.stopDoubtAudio();
-    audioPlaying = false;
+    stopActiveAudio(notify: false);
     aulaRuntimeLoading = true;
     aulaRuntimeError = null;
     notifyListeners();
@@ -1242,6 +1242,14 @@ class LabSession extends ChangeNotifier {
       aulaRuntimeLoading = false;
       notifyListeners();
     }
+  }
+
+  void stopActiveAudio({bool notify = true}) {
+    _lessonAudioController?.pararAudio();
+    _doubtAudio?.stopDoubtAudio();
+    audioPlaying = false;
+    audioLoading = false;
+    if (notify) notifyListeners();
   }
 
   void toggleDoubt() => lessonUiState.toggleDoubt();

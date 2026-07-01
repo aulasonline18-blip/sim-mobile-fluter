@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:sim_mobile/features/session/lab_session.dart';
 import 'package:sim_mobile/sim/lesson/lesson_models.dart';
 import 'package:sim_mobile/sim/lesson/lesson_event_bus.dart';
 import 'package:sim_mobile/sim/lesson/lesson_material_cache.dart';
@@ -383,6 +384,17 @@ void main() {
       expect(playback.stops, 4);
     },
   );
+
+  test('LabSession stopActiveAudio clears playing and loading state', () {
+    final session = LabSession()
+      ..audioPlaying = true
+      ..audioLoading = true;
+
+    session.stopActiveAudio(notify: false);
+
+    expect(session.audioPlaying, false);
+    expect(session.audioLoading, false);
+  });
 
   test('visual prompt preserves language directive and image validation', () {
     final prompt = buildNaturalImagePrompt(

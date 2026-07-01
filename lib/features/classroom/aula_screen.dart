@@ -65,7 +65,8 @@ class AulaLabScreen extends StatefulWidget {
   State<AulaLabScreen> createState() => _AulaLabScreenState();
 }
 
-class _AulaLabScreenState extends State<AulaLabScreen> {
+class _AulaLabScreenState extends State<AulaLabScreen>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _doubtController = TextEditingController();
   int _lastHistoryLen = 0;
@@ -80,11 +81,13 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   final GlobalKey _feedbackKey = GlobalKey();
   final GlobalKey _errorKey = GlobalKey();
   String? _lastScrollSignature;
+  String? _lastMediaPositionSignature;
   int _fontScaleLevel = ClassroomTextScale.defaultLevel;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.session.addListener(_onSessionChange);
     unawaited(_loadFontScaleLevel());
   }
@@ -113,6 +116,16 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final history = snap?.history ?? const <QuestionHistoryEntry>[];
     final hasContent = snap?.conteudo != null;
     final phase = snap?.phase;
+    final mediaPositionSignature = [
+      snap?.itemMarker,
+      snap?.viewModel?.headerLabel,
+    ].join('|');
+    if (_lastMediaPositionSignature == null) {
+      _lastMediaPositionSignature = mediaPositionSignature;
+    } else if (mediaPositionSignature != _lastMediaPositionSignature) {
+      _lastMediaPositionSignature = mediaPositionSignature;
+      widget.session.stopActiveAudio(notify: false);
+    }
     final scrollSignature = [
       history.length,
       hasContent,
@@ -164,10 +177,21 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.session.removeListener(_onSessionChange);
+    widget.session.stopActiveAudio(notify: false);
     _scrollController.dispose();
     _doubtController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      widget.session.stopActiveAudio();
+    }
   }
 
   void _scrollToBottom() {
@@ -837,7 +861,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                 child: SafeArea(
                   top: false,
                   child: Center(
-                    child: IgnorePointer(child: const _FixedBubble()),
+                    child: const IgnorePointer(child: _FixedBubble()),
                   ),
                 ),
               ),
@@ -1385,14 +1409,20 @@ class _FixedBubbleState extends State<_FixedBubble>
       );
     }
 
-    if (reducedMotion) return bubble();
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => bubble(
-        scale: _scale.value,
-        opacity: _opacity.value,
-        spread: (_controller.value * 12).round().toDouble(),
-      ),
+    final child = reducedMotion
+        ? bubble()
+        : AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => bubble(
+              scale: _scale.value,
+              opacity: _opacity.value,
+              spread: (_controller.value * 12).round().toDouble(),
+            ),
+          );
+    return Semantics(
+      label: 'Áudio da aula tocando',
+      liveRegion: true,
+      child: child,
     );
   }
 }

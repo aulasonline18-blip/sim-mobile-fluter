@@ -102,6 +102,33 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets(
+    'bolha de áudio aparece só com audioPlaying real e tem semantics',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final semantics = tester.ensureSemantics();
+      await tester.binding.setSurfaceSize(const Size(390, 720));
+
+      final session = await _pumpAula(tester);
+      expect(find.bySemanticsLabel('Áudio da aula tocando'), findsNothing);
+
+      session.audioEnabled = true;
+      session.audioPlaying = true;
+      session.notifyListeners();
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Áudio da aula tocando'), findsOneWidget);
+
+      session.stopActiveAudio();
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Áudio da aula tocando'), findsNothing);
+
+      await tester.binding.setSurfaceSize(null);
+      semantics.dispose();
+    },
+  );
+
   testWidgets('sinais abrem como gaveta logo abaixo da alternativa ativa', (
     tester,
   ) async {
