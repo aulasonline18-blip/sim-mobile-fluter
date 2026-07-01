@@ -531,9 +531,9 @@ VisualN2Result classifyVisualByKeywords({
   }
 
   // LOCK DE DOMÍNIO: física/matemática/química/lógica → SVG obrigatório
-  final photoEscape = _photoRealismEscape.any((k) => parts.contains(k));
+  final photoEscape = _photoRealismEscape.any((k) => _matchesHint(parts, k));
   final lockedHits = _lockedSvgSubjects
-      .where((k) => parts.contains(k))
+      .where((k) => _matchesHint(parts, k))
       .take(5)
       .toList();
   if (lockedHits.isNotEmpty && !photoEscape) {
@@ -550,7 +550,9 @@ VisualN2Result classifyVisualByKeywords({
   }
 
   // OVERRIDE: conteúdo orgânico/biológico/anatômico SEMPRE vai para IA
-  final organicHits = _organicHints.where((k) => parts.contains(k)).toList();
+  final organicHits = _organicHints
+      .where((k) => _matchesHint(parts, k))
+      .toList();
   if (organicHits.isNotEmpty) {
     return _withN2Log(
       VisualN2Result(
@@ -577,8 +579,8 @@ VisualN2Result classifyVisualByKeywords({
     );
   }
 
-  final svgHits = _svgHints.where((k) => parts.contains(k)).toList();
-  final aiHits = _aiHints.where((k) => parts.contains(k)).toList();
+  final svgHits = _svgHints.where((k) => _matchesHint(parts, k)).toList();
+  final aiHits = _aiHints.where((k) => _matchesHint(parts, k)).toList();
 
   if (svgHits.isNotEmpty && aiHits.isEmpty) {
     return _withN2Log(
@@ -649,4 +651,15 @@ String _shortN2Text(String? value) {
   final text = (value ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
   if (text.length <= 80) return text;
   return text.substring(0, 80);
+}
+
+bool _matchesHint(String text, String hint) {
+  final normalized = hint.trim().toLowerCase();
+  if (normalized.isEmpty) return false;
+  if (normalized.length <= 2 && RegExp(r'^[a-z0-9]+$').hasMatch(normalized)) {
+    return RegExp(
+      '(^|[^a-z0-9])${RegExp.escape(normalized)}([^a-z0-9]|\$)',
+    ).hasMatch(text);
+  }
+  return text.contains(hint);
 }

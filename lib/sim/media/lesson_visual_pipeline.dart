@@ -8,6 +8,7 @@ import 's12_visual_pipeline.dart';
 import 'visual_router_n2.dart';
 import 'visual_router_n3.dart';
 import 'image_data_url_compression.dart';
+import 'local_visual_fallback.dart';
 import 'math_templates/math_templates.dart';
 
 export 's12_visual_pipeline.dart'
@@ -228,6 +229,26 @@ class LessonVisualPipeline {
           n2Reason: n2.reason,
         );
       }
+    }
+
+    final localSvg = renderLocalVisualFallback(
+      n2: n2,
+      topic: trigger.topic,
+      visualType: trigger.visualType,
+      imagePrompt: trigger.imagePrompt,
+    );
+    if (localSvg != null) {
+      _visualLog(
+        lessonKey,
+        'local_software',
+        'delivered after n2=${n2.verdict.name}/${n2.reason}',
+      );
+      return LessonVisualResult(
+        svg: localSvg,
+        dataUrl: null,
+        source: 'local_software',
+        n2Reason: n2.reason,
+      );
     }
 
     if (!allowPaidImages) {

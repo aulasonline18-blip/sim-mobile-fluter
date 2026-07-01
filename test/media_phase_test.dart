@@ -706,6 +706,39 @@ void main() {
   );
 
   test(
+    'parabola still renders free local SVG when N3 is unavailable',
+    () async {
+      final client = FakeImageClient();
+      final pipeline = LessonVisualPipeline(
+        imageClient: client,
+        visualRouterClient: const ThrowingVisualRouterClient(),
+      );
+
+      const trigger = LessonVisualTrigger(
+        needsImage: true,
+        pedagogicalNeed: 'important',
+        topic: 'parábola de uma função quadrática com intercepto Y em (0, 3)',
+        visualType: 'graph',
+        imagePrompt: 'Observe a parábola no gráfico.',
+      );
+
+      final result = await pipeline.resolveVisual(
+        trigger: trigger,
+        lessonKey: 'parabola-lesson',
+        allowPaidImages: true,
+        acceptedOfferId: null,
+      );
+
+      expect(result.source, 'local_software');
+      expect(result.displayUrl, startsWith('data:image/svg+xml;utf8,'));
+      final decoded = Uri.decodeFull(result.displayUrl!);
+      expect(decoded, contains('Parábola'));
+      expect(decoded, contains('3'));
+      expect(client.calls, 0);
+    },
+  );
+
+  test(
     'N3 sends realistic ambiguous visual to paid path only when allowed',
     () async {
       final client = FakeImageClient();
