@@ -1,0 +1,1655 @@
+PROJETO CONSTRUTIVO SIM FLUTTER 10X - FASES DE EXECUCAO
+Data: 2026-07-01
+Documento base: docs/PLANTA-SIM-FLUTTER-10X-APP-DE-ENSINO.txt
+Repositorio alvo: /root/sim-mobile-fluter
+Publico: engenharia Flutter, engenharia API, QA, produto, pedagogia, design
+
+======================================================================
+0. COMO USAR ESTE DOCUMENTO
+======================================================================
+
+Este documento divide a planta SIM Flutter 10x em fases construtivas.
+Ele deve ser seguido em sequencia. Cada fase tem:
+
+- objetivo;
+- por que vem nessa ordem;
+- orgaos arquiteturais envolvidos;
+- entregaveis;
+- passos construtivos;
+- testes obrigatorios;
+- criterio de aceite;
+- proibicoes;
+- saida esperada.
+
+Regra principal:
+
+Nao avance para a fase seguinte se a fase atual nao estiver testada,
+documentada, commitada e empurrada para `main`.
+
+Regra de arquitetura:
+
+Toda correcao ou melhoria deve entrar no orgao correto da Planta-Mae.
+UI renderiza. Estado fica no StudentLearningState/Store. Pedagogia fica no
+motor. IA fica atras de contrato. Sync fica no orgao de sync. Midia fica no
+orgao de midia.
+
+Regra de produto:
+
+O objetivo nao e "ficar bonito". O objetivo e fazer o aluno aprender mais,
+com menos atrito, com mais continuidade e com prova.
+
+======================================================================
+1. MAPA GERAL DAS FASES
+======================================================================
+
+FASE 0 - Baseline, seguranca e canteiro de obra
+FASE 1 - Prova fisica do APK real e harness de regressao
+FASE 2 - Evento pedagogico canonico e telemetria local
+FASE 3 - Skill graph e modelo de dominio por evidencia
+FASE 4 - MasteryTruthEngine 10x e decisao pedagogica por evidencia
+FASE 5 - Revisao espacada
+FASE 6 - Recuperacao por pre-requisito
+FASE 7 - Aula mobile 10x
+FASE 8 - Duvida multimodal 10x
+FASE 9 - IA com contratos fortes e quality harness
+FASE 10 - Offline-first, sync e backup robustos
+FASE 11 - Midia pedagogica 10x: imagem, audio, captions e texto alternativo
+FASE 12 - Acessibilidade, personalizacao e inclusao
+FASE 13 - Painel do aluno
+FASE 14 - Painel do responsavel
+FASE 15 - Performance, seguranca e observabilidade operacional
+FASE 16 - Release beta controlado e medicao 10x
+FASE 17 - Fechamento final: SIM Flutter 10x
+
+Cada fase tem uma porta. A porta e a validacao que libera a proxima fase.
+Sem porta aprovada, nao avanca.
+
+======================================================================
+FASE 0 - BASELINE, SEGURANCA E CANTEIRO DE OBRA
+======================================================================
+
+Objetivo:
+
+Criar o ponto de partida confiavel. Antes de melhorar, provar que sabemos
+voltar, medir, testar e nao quebrar o que ja existe.
+
+Por que vem primeiro:
+
+Sem baseline, qualquer melhoria vira aposta. Esta fase cria a linha de base
+para comparar antes/depois e protege o fluxo vital.
+
+Orgaos envolvidos:
+
+- repo Flutter;
+- repo API se necessario;
+- docs;
+- CI/local scripts;
+- testes existentes;
+- APK production.
+
+Entregaveis:
+
+1. Documento `docs/10x-baseline-report.md`.
+2. Lista dos testes que definem "nao quebrar".
+3. APK baseline com SHA256.
+4. Lista de dispositivos reais de teste.
+5. Checklist de fluxo vital.
+
+Passos construtivos:
+
+1. Rodar no Flutter:
+   - `git status --short`
+   - `git branch --show-current`
+   - `git pull --rebase origin main`
+   - `flutter analyze`
+   - `flutter test`
+   - `flutter build apk --release --dart-define=FLUTTER_APP_MODE=production`
+
+2. Se API for tocada nesta fase, rodar:
+   - `npm test`
+
+3. Gerar APK e SHA256.
+
+4. Publicar APK no link padrao:
+   - `http://167.179.109.137:3000/downloads/sim-production-latest.apk`
+
+5. Registrar:
+   - commit atual;
+   - APK;
+   - SHA;
+   - resultados de testes;
+   - pendencias conhecidas.
+
+6. Montar checklist de nao-regressao:
+   - login;
+   - credito;
+   - objetivo;
+   - T00;
+   - T02;
+   - aula;
+   - A/B/C;
+   - sinal 1/2/3;
+   - feedback;
+   - duvida;
+   - drawer;
+   - backup;
+   - sync;
+   - audio;
+   - imagem.
+
+Testes obrigatorios:
+
+- todos os testes atuais;
+- build release;
+- instalacao manual do APK em Android real quando houver aparelho.
+
+Criterio de aceite:
+
+- main limpo;
+- testes passam;
+- build passa;
+- APK baseline disponivel;
+- documento baseline criado;
+- nenhum codigo alterado sem necessidade.
+
+Proibicoes:
+
+- implementar feature 10x antes do baseline;
+- refatorar;
+- mexer em SimWeb;
+- aceitar workspace sujo sem explicacao.
+
+Saida esperada:
+
+Equipe sabe exatamente qual e o ponto zero e como provar regressao.
+
+======================================================================
+FASE 1 - PROVA FISICA DO APK REAL E HARNESS DE REGRESSAO
+======================================================================
+
+Objetivo:
+
+Eliminar o bloqueio recorrente: "passa em teste, mas ainda nao foi provado
+no celular real".
+
+Por que vem agora:
+
+O SIM Flutter e um app Android. A superioridade sobre o Web so vale se o APK
+real funciona na mao do aluno.
+
+Orgaos envolvidos:
+
+- QA;
+- release APK;
+- scripts de smoke test;
+- docs;
+- Flutter test driver, integration_test ou ferramenta equivalente.
+
+Entregaveis:
+
+1. `docs/10x-apk-real-test-protocol.md`.
+2. `test/integration/` ou equivalente com fluxo vital automatizavel.
+3. Relatorio de teste manual por aparelho.
+4. Screenshots de fluxo vital.
+
+Passos construtivos:
+
+1. Definir aparelhos minimos:
+   - Android pequeno;
+   - Android medio;
+   - Android com fonte grande;
+   - Android lento;
+   - Android recente.
+
+2. Criar protocolo manual:
+   - instalar APK;
+   - abrir app;
+   - login;
+   - ver credito;
+   - escolher idioma;
+   - preencher objetivo;
+   - anexar opcionalmente uma imagem;
+   - rodar T00;
+   - rodar T02;
+   - abrir aula;
+   - responder A/B/C;
+   - escolher sinal;
+   - ver feedback;
+   - abrir duvida;
+   - abrir drawer;
+   - exportar/importar backup.
+
+3. Criar harness automatizado gradualmente:
+   - primeiro smoke test de abertura;
+   - depois login fake/test account quando permitido;
+   - depois fluxo de aula com backend controlado;
+   - depois fluxo real contra API.
+
+4. Criar pasta de evidencias:
+   - screenshots;
+   - logs;
+   - SHA do APK;
+   - device model;
+   - Android version.
+
+Testes obrigatorios:
+
+- `flutter test`;
+- build release;
+- smoke manual em pelo menos 1 aparelho real.
+
+Criterio de aceite:
+
+- fluxo vital real passa em aparelho;
+- se falhar, erro vira issue/fase de correcao;
+- screenshots existem;
+- protocolo repetivel.
+
+Proibicoes:
+
+- declarar B/10x sem APK real;
+- usar apenas emulador Linux;
+- esconder erro manual.
+
+Saida esperada:
+
+O time passa a ter uma porta real de produto. Toda fase futura precisa
+passar por ela.
+
+======================================================================
+FASE 2 - EVENTO PEDAGOGICO CANONICO E TELEMETRIA LOCAL
+======================================================================
+
+Objetivo:
+
+Criar a base de dados viva para medir aprendizagem: cada toque importante
+vira evento pedagogico auditavel.
+
+Por que vem antes de mastery:
+
+Nao da para calcular dominio 10x se o app nao registra evidencia suficiente.
+
+Orgaos envolvidos:
+
+- StudentLearningState;
+- StudentLearningStateService;
+- StudentStateStore;
+- LessonRuntimeEngine;
+- LessonAnswerProgressController;
+- Aux room services;
+- media services;
+- sync/backups.
+
+Entregaveis:
+
+1. Modelo `LearningEvent`.
+2. Enum de eventos canonicos.
+3. Serializacao no StudentLearningState.
+4. Export/import/sync dos eventos.
+5. Testes de roundtrip.
+6. Documento `docs/10x-learning-event-contract.md`.
+
+Passos construtivos:
+
+1. Auditar eventos ja existentes.
+
+2. Definir schema:
+   - eventId;
+   - type;
+   - lessonLocalId;
+   - marker;
+   - layer;
+   - skillId opcional;
+   - timestamp;
+   - payload tipado;
+   - requestId opcional;
+   - offline flag;
+   - appVersion.
+
+3. Criar tipos de evento:
+   - LESSON_OPENED;
+   - MATERIAL_READY;
+   - QUESTION_VISIBLE;
+   - ANSWER_SELECTED;
+   - SIGNAL_SUBMITTED;
+   - FEEDBACK_VISIBLE;
+   - NEXT_ADVANCED;
+   - DOUBT_OPENED;
+   - DOUBT_SUBMITTED;
+   - DOUBT_ANSWERED;
+   - REVIEW_SCHEDULED;
+   - REVIEW_COMPLETED;
+   - RECOVERY_STARTED;
+   - RECOVERY_COMPLETED;
+   - IMAGE_OFFER_SHOWN;
+   - IMAGE_ACCEPTED;
+   - AUDIO_STARTED;
+   - AUDIO_STOPPED;
+   - ERROR_SHOWN;
+   - RETRY_TAPPED.
+
+4. Inserir escrita nos orgaos corretos:
+   - resposta no controller de resposta;
+   - sinal no motor/progress controller;
+   - feedback na runtime;
+   - duvida no controller de duvida;
+   - midia no media service;
+   - sync no sync service.
+
+5. Nao escrever evento direto em widget, exceto comando de UI que chama
+   metodo de orgao.
+
+6. Garantir idempotencia:
+   - eventId estavel;
+   - replay nao duplica;
+   - import de backup nao duplica.
+
+Testes obrigatorios:
+
+- event_log_roundtrip_test;
+- event_log_no_duplicate_on_import_test;
+- answer_signal_feedback_event_test;
+- doubt_event_test;
+- media_event_test;
+
+Criterio de aceite:
+
+- eventos aparecem no estado;
+- export/import preserva;
+- sync preserva;
+- nenhum evento sensivel loga token/base64;
+- testes passam.
+
+Proibicoes:
+
+- analytics direto em widget;
+- evento sem schema;
+- logar texto sensivel em claro sem decisao;
+- quebrar backup.
+
+Saida esperada:
+
+O SIM passa a ter uma linha do tempo pedagogica real.
+
+======================================================================
+FASE 3 - SKILL GRAPH E MODELO DE DOMINIO POR EVIDENCIA
+======================================================================
+
+Objetivo:
+
+Transformar curriculo linear em grafo de habilidades. O app deve saber
+qual habilidade esta sendo ensinada e quais prerequisitos estao por tras.
+
+Por que vem depois dos eventos:
+
+Os eventos precisam apontar para skills. Sem skill graph, evidencia fica
+presa em marker/layer e nao vira dominio transferivel.
+
+Orgaos envolvidos:
+
+- StudentLearningState;
+- T00 adapter;
+- T02 adapter;
+- StudentExperienceEngine;
+- StudentLearningStateService;
+- backup/sync;
+- API T00 se necessario.
+
+Entregaveis:
+
+1. Modelo `SkillNode`.
+2. Campo `skillGraph` no estado.
+3. Mapeamento `CurriculumItem.skillIds`.
+4. Contrato T00 atualizado para skills, se necessario.
+5. Migracao para estado antigo.
+6. Testes.
+
+Passos construtivos:
+
+1. Criar modelo:
+   - id;
+   - title;
+   - description;
+   - prerequisites;
+   - dependents;
+   - cognitiveLevel;
+   - area;
+   - misconceptions;
+   - evidenceRequired;
+   - visualHints.
+
+2. Adicionar ao estado sem quebrar estados antigos:
+   - se skillGraph ausente, gerar skill simples por marker;
+   - se CurriculumItem sem skillIds, mapear marker -> skillId.
+
+3. Atualizar T00:
+   - pedir skill graph;
+   - validar shape;
+   - retry se contrato invalido;
+   - fallback seguro: skill por item, nao aula falsa.
+
+4. Atualizar T02 payload:
+   - enviar skillId atual;
+   - enviar prerequisitos relevantes;
+   - enviar misconceptions conhecidas.
+
+5. Garantir backup/sync:
+   - export inclui skillGraph;
+   - import antigo funciona;
+   - cloud merge preserva.
+
+Testes obrigatorios:
+
+- skill_graph_roundtrip_test;
+- legacy_curriculum_generates_skill_graph_test;
+- t00_skill_graph_contract_test;
+- t02_receives_skill_context_test;
+- backup_preserves_skill_graph_test.
+
+Criterio de aceite:
+
+- toda aula tem skillId;
+- todo evento novo pode carregar skillId;
+- estados antigos continuam abrindo;
+- T00 invalido nao quebra app;
+- build passa.
+
+Proibicoes:
+
+- depender de IA para inferir skill a cada tela;
+- quebrar curriculos antigos;
+- criar skillGraph fora do estado canonico.
+
+Saida esperada:
+
+O SIM sabe o que esta ensinando, nao apenas qual tela esta mostrando.
+
+======================================================================
+FASE 4 - MASTERYTRUTHENGINE 10X E DECISAO POR EVIDENCIA
+======================================================================
+
+Objetivo:
+
+Fazer o app decidir dominio por evidencia acumulada, nao por uma resposta
+isolada.
+
+Por que vem depois do skill graph:
+
+Dominio precisa ser calculado por habilidade, nao apenas por item/layer.
+
+Orgaos envolvidos:
+
+- MasteryTruthEngine;
+- LearningDecisionEngine;
+- StudentLessonExecutor;
+- LessonAnswerProgressController;
+- StudentLearningStateService.
+
+Entregaveis:
+
+1. Modelo `MasteryEvidence`.
+2. Mastery status por skill.
+3. Calculo de falsa confianca.
+4. Calculo de esquecimento provavel.
+5. Motor de decisao usando mastery.
+6. Testes de cenarios.
+
+Passos construtivos:
+
+1. Definir MasteryEvidence:
+   - skillId;
+   - marker/layer;
+   - correct;
+   - answerLetter;
+   - signal;
+   - responseTimeMs;
+   - doubtAsked;
+   - reviewContext;
+   - recoveryContext;
+   - timestamp.
+
+2. Capturar evidencia:
+   - ao responder;
+   - ao sinalizar;
+   - ao concluir revisao;
+   - ao concluir recuperacao;
+   - ao pedir duvida, como sinal de incerteza.
+
+3. Calcular status:
+   - nao_visto;
+   - iniciando;
+   - aprendendo;
+   - quase;
+   - dominado_fraco;
+   - dominado_forte;
+   - esquecimento_provavel;
+   - falsa_maestria;
+   - precisa_revisao;
+   - precisa_recuperacao.
+
+4. Integrar com LearningDecisionEngine:
+   - acertou + sinal 1 + historico bom -> avanca;
+   - acertou + sinal 2 -> avanca e agenda revisao;
+   - acertou + sinal 3 -> reforco ou revisao curta;
+   - errou + sinal 1 -> falsa confianca;
+   - errou repetido -> recuperacao;
+   - prerequisito quebrado -> bloqueia conclusao com explicacao.
+
+5. Garantir que UI nao decide.
+
+Testes obrigatorios:
+
+- mastery_evidence_capture_test;
+- mastery_false_confidence_test;
+- mastery_review_needed_test;
+- mastery_recovery_needed_test;
+- decision_engine_uses_mastery_test;
+- ui_does_not_decide_mastery_test.
+
+Criterio de aceite:
+
+- engine decide com base em evidencias;
+- nenhum widget contem regra pedagogica;
+- revisao/recuperacao recebem razao clara;
+- estado persiste mastery;
+- testes passam.
+
+Proibicoes:
+
+- "um acerto = dominado";
+- "sinal 1 sempre pula tudo";
+- hardcode de pedagogia em tela.
+
+Saida esperada:
+
+O app passa a ter verdade pedagogica confiavel.
+
+======================================================================
+FASE 5 - REVISAO ESPACADA
+======================================================================
+
+Objetivo:
+
+Fazer o app chamar o aluno para revisar no momento certo.
+
+Por que vem depois do mastery:
+
+Revisao espacada depende do grau de dominio e da estabilidade da memoria.
+
+Orgaos envolvidos:
+
+- novo SpacedReviewScheduler;
+- StudentLearningState;
+- ReviewRoomService;
+- StudentAuxRoomService;
+- drawer/menu;
+- painel do aluno futuro.
+
+Entregaveis:
+
+1. `SpacedReviewScheduler`.
+2. Fila de revisao persistida.
+3. Regras de intervalo.
+4. UI minima de pendencias.
+5. Testes.
+
+Passos construtivos:
+
+1. Criar modelo ReviewDue:
+   - skillId;
+   - marker;
+   - dueAt;
+   - priority;
+   - reason;
+   - sourceEvidenceId;
+   - completedAt.
+
+2. Regras iniciais:
+   - acerto sinal 1: revisao leve em 24h;
+   - acerto sinal 2: revisao em 10-30min ou fim da aula;
+   - acerto sinal 3: revisao imediata curta;
+   - erro sinal 1: revisao + falsa confianca;
+   - erro repetido: recuperacao.
+
+3. Integrar com ReviewRoomService:
+   - review queue vem de ReviewDue;
+   - ao concluir, atualizar mastery;
+   - reagendar se necessario.
+
+4. UI:
+   - mostrar pendencias sem bloquear tudo;
+   - quando pendencia e critica, explicar por que.
+
+Testes obrigatorios:
+
+- spaced_review_schedule_test;
+- review_due_persists_test;
+- review_completion_updates_mastery_test;
+- review_due_survives_backup_sync_test.
+
+Criterio de aceite:
+
+- revisao aparece por regra;
+- revisao some ao concluir;
+- nao duplica;
+- nao bloqueia indevidamente;
+- teste passa.
+
+Proibicoes:
+
+- notificar revisao aleatoria;
+- sumir pendencia sem evento;
+- usar data local sem controle de timezone em serializacao.
+
+Saida esperada:
+
+O SIM passa a combater esquecimento.
+
+======================================================================
+FASE 6 - RECUPERACAO POR PRE-REQUISITO
+======================================================================
+
+Objetivo:
+
+Quando o aluno trava, o app deve recuperar a base que falta, nao repetir a
+mesma pergunta.
+
+Por que vem depois de skill/mastery/review:
+
+Recuperacao precisa saber qual habilidade falhou e qual prerequisito e causa.
+
+Orgaos envolvidos:
+
+- RecoveryRoomService;
+- StudentAuxRoomService;
+- LearningDecisionEngine;
+- SkillGraph;
+- T02 aux caller;
+- StudentLearningState.
+
+Entregaveis:
+
+1. `PrerequisiteResolver`.
+2. Recovery plan.
+3. Prompt/contrato de recuperacao.
+4. Bloqueio/liberacao de conclusao por recuperacao.
+5. Testes.
+
+Passos construtivos:
+
+1. Criar RecoveryNeed:
+   - skillId;
+   - prerequisiteSkillId;
+   - reason;
+   - evidenceIds;
+   - blocksCompletion;
+   - status.
+
+2. Detectar:
+   - erro repetido;
+   - sinal 3;
+   - falsa confianca;
+   - prerequisito marcado fraco.
+
+3. Resolver prerequisito:
+   - primeiro pelo skill graph;
+   - se ausente, por heuristica local;
+   - nunca depender de IA sem validacao.
+
+4. Gerar recuperacao:
+   - microexplicacao;
+   - exemplo resolvido;
+   - pergunta curta;
+   - feedback;
+   - retorno para aula principal.
+
+5. Estado:
+   - salvar recoveryNeed;
+   - salvar tentativa;
+   - limpar ao concluir;
+   - manter historico.
+
+Testes obrigatorios:
+
+- prerequisite_resolver_test;
+- recovery_blocks_completion_test;
+- recovery_completion_unblocks_test;
+- recovery_returns_to_main_lesson_test;
+- recovery_does_not_change_main_position_wrongly_test.
+
+Criterio de aceite:
+
+- recuperacao inicia por razao correta;
+- nao bagunca item/layer principal;
+- bloqueia conclusao somente quando necessario;
+- limpa pendencia corretamente.
+
+Proibicoes:
+
+- recuperar sempre L1 sem diagnostico;
+- apagar tentativa original;
+- deixar aluno preso sem explicacao.
+
+Saida esperada:
+
+O aluno que erra nao fica no loop. O app reconstrói a base.
+
+======================================================================
+FASE 7 - AULA MOBILE 10X
+======================================================================
+
+Objetivo:
+
+Transformar a tela de aula em experiencia mobile excelente: clara, acessivel,
+sem perder scroll, sem botao morto.
+
+Por que vem depois dos motores:
+
+UI deve refletir a pedagogia, nao inventa-la.
+
+Orgaos envolvidos:
+
+- AulaLabScreen;
+- aula_widgets;
+- ClassroomScrollCoordinator novo;
+- LessonRuntimeEngine;
+- LessonMainViewModel;
+- acessibilidade/Semantics.
+
+Entregaveis:
+
+1. `ClassroomScrollCoordinator`.
+2. Historico recolhivel.
+3. Modo foco.
+4. Feedback acionavel.
+5. Semantics em controles.
+6. Testes widget/golden.
+
+Passos construtivos:
+
+1. Extrair scroll para orgao proprio:
+   - target explanation;
+   - target question;
+   - target selectedOption;
+   - target signalRow;
+   - target feedback;
+   - target error;
+   - fallback bottom.
+
+2. Criar view model de aula:
+   - estado de header;
+   - progresso;
+   - conteudo;
+   - midia;
+   - pergunta;
+   - sinal;
+   - feedback;
+   - next action.
+
+3. Melhorar feedback:
+   - curto;
+   - especifico;
+   - com acao;
+   - com razao de revisao/recuperacao se houver.
+
+4. Historico:
+   - recolhivel por padrao quando longo;
+   - expandivel;
+   - nunca atrapalha pergunta atual.
+
+5. Semantics:
+   - "Alternativa A, texto...";
+   - "Sinal 1, sei com seguranca";
+   - "Sinal 2, quero revisar";
+   - "Sinal 3, nao sei";
+   - "Proximo item".
+
+6. Testar fontes grandes:
+   - texto nao corta;
+   - botoes continuam tocaveis;
+   - feedback visivel.
+
+Testes obrigatorios:
+
+- classroom_scroll_targets_test;
+- classroom_large_font_test;
+- classroom_semantics_test;
+- classroom_history_collapsible_test;
+- classroom_feedback_actionable_test.
+
+Criterio de aceite:
+
+- sinais visiveis;
+- feedback visivel;
+- botao proximo visivel;
+- TalkBack reconhece botoes;
+- fonte grande nao quebra;
+- teste passa.
+
+Proibicoes:
+
+- regra pedagogica na UI;
+- esconder controle principal;
+- depender de pixel-perfect Web.
+
+Saida esperada:
+
+A aula fica melhor que o Web para celular.
+
+======================================================================
+FASE 8 - DUVIDA MULTIMODAL 10X
+======================================================================
+
+Objetivo:
+
+Fazer a duvida virar um tutor contextual: texto, foto, audio e historico,
+sem baguncar progresso principal.
+
+Orgaos envolvidos:
+
+- DoubtInputSheet;
+- LessonDoubtController;
+- DoubtT02Caller;
+- StudentAuxRoomService;
+- attachment/media service;
+- API T02/doubt.
+
+Entregaveis:
+
+1. Dúvida por texto/foto/audio.
+2. OCR/vision seguro.
+3. Context payload completo.
+4. Mini-check opcional.
+5. Testes.
+
+Passos construtivos:
+
+1. Criar `DoubtContext`:
+   - lessonLocalId;
+   - marker;
+   - layer;
+   - skillId;
+   - question;
+   - options;
+   - selectedAnswer;
+   - signal;
+   - recentHistory;
+   - image data/ref;
+   - audio transcript opcional.
+
+2. Audio do aluno:
+   - gravar curto;
+   - transcrever na API;
+   - nao salvar audio bruto sem politica;
+   - permitir apagar.
+
+3. Foto:
+   - comprimir;
+   - limitar tamanho;
+   - redigir logs;
+   - enviar dataUrl/ref seguro.
+
+4. Resposta:
+   - explanation;
+   - misconception;
+   - suggested action;
+   - optional visual;
+   - optional mini question.
+
+5. Garantir:
+   - duvida nao muda progresso principal;
+   - mini-check, se usado, escreve evento separado.
+
+Testes obrigatorios:
+
+- doubt_context_payload_test;
+- doubt_photo_payload_test;
+- doubt_audio_transcript_test;
+- doubt_does_not_change_main_progress_test;
+- doubt_mini_check_event_test.
+
+Criterio de aceite:
+
+- texto funciona;
+- foto funciona em APK;
+- audio/transcricao funciona se ativado;
+- progresso principal preservado;
+- logs seguros.
+
+Proibicoes:
+
+- mandar base64 para log;
+- cobrar imagem paga por duvida sem aceite;
+- duvida alterar item/layer principal.
+
+Saida esperada:
+
+O aluno tira duvida como faria com professor humano.
+
+======================================================================
+FASE 9 - IA COM CONTRATOS FORTES E QUALITY HARNESS
+======================================================================
+
+Objetivo:
+
+Controlar qualidade da IA antes que ela chegue ao aluno.
+
+Orgaos envolvidos:
+
+- API T00/T02;
+- validators;
+- SimServer AI clients;
+- prompt contracts;
+- tests;
+- logs/requestId.
+
+Entregaveis:
+
+1. PedagogicalContractValidator.
+2. Retry por contrato invalido.
+3. Dataset de avaliacao.
+4. Relatorio de qualidade.
+5. Métricas de custo/latencia.
+
+Passos construtivos:
+
+1. Consolidar schemas:
+   - T00;
+   - T02 normal;
+   - T02 duvida;
+   - T02 revisao;
+   - T02 recuperacao;
+   - visual_trigger;
+   - audioText.
+
+2. Validar:
+   - explanation nao vazia;
+   - question nao vazia;
+   - A/B/C completos;
+   - correct_answer valido;
+   - marker/layer coerentes;
+   - feedback presente;
+   - visual/audio shape validos.
+
+3. Retry:
+   - max 3;
+   - apenas contrato invalido/JSON invalido;
+   - sem retry infinito;
+   - logs requestId.
+
+4. Quality harness:
+   - 100 objetivos;
+   - 50 anexos;
+   - 50 duvidas;
+   - 30 revisoes;
+   - 30 recuperacoes;
+   - medir invalid rate, custo, latencia.
+
+Testes obrigatorios:
+
+- t00_contract_dataset_test;
+- t02_contract_dataset_test;
+- invalid_contract_retry_test;
+- no_fake_lesson_test;
+- prompt_regression_report.
+
+Criterio de aceite:
+
+- aula falsa = zero;
+- contrato invalido nao chega a UI;
+- retry controlado;
+- custo medido;
+- logs sem segredo.
+
+Proibicoes:
+
+- parser permissivo demais;
+- default correct_answer para A;
+- prompt no Flutter;
+- chave Gemini no Flutter.
+
+Saida esperada:
+
+A IA vira componente controlado, nao risco solto.
+
+======================================================================
+FASE 10 - OFFLINE-FIRST, SYNC E BACKUP ROBUSTOS
+======================================================================
+
+Objetivo:
+
+Garantir que a vida escolar viaja com o aluno e nao se perde.
+
+Orgaos envolvidos:
+
+- StudentStateStore;
+- CloudQueue;
+- StudentLearningSync;
+- backup migrator;
+- API student-state;
+- drawer.
+
+Entregaveis:
+
+1. Estado local como fonte de leitura.
+2. Sync por eventos/patches quando possivel.
+3. Conflito por high-water + eventos.
+4. Backup versionado.
+5. Import report.
+6. Testes multi-device.
+
+Passos construtivos:
+
+1. Revisar estado atual:
+   - garantir skillGraph;
+   - mastery;
+   - reviews;
+   - recoveries;
+   - events.
+
+2. Sync:
+   - persistir fila;
+   - retry exponencial;
+   - merge seguro;
+   - tombstone;
+   - no overwrite with stale.
+
+3. Backup:
+   - exportar tudo;
+   - importar Web;
+   - importar App;
+   - migrar versoes;
+   - relatorio de importacao:
+     - aulas importadas;
+     - duplicadas;
+     - ignoradas;
+     - erros.
+
+4. Offline:
+   - aula pronta abre;
+   - resposta salva;
+   - sync posterior.
+
+Testes obrigatorios:
+
+- offline_answer_then_sync_test;
+- multi_device_event_merge_test;
+- stale_cloud_does_not_overwrite_test;
+- backup_version_migration_test;
+- import_report_test.
+
+Criterio de aceite:
+
+- sem perda;
+- sem duplicacao;
+- estado antigo migra;
+- offline funciona para aula pronta.
+
+Proibicoes:
+
+- UI escrever sync direto;
+- apagar cloud sem tombstone/regra;
+- import silencioso que perde campo.
+
+Saida esperada:
+
+O aluno tem uma vida escolar unica e portavel.
+
+======================================================================
+FASE 11 - MIDIA PEDAGOGICA 10X
+======================================================================
+
+Objetivo:
+
+Imagem e audio devem ensinar melhor, nao decorar a aula.
+
+Orgaos envolvidos:
+
+- LessonVisualPipeline;
+- PaidImageService;
+- StudentLessonMediaService;
+- AudioCore;
+- LessonAudioController;
+- media API.
+
+Entregaveis:
+
+1. Texto alternativo para imagem.
+2. Captions/audioText completo.
+3. Imagens por software priorizadas.
+4. Cache multimidia.
+5. Provas de nao bloqueio.
+
+Passos construtivos:
+
+1. Imagem:
+   - decidir se precisa;
+   - software primeiro;
+   - IA paga apenas com aceite;
+   - texto alternativo;
+   - erro visual nao bloqueante.
+
+2. Audio:
+   - respeitar preferencia;
+   - nao chamar servidor se desligado;
+   - TTS local fallback;
+   - parar ao avancar;
+   - captions sempre disponiveis.
+
+3. Acessibilidade:
+   - imagem com descricao;
+   - audio com texto;
+   - controle claro.
+
+Testes obrigatorios:
+
+- image_alt_text_test;
+- paid_image_requires_acceptance_test;
+- audio_caption_test;
+- audio_stops_on_navigation_test;
+- media_does_not_block_lesson_test.
+
+Criterio de aceite:
+
+- midia nao bloqueia;
+- midia ensina;
+- acessivel;
+- custo controlado.
+
+Proibicoes:
+
+- gerar imagem cara sem aceite;
+- audio tocar em aula antiga;
+- imagem sem descricao quando essencial.
+
+Saida esperada:
+
+Midia aumenta entendimento sem aumentar risco.
+
+======================================================================
+FASE 12 - ACESSIBILIDADE, PERSONALIZACAO E INCLUSAO
+======================================================================
+
+Objetivo:
+
+Fazer o app funcionar para alunos diferentes: baixa visao, dislexia, fonte
+grande, audio, alto contraste, baixa animacao.
+
+Orgaos envolvidos:
+
+- UI theme;
+- settings/preferences;
+- Semantics;
+- AudioCore;
+- StudentLearningState/profile.
+
+Entregaveis:
+
+1. Configuracoes de acessibilidade.
+2. Alto contraste.
+3. Fonte ajustavel.
+4. Reduzir animacao.
+5. Semantics completo na aula.
+6. Testes.
+
+Passos construtivos:
+
+1. Criar AccessibilityPreferences:
+   - fontScale;
+   - highContrast;
+   - reduceMotion;
+   - audioDefault;
+   - simpleLanguage;
+   - dyslexiaFriendly.
+
+2. Aplicar no tema.
+
+3. Aula:
+   - Semantics em A/B/C;
+   - Semantics em sinais;
+   - Semantics em feedback;
+   - labels nos icones.
+
+4. Testar:
+   - fonte 200%;
+   - viewport pequeno;
+   - TalkBack labels;
+   - alto contraste.
+
+Testes obrigatorios:
+
+- accessibility_preferences_roundtrip_test;
+- classroom_semantics_test;
+- large_font_layout_test;
+- high_contrast_snapshot_test.
+
+Criterio de aceite:
+
+- aluno com fonte grande consegue responder;
+- TalkBack identifica controles;
+- contraste adequado;
+- sem texto cortado em botoes principais.
+
+Proibicoes:
+
+- fonte fixa que ignora preferencia;
+- icone sem label;
+- usar cor como unica informacao.
+
+Saida esperada:
+
+O SIM vira app inclusivo, nao so app bonito.
+
+======================================================================
+FASE 13 - PAINEL DO ALUNO
+======================================================================
+
+Objetivo:
+
+Dar ao aluno visao clara do proprio aprendizado.
+
+Orgaos envolvidos:
+
+- MasteryTruthEngine;
+- ReviewScheduler;
+- StudentLearningState;
+- UI dashboard;
+- drawer/menu.
+
+Entregaveis:
+
+1. Mapa de aprendizagem.
+2. Fila de revisao.
+3. Pontos fortes/fracos.
+4. Progresso narrativo.
+5. Testes.
+
+Passos construtivos:
+
+1. Criar StudentLearningDashboardViewModel:
+   - skills dominadas;
+   - skills em risco;
+   - revisoes hoje;
+   - recuperacoes pendentes;
+   - objetivo;
+   - progresso.
+
+2. UI:
+   - nao mostrar tabela fria;
+   - mostrar frases humanas;
+   - permitir abrir revisao;
+   - permitir voltar aula.
+
+3. Integrar drawer:
+   - botao "Meu progresso".
+
+Testes obrigatorios:
+
+- student_dashboard_view_model_test;
+- dashboard_opens_review_test;
+- dashboard_reflects_mastery_test.
+
+Criterio de aceite:
+
+- aluno entende onde esta;
+- dashboard vem do estado real;
+- nao duplica estado.
+
+Proibicoes:
+
+- metricas falsas;
+- porcentagem sem base;
+- editar mastery pela UI.
+
+Saida esperada:
+
+O aluno sabe o que fazer hoje.
+
+======================================================================
+FASE 14 - PAINEL DO RESPONSAVEL
+======================================================================
+
+Objetivo:
+
+Mostrar para o responsavel progresso, dificuldade e recomendacao sem expor
+dado sensivel desnecessario.
+
+Orgaos envolvidos:
+
+- Father panel;
+- StudentLearningState;
+- reporting service;
+- privacy filters.
+
+Entregaveis:
+
+1. Relatorio semanal.
+2. Alertas.
+3. Recomendacoes.
+4. Export PDF/texto.
+5. Testes.
+
+Passos construtivos:
+
+1. Criar ParentReport:
+   - resumo;
+   - tempo;
+   - progresso;
+   - topicos fortes;
+   - topicos fracos;
+   - revisoes pendentes;
+   - recomendacao.
+
+2. Privacidade:
+   - nao expor prompt bruto;
+   - nao expor fotos;
+   - nao expor token;
+   - permitir delete/export.
+
+3. UI:
+   - simples;
+   - compartilhavel;
+   - sem jargao tecnico.
+
+Testes obrigatorios:
+
+- parent_report_privacy_test;
+- parent_report_reflects_state_test;
+- parent_report_export_test.
+
+Criterio de aceite:
+
+- responsavel entende;
+- dados sensiveis protegidos;
+- export funciona.
+
+Proibicoes:
+
+- mostrar JSON cru;
+- expor foto/anexo sem decisao;
+- inventar progresso.
+
+Saida esperada:
+
+Responsavel consegue ajudar sem invadir o aluno.
+
+======================================================================
+FASE 15 - PERFORMANCE, SEGURANCA E OBSERVABILIDADE OPERACIONAL
+======================================================================
+
+Objetivo:
+
+Preparar o app para uso real: rapido, seguro, observavel e barato.
+
+Orgaos envolvidos:
+
+- Flutter app;
+- API;
+- logs;
+- metrics;
+- security;
+- release.
+
+Entregaveis:
+
+1. Performance budget.
+2. Crash/error reporting.
+3. Logs com requestId.
+4. Security checklist MASVS.
+5. Custo por aula.
+6. Alertas.
+
+Passos construtivos:
+
+1. Performance:
+   - medir startup;
+   - medir aula local;
+   - medir T00/T02;
+   - medir jank;
+   - otimizar imagens/listas.
+
+2. Seguranca:
+   - sem segredo no app;
+   - auth obrigatorio;
+   - rate limit;
+   - logs sem token/base64;
+   - delete account;
+   - backup seguro.
+
+3. Observabilidade:
+   - requestId em cada chamada;
+   - eventos de erro;
+   - taxa de contrato invalido;
+   - custo de IA;
+   - latencia.
+
+Testes obrigatorios:
+
+- no_secrets_in_flutter_test;
+- api_auth_required_test;
+- logs_redact_sensitive_payload_test;
+- performance_smoke_test.
+
+Criterio de aceite:
+
+- app rapido;
+- sem segredo;
+- logs uteis;
+- custo medido;
+- erro rastreavel.
+
+Proibicoes:
+
+- token em log;
+- base64 em log;
+- endpoint caro sem limite;
+- build release sem validacao.
+
+Saida esperada:
+
+O SIM esta pronto para beta controlado.
+
+======================================================================
+FASE 16 - RELEASE BETA CONTROLADO E MEDICAO 10X
+======================================================================
+
+Objetivo:
+
+Validar com alunos reais se o app melhorou aprendizagem e experiencia.
+
+Orgaos envolvidos:
+
+- produto;
+- QA;
+- analytics pedagogico;
+- suporte;
+- release.
+
+Entregaveis:
+
+1. Grupo beta.
+2. Checklist de instalacao.
+3. Metricas 10x.
+4. Relatorio semanal.
+5. Plano de correcao.
+
+Passos construtivos:
+
+1. Selecionar alunos:
+   - 5 internos;
+   - 20 beta fechado;
+   - 100 beta expandido.
+
+2. Medir:
+   - time to first lesson;
+   - completion rate;
+   - revisao feita;
+   - recuperacao sucesso;
+   - duvida resolvida;
+   - retencao 24h;
+   - erro tecnico;
+   - NPS.
+
+3. Rodar comparacao com Web:
+   - mesmo objetivo;
+   - mesmo perfil;
+   - comparar atrito e resultado.
+
+4. Corrigir semanalmente:
+   - top 5 travas;
+   - top 5 confusoes;
+   - top 5 bugs.
+
+Testes obrigatorios:
+
+- release smoke;
+- regression suite;
+- manual APK protocol.
+
+Criterio de aceite:
+
+- beta usa app sem engenheiro;
+- metricas melhoram contra baseline;
+- bugs criticos corrigidos.
+
+Proibicoes:
+
+- beta sem logs;
+- beta sem suporte;
+- medir vanity metrics apenas.
+
+Saida esperada:
+
+Evidencia real de que o app ensina melhor.
+
+======================================================================
+FASE 17 - FECHAMENTO FINAL: SIM FLUTTER 10X
+======================================================================
+
+Objetivo:
+
+Declarar que o SIM Flutter virou um app de ensino superior ao SIM Web com
+prova tecnica, pedagogica e operacional.
+
+Entregaveis:
+
+1. `docs/10x-final-report.md`.
+2. Matriz de criterios 10x.
+3. APK final.
+4. SHA/link.
+5. Resultados de alunos reais.
+6. Roadmap pos-10x.
+
+Checklist final:
+
+- fluxo vital real passa;
+- aula pronta abre offline;
+- skill graph ativo;
+- mastery por evidencia ativo;
+- revisao espacada ativa;
+- recuperacao por prerequisito ativa;
+- duvida multimodal ativa;
+- feedback acionavel;
+- sync multi-device;
+- backup Web/App;
+- acessibilidade validada;
+- painel do aluno;
+- painel responsavel;
+- IA com contrato e harness;
+- seguranca MASVS basica;
+- performance dentro do budget;
+- metricas mostram melhora.
+
+Criterio de aceite:
+
+So declarar 10x se:
+
+- teste automatizado passa;
+- build release passa;
+- APK real passa;
+- beta real passa;
+- dados pedagogicos melhoram;
+- arquitetura preservada;
+- nenhum mock production;
+- nenhum fallback falso.
+
+======================================================================
+ORDEM DE EXECUCAO RESUMIDA PARA ENGENHARIA
+======================================================================
+
+1. Fase 0: congelar baseline.
+2. Fase 1: provar APK real.
+3. Fase 2: criar event log canonico.
+4. Fase 3: adicionar skill graph.
+5. Fase 4: atualizar mastery/decision engine.
+6. Fase 5: criar revisao espacada.
+7. Fase 6: criar recuperacao por prerequisito.
+8. Fase 7: elevar aula mobile.
+9. Fase 8: elevar duvida multimodal.
+10. Fase 9: endurecer IA e quality harness.
+11. Fase 10: robustecer offline/sync/backup.
+12. Fase 11: elevar midia pedagogica.
+13. Fase 12: acessibilidade/personalizacao.
+14. Fase 13: painel do aluno.
+15. Fase 14: painel do responsavel.
+16. Fase 15: performance/seguranca/observabilidade.
+17. Fase 16: beta e medicao.
+18. Fase 17: fechamento 10x.
+
+======================================================================
+REGRA DE COMMIT POR FASE
+======================================================================
+
+Para cada fase:
+
+1. Criar branch? Nao, se a regra do projeto continuar sendo main direto,
+   trabalhar sempre no main.
+2. Antes:
+   - `git status --short`
+   - `git branch --show-current`
+   - `git pull --rebase origin main`
+3. Durante:
+   - commits pequenos por orgao;
+   - nao misturar fases.
+4. Depois:
+   - `flutter analyze`
+   - `flutter test`
+   - build release quando tocar app principal;
+   - `npm test` quando tocar API;
+   - atualizar docs da fase.
+5. Commit:
+   - mensagem clara;
+   - push origin main.
+
+======================================================================
+DEFINICAO DE "NAO QUEBROU O QUE JA EXISTE"
+======================================================================
+
+Depois de cada fase, estes pontos devem continuar verdadeiros:
+
+- login real funciona;
+- credito/test account nao bloqueia indevidamente;
+- objetivo -> T00 -> T02 -> aula funciona;
+- aula responde A/B/C;
+- sinais 1/2/3 funcionam;
+- feedback aparece;
+- imagem nao bloqueia aula;
+- audio nao bloqueia aula;
+- duvida funciona;
+- revisao/recuperacao existentes nao quebram;
+- drawer abre;
+- backup importa/exporta;
+- sync nao perde estado;
+- build release passa;
+- APK real nao abre tela branca.
+
+======================================================================
+FIM
+======================================================================
+
+Este projeto construtivo e a sequencia de obra. A planta define o que o SIM
+deve virar. Este documento define a ordem em que a equipe deve construir.
+Se a equipe seguir as fases, respeitar os orgaos, testar as portas e medir
+aprendizagem real, o Flutter deixa de ser apenas paridade com Web e vira o
+produto principal de ensino do SIM.
+
