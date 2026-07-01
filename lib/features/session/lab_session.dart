@@ -35,6 +35,7 @@ import '../../sim/media/audio_preference.dart';
 import '../../sim/media/doubt_audio.dart';
 import '../../sim/media/image_data_url_compression.dart';
 import '../../sim/media/lesson_audio_controller.dart';
+import '../../sim/media/platform_audio_adapter.dart';
 import '../../sim/media/s12_visual_pipeline.dart';
 import '../../sim/media/student_lesson_media_service.dart';
 import '../../sim/state/shared_prefs_state_storage.dart';
@@ -925,7 +926,7 @@ class LabSession extends ChangeNotifier {
       mediaService: StudentLessonMediaService(
         audioCore: AudioCore(
           preference: _audioPreference,
-          playback: NoopAudioPlaybackAdapter(),
+          playback: PlatformAudioAdapter(),
           generatedAudioClient: SimServerGeneratedAudioClient(
             config: _serverConfig(),
           ),
@@ -949,13 +950,13 @@ class LabSession extends ChangeNotifier {
       preference: _audioPreference,
       audioCore: AudioCore(
         preference: _audioPreference,
-        playback: NoopAudioPlaybackAdapter(),
+        playback: PlatformAudioAdapter(),
         generatedAudioClient: SimServerGeneratedAudioClient(
           config: _serverConfig(),
         ),
         stableLangProvider: () => stableLang ?? selectedLanguageCode ?? 'pt-BR',
         onGeneratedAudioError: (_) {
-          audioError = 'Audio remoto indisponivel; usando audio local.';
+          audioError = 'Áudio remoto indisponível.';
           notifyListeners();
         },
       ),
@@ -993,6 +994,18 @@ class LabSession extends ChangeNotifier {
     return '$id:$marker:$layer';
   }
 
+  String _stableLessonImageOfferId(String lessonKey, String prompt) {
+    return 'img_offer_${_stableOfferHash('$lessonKey|${prompt.trim()}')}';
+  }
+
+  String _stableOfferHash(String input) {
+    var hash = 5381;
+    for (final unit in input.codeUnits) {
+      hash = ((hash << 5) + hash) ^ unit;
+    }
+    return (hash & 0xffffffff).toRadixString(36);
+  }
+
   void declineLessonPaidImage() {
     imageStatus = 'declined';
     imageError = null;
@@ -1009,7 +1022,8 @@ class LabSession extends ChangeNotifier {
     final prompt = lessonPaidImagePrompt;
     if (prompt == null || lessonImageOfferLoading) return;
     final key = _lessonImageKey();
-    final offerId = lessonImageOfferId ?? 'img_offer_${key.hashCode.abs()}';
+    final offerId =
+        lessonImageOfferId ?? _stableLessonImageOfferId(key, prompt);
     lessonImageOfferId = offerId;
     lessonImageOfferLoading = true;
     imageStatus = 'loading';

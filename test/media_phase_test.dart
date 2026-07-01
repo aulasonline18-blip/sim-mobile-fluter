@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -179,6 +180,27 @@ void main() {
     expect(preference.getAudioEnabled(), false);
     expect(notified, true);
   });
+
+  test(
+    'production/session audio wiring uses PlatformAudioAdapter, not Noop',
+    () {
+      final labSession = File(
+        'lib/features/session/lab_session.dart',
+      ).readAsStringSync();
+      final organism = File(
+        'lib/sim/organism/sim_organism.dart',
+      ).readAsStringSync();
+
+      expect(labSession, contains('playback: PlatformAudioAdapter()'));
+      expect(
+        RegExp(
+          r'playback:\s*NoopAudioPlaybackAdapter\(\)',
+        ).hasMatch(labSession),
+        false,
+      );
+      expect(organism, contains('playback ?? PlatformAudioAdapter()'));
+    },
+  );
 
   test('audio core maps stable language and caches generated audio', () async {
     final preference = AudioPreference();
@@ -528,6 +550,64 @@ void main() {
       expect(image, 'data:image/png;base64,AAAA');
       expect(fetches, 1);
       expect(offer.status, paid.PaidImageOfferStatus.consumed);
+    },
+  );
+
+  test(
+    'PaidImageService keeps stable offer/idempotency key and blocks double consume',
+    () async {
+      final stateService = StudentLearningStateService(
+        seed: {'l1': StudentLearningState.empty(lessonLocalId: 'l1')},
+      );
+      var fetches = 0;
+      String? seenAcceptedOfferId;
+      String? seenIdempotencyKey;
+      final service = paid.PaidImageService(
+        stateService: stateService,
+        fetcher:
+            ({
+              required prompt,
+              required lessonKey,
+              required acceptedOfferId,
+              required idempotencyKey,
+            }) async {
+              fetches += 1;
+              seenAcceptedOfferId = acceptedOfferId;
+              seenIdempotencyKey = idempotencyKey;
+              await Future<void>.delayed(const Duration(milliseconds: 1));
+              return 'data:image/png;base64,AAAA';
+            },
+      );
+      const trigger = {
+        'needs_image': true,
+        'pedagogical_need': 'important',
+        'render_strategy': 'ai',
+        'image_prompt': 'foto realista de um coração humano',
+      };
+
+      final first = service.offer(
+        lessonKey: 'lesson-key',
+        lessonLocalId: 'l1',
+        visualTrigger: trigger,
+      );
+      final second = service.offer(
+        lessonKey: 'lesson-key',
+        lessonLocalId: 'l1',
+        visualTrigger: trigger,
+      );
+
+      expect(second.offerId, first.offerId);
+      expect(first.offerId, startsWith('img_offer_'));
+
+      final results = await Future.wait([
+        service.consume(offerId: first.offerId, lessonLocalId: 'l1'),
+        service.consume(offerId: first.offerId, lessonLocalId: 'l1'),
+      ]);
+
+      expect(results.whereType<String>(), hasLength(1));
+      expect(fetches, 1);
+      expect(seenAcceptedOfferId, first.offerId);
+      expect(seenIdempotencyKey, first.offerId);
     },
   );
 

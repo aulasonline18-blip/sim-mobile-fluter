@@ -7,15 +7,21 @@ import 'audio_core.dart';
 /// Real audio adapter — plays WAV data URLs from the TTS endpoint.
 /// Mirrors Web behaviour: single currentAudio instance, overwritten on each new speak().
 class PlatformAudioAdapter implements AudioPlaybackAdapter {
-  PlatformAudioAdapter() {
-    _player.onPlayerComplete.listen((_) {
+  AudioPlayer? _player;
+  StreamSubscription<void>? _completeSubscription;
+  void Function()? _onEnd;
+
+  AudioPlayer get _activePlayer {
+    final existing = _player;
+    if (existing != null) return existing;
+    final created = AudioPlayer();
+    _completeSubscription = created.onPlayerComplete.listen((_) {
       _onEnd?.call();
       _onEnd = null;
     });
+    _player = created;
+    return created;
   }
-
-  final AudioPlayer _player = AudioPlayer();
-  void Function()? _onEnd;
 
   @override
   bool playDataUrl(String dataUrl, SpeakOptions opts) {
@@ -24,7 +30,7 @@ class PlatformAudioAdapter implements AudioPlaybackAdapter {
     _stop();
     _onEnd = opts.onEnd;
     opts.onStart?.call();
-    unawaited(_player.play(BytesSource(bytes)));
+    unawaited(_activePlayer.play(BytesSource(bytes)));
     return true;
   }
 
@@ -41,7 +47,10 @@ class PlatformAudioAdapter implements AudioPlaybackAdapter {
 
   void _stop() {
     _onEnd = null;
-    unawaited(_player.stop());
+    final player = _player;
+    if (player != null) {
+      unawaited(player.stop());
+    }
   }
 
   /// Decodes `data:audio/wav;base64,<payload>` → raw bytes.
@@ -57,6 +66,7 @@ class PlatformAudioAdapter implements AudioPlaybackAdapter {
   }
 
   void dispose() {
-    _player.dispose();
+    unawaited(_completeSubscription?.cancel());
+    _player?.dispose();
   }
 }

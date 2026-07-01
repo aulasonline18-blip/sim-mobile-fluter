@@ -81,7 +81,15 @@ class PaidImageService {
       )..status = PaidImageOfferStatus.declined;
     }
 
-    final offerId = 'img_offer_${DateTime.now().millisecondsSinceEpoch}';
+    final offerId = _stableOfferId(
+      lessonKey: lessonKey,
+      prompt: decision.prompt!,
+    );
+    final existing = _offers[offerId];
+    if (existing != null) {
+      _offerController.add(existing);
+      return existing;
+    }
     final o = PaidImageOffer(
       offerId: offerId,
       lessonKey: lessonKey,
@@ -181,4 +189,16 @@ class PaidImageService {
   void dispose() {
     _offerController.close();
   }
+}
+
+String _stableOfferId({required String lessonKey, required String prompt}) {
+  return 'img_offer_${_stableHash('$lessonKey|${prompt.trim()}')}';
+}
+
+String _stableHash(String input) {
+  var hash = 5381;
+  for (final unit in input.codeUnits) {
+    hash = ((hash << 5) + hash) ^ unit;
+  }
+  return (hash & 0xffffffff).toRadixString(36);
 }
