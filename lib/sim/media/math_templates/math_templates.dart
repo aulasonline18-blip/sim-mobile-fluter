@@ -11,6 +11,7 @@ import 'kinematics_st.dart';
 import 'linear_function.dart';
 import 'quadratic_function.dart';
 import 'unit_circle.dart';
+import 'formula_parser.dart';
 
 const _allowedNames = {
   'kinematics_vt',
@@ -18,18 +19,25 @@ const _allowedNames = {
   'linear_function',
   'quadratic_function',
   'unit_circle',
+  'custom',
 };
 
 /// Renderiza template matemático. Retorna SVG cru ou null em qualquer falha.
 String? renderMathTemplate(String name, Map<String, dynamic> params) {
   try {
     switch (name) {
-      case 'kinematics_vt': return renderKinematicsVT(params);
-      case 'kinematics_st': return renderKinematicsST(params);
-      case 'linear_function': return renderLinearFunction(params);
-      case 'quadratic_function': return renderQuadraticFunction(params);
-      case 'unit_circle': return renderUnitCircle(params);
-      default: return null;
+      case 'kinematics_vt':
+        return renderKinematicsVT(params);
+      case 'kinematics_st':
+        return renderKinematicsST(params);
+      case 'linear_function':
+        return renderLinearFunction(params);
+      case 'quadratic_function':
+        return renderQuadraticFunction(params);
+      case 'unit_circle':
+        return renderUnitCircle(params);
+      default:
+        return null;
     }
   } catch (_) {
     return null;
@@ -46,10 +54,18 @@ String? tryRenderMathTemplate(Object? visualTrigger) {
   final name = raw['name']?.toString();
   if (name == null || !_allowedNames.contains(name)) return null;
 
-  final params = raw['params'];
-  if (params is! Map) return null;
+  final rawParams = raw['params'];
+  final params = <String, dynamic>{
+    if (rawParams is Map) ...Map<String, dynamic>.from(rawParams),
+    if (raw['formula'] != null) 'formula': raw['formula'],
+  };
+  if (params.isEmpty) return null;
 
-  final svg = renderMathTemplate(name, Map<String, dynamic>.from(params));
+  final overridden = overrideParamsFromFormula(name, params);
+  if (!_allowedNames.contains(overridden.name) || overridden.name == 'custom') {
+    return null;
+  }
+  final svg = renderMathTemplate(overridden.name, overridden.params);
   if (svg == null) return null;
   return sanitizeAndEncodeSvg(svg);
 }

@@ -21,6 +21,7 @@ import 'package:sim_mobile/sim/media/lesson_image_api_contract.dart';
 import 'package:sim_mobile/sim/media/lesson_paid_image_offer.dart';
 import 'package:sim_mobile/sim/media/lesson_visual_models.dart';
 import 'package:sim_mobile/sim/media/lesson_visual_pipeline.dart';
+import 'package:sim_mobile/sim/media/math_templates/math_templates.dart';
 import 'package:sim_mobile/sim/media/paid_image_service.dart' as paid;
 import 'package:sim_mobile/sim/media/student_lesson_media_service.dart';
 import 'package:sim_mobile/sim/modules/pedagogical_module_contracts.dart';
@@ -604,6 +605,23 @@ void main() {
       expect(client.calls, 0);
     },
   );
+
+  test('math template custom formula renders deterministic SVG', () {
+    final dataUrl = tryRenderMathTemplate({
+      'math_template': {
+        'name': 'custom',
+        'formula': 'y = 3x^2 - 2x + 1',
+        'params': {
+          'labels': {'title': 'formula custom'},
+        },
+      },
+    });
+
+    expect(dataUrl, startsWith('data:image/svg+xml;utf8,'));
+    final decoded = Uri.decodeFull(dataUrl!);
+    expect(decoded, contains('y = 3'));
+    expect(decoded, contains('x²'));
+  });
 
   test(
     'N3 delegates schematic routing to injected visual router client',
