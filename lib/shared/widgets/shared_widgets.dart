@@ -145,58 +145,65 @@ class AnswerButton extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: _PressScale(
         enabled: enabled,
-        child: GestureDetector(
-          onTap: enabled ? onTap : null,
-          child: Opacity(
-            opacity: enabled ? 1 : 0.6,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: simCard,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: active ? simDark : simBorder,
-                  width: active ? 1.5 : 1,
+        child: Semantics(
+          button: true,
+          enabled: enabled,
+          selected: active,
+          excludeSemantics: true,
+          label: 'Alternativa $label',
+          child: GestureDetector(
+            onTap: enabled ? onTap : null,
+            child: Opacity(
+              opacity: enabled ? 1 : 0.6,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: simCard,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: active ? simDark : simBorder,
+                    width: active ? 1.5 : 1,
+                  ),
+                  boxShadow: simShadowGlow,
                 ),
-                boxShadow: simShadowGlow,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      gradient: active ? simGradientPrimary : null,
-                      color: active ? null : const Color(0x0DFFFFFF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: active ? simDark : const Color(0x0F111827),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: active ? simGradientPrimary : null,
+                        color: active ? null : const Color(0x0DFFFFFF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: active ? simDark : const Color(0x0F111827),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontFamily: kMono,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: simDark,
+                        ),
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        fontFamily: kMono,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: simDark,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        text,
+                        style: const TextStyle(
+                          color: simDark,
+                          fontSize: 16,
+                          height: 1.35,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        color: simDark,
-                        fontSize: 16,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -240,7 +247,11 @@ class _PressScaleState extends State<_PressScale> {
   }
 }
 
-void showAulaMenu(BuildContext context, LabSession session) {
+void showAulaMenu(
+  BuildContext context,
+  LabSession session, {
+  double textScale = 1,
+}) {
   showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
@@ -250,23 +261,28 @@ void showAulaMenu(BuildContext context, LabSession session) {
     pageBuilder: (ctx, anim1, anim2) {
       final sw = MediaQuery.of(ctx).size.width;
       final drawerW = (sw * 0.88).clamp(0.0, 360.0);
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: AnimatedBuilder(
-          animation: anim1,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(-drawerW * (1 - anim1.value), 0),
-            child: child,
-          ),
-          child: Material(
-            color: const Color(0xFFF0F0F0),
-            child: SizedBox(
-              width: drawerW,
-              height: double.infinity,
-              child: SafeArea(
-                child: _AulaDrawerContent(
-                  session: session,
-                  onClose: () => Navigator.of(ctx).pop(),
+      return MediaQuery(
+        data: MediaQuery.of(
+          ctx,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: AnimatedBuilder(
+            animation: anim1,
+            builder: (_, child) => Transform.translate(
+              offset: Offset(-drawerW * (1 - anim1.value), 0),
+              child: child,
+            ),
+            child: Material(
+              color: const Color(0xFFF0F0F0),
+              child: SizedBox(
+                width: drawerW,
+                height: double.infinity,
+                child: SafeArea(
+                  child: _AulaDrawerContent(
+                    session: session,
+                    onClose: () => Navigator.of(ctx).pop(),
+                  ),
                 ),
               ),
             ),

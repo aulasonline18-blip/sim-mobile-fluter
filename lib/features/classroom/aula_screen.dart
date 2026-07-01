@@ -18,6 +18,7 @@ import '../../sim/external_ai/sim_ai_server_config.dart';
 import '../../sim/external_ai/sim_server_ai_clients.dart';
 import '../../sim/external_ai/sim_server_attachment_client.dart';
 import '../../sim/classroom/classroom_models.dart';
+import '../../sim/classroom/classroom_text_scale.dart';
 import '../../sim/classroom/lesson_runtime_engine.dart';
 import '../../sim/classroom/lesson_main_view_model.dart';
 import '../../sim/experience/student_experience_types.dart';
@@ -79,11 +80,32 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
   final GlobalKey _feedbackKey = GlobalKey();
   final GlobalKey _errorKey = GlobalKey();
   String? _lastScrollSignature;
+  int _fontScaleLevel = ClassroomTextScale.defaultLevel;
 
   @override
   void initState() {
     super.initState();
     widget.session.addListener(_onSessionChange);
+    unawaited(_loadFontScaleLevel());
+  }
+
+  Future<void> _loadFontScaleLevel() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _fontScaleLevel = ClassroomTextScale.normalize(
+        prefs.getInt(ClassroomTextScale.prefsKey) ??
+            ClassroomTextScale.defaultLevel,
+      );
+    });
+  }
+
+  Future<void> _cycleFontScaleLevel() async {
+    final next = ClassroomTextScale.next(_fontScaleLevel);
+    setState(() => _fontScaleLevel = next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(ClassroomTextScale.prefsKey, next);
+    _scrollForSnapshot(widget.session.aulaSnapshot);
   }
 
   void _onSessionChange() {
@@ -165,7 +187,8 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     double alignment = 0.1,
     bool fallbackToBottom = true,
   }) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    void ensure() {
+      if (!mounted) return;
       final ctx = targetKey.currentContext;
       if (ctx == null) {
         if (fallbackToBottom && _scrollController.hasClients) {
@@ -183,6 +206,12 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
         duration: const Duration(milliseconds: 320),
         curve: Curves.easeOut,
       );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ensure();
+      Future<void>.delayed(const Duration(milliseconds: 90), ensure);
+      Future<void>.delayed(const Duration(milliseconds: 220), ensure);
     });
   }
 
@@ -235,6 +264,7 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
     final theoryReady = session.prefs == null
         ? content != null
         : explanationKey != null && _theoryDoneKey == explanationKey;
+    final textScale = ClassroomTextScale.scaleFor(_fontScaleLevel);
 
     if (isDone) {
       return LessonDoneScreen(session: session);
@@ -255,166 +285,357 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 112, 16, 128),
-              children: [
-                // Past answered questions â€” dimmed, non-interactive
-                // Sliding window: last 4 entries keep image, older entries show text only
-                Builder(
-                  builder: (context) {
-                    final imageCutoff = (history.length - 4).clamp(
-                      0,
-                      history.length,
-                    );
-                    return Column(
-                      children: [
-                        for (var i = 0; i < history.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Opacity(
-                              opacity: 0.6,
-                              child: IgnorePointer(
-                                child: _QuestionHistoryBlock(
-                                  entry: history[i],
-                                  showImage: i >= imageCutoff,
+      body: MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 112, 16, 128),
+                children: [
+                  // Past answered questions â€” dimmed, non-interactive
+                  // Sliding window: last 4 entries keep image, older entries show text only
+                  Builder(
+                    builder: (context) {
+                      final imageCutoff = (history.length - 4).clamp(
+                        0,
+                        history.length,
+                      );
+                      return Column(
+                        children: [
+                          for (var i = 0; i < history.length; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Opacity(
+                                opacity: 0.6,
+                                child: IgnorePointer(
+                                  child: _QuestionHistoryBlock(
+                                    entry: history[i],
+                                    showImage: i >= imageCutoff,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+
+                  // Active content card
+                  if (session.aulaRuntimeLoading && content == null) ...[
+                    const SizedBox(height: 8),
+                    // AUL-3: Loading phase â€” glass-soft card matching LessonMainScreen.tsx
+                    Container(
+                      constraints: const BoxConstraints(minHeight: 280),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: simBorder),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0F111827),
+                            blurRadius: 16,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x1A21B2E9),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  t('aula_theory').toUpperCase(),
+                                  style: TextStyle(
+                                    fontFamily: kMono,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: simDark,
+                                    letterSpacing: 2.2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Builder(
+                            builder: (_) {
+                              final copy = loadingCopy(session.entryStatus);
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    copy.$1,
+                                    style: const TextStyle(
+                                      color: simDark,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    copy.$2,
+                                    style: const TextStyle(
+                                      color: simMuted,
+                                      fontSize: 14,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              height: 8,
+                              color: const Color(0x14000000),
+                              child: const _PulseBar(),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Semantics(
+                            button: true,
+                            excludeSemantics: true,
+                            label: 'Tentar novamente preparar aula',
+                            child: GestureDetector(
+                              onTap: () => unawaited(session.openAulaRuntime()),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x0F000000),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: simBorder),
+                                ),
+                                child: Text(
+                                  t('aula_try_again_2'),
+                                  style: const TextStyle(
+                                    color: simDark,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                      ],
-                    );
-                  },
-                ),
-
-                // Active content card
-                if (session.aulaRuntimeLoading && content == null) ...[
-                  const SizedBox(height: 8),
-                  // AUL-3: Loading phase â€” glass-soft card matching LessonMainScreen.tsx
-                  Container(
-                    constraints: const BoxConstraints(minHeight: 280),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: simBorder),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0F111827),
-                          blurRadius: 16,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0x1A21B2E9),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                t('aula_theory').toUpperCase(),
+                  ],
+
+                  // Theory card â€” only when content is loaded
+                  if (content != null) ...[
+                    SimCard(
+                      key: _contentKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // AUL-4: TEORIA section label
+                          Row(
+                            children: [
+                              Text(
+                                t('aula_theory'),
                                 style: TextStyle(
                                   fontFamily: kMono,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: simDark,
-                                  letterSpacing: 2.2,
+                                  color: simMuted,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Builder(
-                          builder: (_) {
-                            final copy = loadingCopy(session.entryStatus);
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  copy.$1,
-                                  style: const TextStyle(
-                                    color: simDark,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.3,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  copy.$2,
-                                  style: const TextStyle(
-                                    color: simMuted,
-                                    fontSize: 14,
-                                    height: 1.5,
+                              if (viewModel != null) ...[
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    '· ${headerLabelText(viewModel.headerLabel)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: simMuted,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Container(
-                            height: 8,
-                            color: const Color(0x14000000),
-                            child: const _PulseBar(),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () => unawaited(session.openAulaRuntime()),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0x0F000000),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: simBorder),
-                            ),
-                            child: Text(
-                              t('aula_try_again_2'),
+                          const SizedBox(height: 8),
+                          if (session.prefs == null)
+                            Text(
+                              content.explanation,
                               style: const TextStyle(
                                 color: simDark,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                            )
+                          else
+                            SimTypewriter(
+                              text: content.explanation,
+                              style: const TextStyle(
+                                color: simDark,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                              onTick: _scrollToBottom,
+                              onDone: () {
+                                setState(
+                                  () => _theoryDoneKey = content.explanation,
+                                );
+                                _scrollToBottom();
+                              },
+                            ),
+                          // Doubt: processing â†’ progress bar
+                          if (session.doubt.status ==
+                              DoubtStatus.processing) ...[
+                            const SizedBox(height: 12),
+                            DoubtProgressBar(
+                              progress: session.doubt.progress.toDouble(),
+                              label: 'Analisando sua dúvida...',
+                            ),
+                          ],
+                          // Doubt: explaining / error â†’ explanation card
+                          if (session.doubt.status == DoubtStatus.explaining ||
+                              session.doubt.status == DoubtStatus.error) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: simBorder),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x59111827),
+                                    blurRadius: 30,
+                                    spreadRadius: -24,
+                                    offset: Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Explicação da sua dúvida',
+                                    style: TextStyle(
+                                      color: simDark,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  if (session.doubt.error != null)
+                                    Text(
+                                      session.doubt.error!,
+                                      style: const TextStyle(
+                                        color: simMuted,
+                                        fontSize: 14,
+                                        height: 1.4,
+                                      ),
+                                    )
+                                  else if (session.doubt.response != null)
+                                    Text(
+                                      session.doubt.response!.explanation,
+                                      style: const TextStyle(
+                                        color: simDark,
+                                        fontSize: 14,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                          ),
-                        ),
-                      ],
+                          ],
+                          const SizedBox(height: 14),
+                          LessonImagePanel(session: session),
+                          const SizedBox(height: 8),
+                          if (session.audioLoading) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Preparando audio da aula...',
+                              loading: true,
+                            ),
+                          ] else if (session.audioError != null) ...[
+                            StatusLine(
+                              icon: Icons.volume_off_outlined,
+                              text: session.audioError!,
+                            ),
+                          ] else if (session.audioEnabled) ...[
+                            StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Audio da aula ligado',
+                              onTap: session.toggleAudio,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                  ],
 
-                // Theory card â€” only when content is loaded
-                if (content != null) ...[
-                  SimCard(
-                    key: _contentKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // AUL-4: TEORIA section label
-                        Row(
-                          children: [
-                            Text(
-                              t('aula_theory'),
+                  if (content == null) ...[
+                    SimCard(
+                      key: _questionKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LessonImagePanel(session: session),
+                          const SizedBox(height: 8),
+                          if (session.audioLoading) ...[
+                            const StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Preparando audio da aula...',
+                              loading: true,
+                            ),
+                          ] else if (session.audioError != null) ...[
+                            StatusLine(
+                              icon: Icons.volume_off_outlined,
+                              text: session.audioError!,
+                            ),
+                          ] else if (session.audioEnabled) ...[
+                            StatusLine(
+                              icon: Icons.volume_up_outlined,
+                              text: 'Audio da aula ligado',
+                              onTap: session.toggleAudio,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // Challenge/question block â€” hidden while doubt sheet is open to avoid duplicate B. finders
+                  if (!session.doubtOpen && theoryReady && content != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          const Expanded(child: Divider(color: simBorder)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              t('aula_challenge'),
                               style: TextStyle(
                                 fontFamily: kMono,
                                 fontSize: 11,
@@ -423,395 +644,240 @@ class _AulaLabScreenState extends State<AulaLabScreen> {
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            if (viewModel != null) ...[
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  '· ${headerLabelText(viewModel.headerLabel)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: simMuted,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        if (session.prefs == null)
-                          Text(
-                            content.explanation,
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 15,
-                              height: 1.45,
-                            ),
-                          )
-                        else
-                          SimTypewriter(
-                            text: content.explanation,
-                            style: const TextStyle(
-                              color: simDark,
-                              fontSize: 15,
-                              height: 1.45,
-                            ),
-                            onTick: _scrollToBottom,
-                            onDone: () {
-                              setState(
-                                () => _theoryDoneKey = content.explanation,
-                              );
-                              _scrollToBottom();
-                            },
                           ),
-                        // Doubt: processing â†’ progress bar
-                        if (session.doubt.status == DoubtStatus.processing) ...[
-                          const SizedBox(height: 12),
-                          DoubtProgressBar(
-                            progress: session.doubt.progress.toDouble(),
-                            label: 'Analisando sua dúvida...',
-                          ),
+                          const Expanded(child: Divider(color: simBorder)),
                         ],
-                        // Doubt: explaining / error â†’ explanation card
-                        if (session.doubt.status == DoubtStatus.explaining ||
-                            session.doubt.status == DoubtStatus.error) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: simBorder),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x59111827),
-                                  blurRadius: 30,
-                                  spreadRadius: -24,
-                                  offset: Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Explicação da sua dúvida',
-                                  style: TextStyle(
-                                    color: simDark,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                if (session.doubt.error != null)
-                                  Text(
-                                    session.doubt.error!,
-                                    style: const TextStyle(
-                                      color: simMuted,
-                                      fontSize: 14,
-                                      height: 1.4,
-                                    ),
-                                  )
-                                else if (session.doubt.response != null)
-                                  Text(
-                                    session.doubt.response!.explanation,
-                                    style: const TextStyle(
-                                      color: simDark,
-                                      fontSize: 14,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 14),
-                        LessonImagePanel(session: session),
-                        const SizedBox(height: 8),
-                        if (session.audioLoading) ...[
-                          const StatusLine(
-                            icon: Icons.volume_up_outlined,
-                            text: 'Preparando audio da aula...',
-                            loading: true,
-                          ),
-                        ] else if (session.audioError != null) ...[
-                          StatusLine(
-                            icon: Icons.volume_off_outlined,
-                            text: session.audioError!,
-                          ),
-                        ] else if (session.audioEnabled) ...[
-                          StatusLine(
-                            icon: Icons.volume_up_outlined,
-                            text: 'Audio da aula ligado',
-                            onTap: session.toggleAudio,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-
-                if (content == null) ...[
-                  SimCard(
-                    key: _questionKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LessonImagePanel(session: session),
-                        const SizedBox(height: 8),
-                        if (session.audioLoading) ...[
-                          const StatusLine(
-                            icon: Icons.volume_up_outlined,
-                            text: 'Preparando audio da aula...',
-                            loading: true,
-                          ),
-                        ] else if (session.audioError != null) ...[
-                          StatusLine(
-                            icon: Icons.volume_off_outlined,
-                            text: session.audioError!,
-                          ),
-                        ] else if (session.audioEnabled) ...[
-                          StatusLine(
-                            icon: Icons.volume_up_outlined,
-                            text: 'Audio da aula ligado',
-                            onTap: session.toggleAudio,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-
-                // Challenge/question block â€” hidden while doubt sheet is open to avoid duplicate B. finders
-                if (!session.doubtOpen && theoryReady && content != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        const Expanded(child: Divider(color: simBorder)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(
-                            t('aula_challenge'),
-                            style: TextStyle(
-                              fontFamily: kMono,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: simMuted,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                        const Expanded(child: Divider(color: simBorder)),
-                      ],
-                    ),
-                  ),
-                  SimCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          content.question,
-                          style: const TextStyle(
-                            color: simDark,
-                            fontSize: 15,
-                            height: 1.4,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        AnswerButton(
-                          label: 'A',
-                          text: content.options[AnswerLetter.A] ?? '',
-                          active: effectiveSelected == AnswerLetter.A,
-                          enabled: !locked,
-                          onTap: () => session.chooseAulaAnswer('A'),
-                        ),
-                        AnswerButton(
-                          label: 'B',
-                          text: content.options[AnswerLetter.B] ?? '',
-                          active: effectiveSelected == AnswerLetter.B,
-                          enabled: !locked,
-                          onTap: () => session.chooseAulaAnswer('B'),
-                        ),
-                        AnswerButton(
-                          label: 'C',
-                          text: content.options[AnswerLetter.C] ?? '',
-                          active: effectiveSelected == AnswerLetter.C,
-                          enabled: !locked,
-                          onTap: () => session.chooseAulaAnswer('C'),
-                        ),
-
-                        // Sinal 1/2/3 â€” appears after A/B/C selection
-                        if (effectiveExpanded) ...[
-                          const SizedBox(height: 14),
-                          KeyedSubtree(
-                            key: _signalKey,
-                            child: _SinalRow(
-                              onSignal: session.submitAulaSignal,
-                            ),
-                          ),
-                        ],
-
-                        if (isProcessing) ...[
-                          const SizedBox(height: 14),
-                          const StatusLine(
-                            icon: Icons.auto_awesome_outlined,
-                            text: 'Registrando...',
-                            loading: true,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ], // end challenge block
-                // FeedbackBox + Duvida button + Proximo
-                if (isCompleted && feedbackKey != null) ...[
-                  const SizedBox(height: 10),
-                  // "Duvida" button (spec: concluido state, before FeedbackBox)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      onTap: session.doubt.status != DoubtStatus.processing
-                          ? session.toggleDoubt
-                          : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: simBorder),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x47111827),
-                              blurRadius: 20,
-                              spreadRadius: -16,
-                              offset: Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          session.doubt.status == DoubtStatus.processing
-                              ? 'Dúvida...'
-                              : 'Dúvida',
-                          style: TextStyle(
-                            color:
-                                session.doubt.status == DoubtStatus.processing
-                                ? simMuted
-                                : simDark,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  KeyedSubtree(
-                    key: _feedbackKey,
-                    child: _FeedbackBox(
-                      isCorrect: wasCorrect ?? false,
-                      message: feedbackText(feedbackKey),
-                      nextLabel: nextBtnText(nextKey),
-                      nextReady: session.doubt.status != DoubtStatus.processing,
-                      onNext: () => unawaited(session.advanceAula()),
-                    ),
-                  ),
-                ],
-                if (isEngineError) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    key: _errorKey,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: simWarn),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t('aula_gen_fail'),
-                          style: const TextStyle(
-                            color: simWarn,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (phase?.message != null) ...[
-                          const SizedBox(height: 8),
+                    SimCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            phase!.message!,
+                            content.question,
                             style: const TextStyle(
-                              color: simMuted,
-                              fontSize: 14,
+                              color: simDark,
+                              fontSize: 15,
                               height: 1.4,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          AnswerButton(
+                            label: 'A',
+                            text: content.options[AnswerLetter.A] ?? '',
+                            active: effectiveSelected == AnswerLetter.A,
+                            enabled: !locked,
+                            onTap: () => session.chooseAulaAnswer('A'),
+                          ),
+                          AnswerButton(
+                            label: 'B',
+                            text: content.options[AnswerLetter.B] ?? '',
+                            active: effectiveSelected == AnswerLetter.B,
+                            enabled: !locked,
+                            onTap: () => session.chooseAulaAnswer('B'),
+                          ),
+                          AnswerButton(
+                            label: 'C',
+                            text: content.options[AnswerLetter.C] ?? '',
+                            active: effectiveSelected == AnswerLetter.C,
+                            enabled: !locked,
+                            onTap: () => session.chooseAulaAnswer('C'),
+                          ),
+
+                          // Sinal 1/2/3 â€” appears after A/B/C selection
+                          if (effectiveExpanded) ...[
+                            const SizedBox(height: 14),
+                            KeyedSubtree(
+                              key: _signalKey,
+                              child: _SinalRow(
+                                onSignal: session.submitAulaSignal,
+                              ),
+                            ),
+                          ],
+
+                          if (isProcessing) ...[
+                            const SizedBox(height: 14),
+                            const StatusLine(
+                              icon: Icons.auto_awesome_outlined,
+                              text: 'Registrando...',
+                              loading: true,
+                            ),
+                          ],
                         ],
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () => unawaited(session.openAulaRuntime()),
+                      ),
+                    ),
+                  ], // end challenge block
+                  // FeedbackBox + Duvida button + Proximo
+                  if (isCompleted && feedbackKey != null) ...[
+                    const SizedBox(height: 10),
+                    // "Duvida" button (spec: concluido state, before FeedbackBox)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Semantics(
+                        button: true,
+                        enabled: session.doubt.status != DoubtStatus.processing,
+                        excludeSemantics: true,
+                        label: 'Abrir dúvida da aula',
+                        child: GestureDetector(
+                          onTap: session.doubt.status != DoubtStatus.processing
+                              ? session.toggleDoubt
+                              : null,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 10,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: simDark,
-                              borderRadius: BorderRadius.circular(10),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: simBorder),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x47111827),
+                                  blurRadius: 20,
+                                  spreadRadius: -16,
+                                  offset: Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: Text(
-                              t('aula_try_again_2'),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              session.doubt.status == DoubtStatus.processing
+                                  ? 'Dúvida...'
+                                  : 'Dúvida',
+                              style: TextStyle(
+                                color:
+                                    session.doubt.status ==
+                                        DoubtStatus.processing
+                                    ? simMuted
+                                    : simDark,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    KeyedSubtree(
+                      key: _feedbackKey,
+                      child: _FeedbackBox(
+                        isCorrect: wasCorrect ?? false,
+                        message: feedbackText(feedbackKey),
+                        nextLabel: nextBtnText(nextKey),
+                        nextReady:
+                            session.doubt.status != DoubtStatus.processing,
+                        onNext: () => unawaited(session.advanceAula()),
+                      ),
+                    ),
+                  ],
+                  if (isEngineError) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      key: _errorKey,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: simWarn),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t('aula_gen_fail'),
+                            style: const TextStyle(
+                              color: simWarn,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (phase?.message != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              phase!.message!,
+                              style: const TextStyle(
+                                color: simMuted,
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          Semantics(
+                            button: true,
+                            excludeSemantics: true,
+                            label: 'Tentar novamente preparar aula',
+                            child: GestureDetector(
+                              onTap: () => unawaited(session.openAulaRuntime()),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: simDark,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  t('aula_try_again_2'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AulaTopBar(
-              session: session,
-              showReviewButton: true,
-              progress: viewModel?.progress.toDouble(),
-              headerLabel: viewModel != null
-                  ? headerLabelText(viewModel.headerLabel)
-                  : null,
-            ),
-          ),
-          // FixedBubble â€” fixed bottom-center overlay while audio plays
-          if (session.audioEnabled && session.audioPlaying)
             Positioned(
-              bottom: 24,
+              top: 0,
               left: 0,
               right: 0,
+              child: AulaTopBar(
+                session: session,
+                showReviewButton: true,
+                progress: viewModel?.progress.toDouble(),
+                headerLabel: viewModel != null
+                    ? headerLabelText(viewModel.headerLabel)
+                    : null,
+                textScale: textScale,
+              ),
+            ),
+            Positioned(
+              right: 16,
+              bottom: 24,
               child: SafeArea(
                 top: false,
-                child: Center(
-                  child: IgnorePointer(child: const _FixedBubble()),
+                child: _FontScaleButton(
+                  level: _fontScaleLevel,
+                  onTap: () => unawaited(_cycleFontScaleLevel()),
                 ),
               ),
             ),
-        ],
+            // FixedBubble â€” fixed bottom-center overlay while audio plays
+            if (session.audioEnabled && session.audioPlaying)
+              Positioned(
+                bottom: 82,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  top: false,
+                  child: Center(
+                    child: IgnorePointer(child: const _FixedBubble()),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -864,6 +930,59 @@ class LessonNoCurriculumScreen extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FontScaleButton extends StatelessWidget {
+  const _FontScaleButton({required this.level, required this.onTap});
+
+  final int level;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: 'Tamanho da letra: nível $level de 5',
+      child: GestureDetector(
+        key: const Key('aula-font-scale-button'),
+        onTap: onTap,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: simBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 14,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.text_fields, color: simDark, size: 18),
+              const SizedBox(height: 1),
+              Text(
+                '$level/5',
+                key: const Key('aula-font-scale-level'),
+                style: const TextStyle(
+                  color: simDark,
+                  fontFamily: kMono,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1070,25 +1189,31 @@ class _FeedbackBoxState extends State<_FeedbackBox>
               ),
               if (widget.onNext != null) ...[
                 const SizedBox(width: 10),
-                GestureDetector(
-                  onTap: widget.nextReady ? widget.onNext : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: widget.nextReady ? simGradientPrimary : null,
-                      color: widget.nextReady ? null : simLight,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: widget.nextReady ? simShadowGlow : null,
-                    ),
-                    child: Text(
-                      '${widget.nextLabel ?? ''} >>',
-                      style: TextStyle(
-                        color: widget.nextReady ? simDark : simMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                Semantics(
+                  button: true,
+                  enabled: widget.nextReady,
+                  excludeSemantics: true,
+                  label: 'Avançar aula',
+                  child: GestureDetector(
+                    onTap: widget.nextReady ? widget.onNext : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: widget.nextReady ? simGradientPrimary : null,
+                        color: widget.nextReady ? null : simLight,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: widget.nextReady ? simShadowGlow : null,
+                      ),
+                      child: Text(
+                        '${widget.nextLabel ?? ''} >>',
+                        style: TextStyle(
+                          color: widget.nextReady ? simDark : simMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -1125,45 +1250,50 @@ class _SinalRow extends StatelessWidget {
           for (int i = 0; i < labels.length; i++) ...[
             if (i > 0) const SizedBox(width: 8),
             Expanded(
-              child: GestureDetector(
-                onTap: () => onSignal(labels[i].$1),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0x14111827),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: simDark),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${labels[i].$1}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: kMono,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: simDark,
+              child: Semantics(
+                button: true,
+                excludeSemantics: true,
+                label: 'Sinal ${labels[i].$1}: ${labels[i].$2}',
+                child: GestureDetector(
+                  onTap: () => onSignal(labels[i].$1),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0x14111827),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: simDark),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${labels[i].$1}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: kMono,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: simDark,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        labels[i].$2.toUpperCase(),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: simDark,
-                          letterSpacing: 0.5,
+                        const SizedBox(height: 2),
+                        Text(
+                          labels[i].$2.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: simDark,
+                            letterSpacing: 0.5,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

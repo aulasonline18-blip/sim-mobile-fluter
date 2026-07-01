@@ -61,6 +61,7 @@ class AulaTopBar extends StatelessWidget {
     this.showReviewButton = false,
     this.progress,
     this.headerLabel,
+    this.textScale = 1,
     super.key,
   });
 
@@ -68,6 +69,7 @@ class AulaTopBar extends StatelessWidget {
   final bool showReviewButton;
   final double? progress;
   final String? headerLabel;
+  final double textScale;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +98,10 @@ class AulaTopBar extends StatelessWidget {
               padding: const EdgeInsets.only(top: 16),
               child: Row(
                 children: [
-                  _HamburgerBtn(onTap: () => showAulaMenu(context, session)),
+                  _HamburgerBtn(
+                    onTap: () =>
+                        showAulaMenu(context, session, textScale: textScale),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ClipRRect(
@@ -173,41 +178,49 @@ class AulaTopBar extends StatelessWidget {
                         ? Icons.volume_up
                         : Icons.volume_off_outlined,
                     color: session.audioEnabled ? simDark : simMuted,
+                    semanticLabel: session.audioEnabled
+                        ? 'Desligar áudio da aula'
+                        : 'Ligar áudio da aula',
                     onTap: session.toggleAudio,
                   ),
                   if (showReviewButton) ...[
                     const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: session.openReviewRoom,
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          gradient: simGradientPrimary,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: simDark),
-                          boxShadow: simShadowGlow,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.menu_book_outlined,
-                              color: simDark,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              t('aux_review_button').toUpperCase(),
-                              style: TextStyle(
-                                fontFamily: kMono,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                    Semantics(
+                      button: true,
+                      excludeSemantics: true,
+                      label: 'Abrir revisão',
+                      child: GestureDetector(
+                        onTap: session.openReviewRoom,
+                        child: Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            gradient: simGradientPrimary,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: simDark),
+                            boxShadow: simShadowGlow,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.menu_book_outlined,
                                 color: simDark,
-                                letterSpacing: 0.16 * 11,
+                                size: 14,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Text(
+                                t('aux_review_button').toUpperCase(),
+                                style: TextStyle(
+                                  fontFamily: kMono,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: simDark,
+                                  letterSpacing: 0.16 * 11,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -227,32 +240,39 @@ class _HeaderIconCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    required this.semanticLabel,
   });
 
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: simBorder),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x26000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: simBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: color, size: 16),
         ),
-        child: Icon(icon, color: color, size: 16),
       ),
     );
   }
@@ -264,46 +284,51 @@ class _HamburgerBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: simBorder),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x26000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            for (int i = 0; i < 3; i++) ...[
-              if (i > 0) const SizedBox(height: 4),
-              Container(
-                width: 18,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: simDark,
-                  borderRadius: BorderRadius.circular(2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF111827).withValues(alpha: 0.15),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
+    return Semantics(
+      button: true,
+      excludeSemantics: true,
+      label: 'Abrir menu da aula',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: simBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
             ],
-          ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (int i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(height: 4),
+                Container(
+                  width: 18,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: simDark,
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF111827).withValues(alpha: 0.15),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
